@@ -65,7 +65,7 @@ class Config
             ],
             'storage' => [
                 'max_bytes' => (int)($_ENV['UPLOAD_MAX_BYTES'] ?? 10485760),
-                'path' => dirname(__DIR__) . '/' . trim($_ENV['STORAGE_PATH'] ?? 'storage', '/\\'),
+                'path' => dirname(__DIR__, 2) . '/' . trim($_ENV['STORAGE_PATH'] ?? 'storage', '/\\'),
             ],
         ];
 

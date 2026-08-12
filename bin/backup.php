@@ -6,7 +6,6 @@ require_once dirname(__DIR__) . '/vendor/autoload.php';
 require_once dirname(__DIR__) . '/config/config.php';
 
 use App\Services\BackupService;
-use Throwable;
 
 echo "=== Claret LMS Database Backup Runner ===\n";
 echo "Timestamp: " . gmdate('Y-m-d H:i:s') . " UTC\n\n";
