@@ -1,0 +1,155 @@
+<div class="max-w-3xl mx-auto space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-900 tracking-tight">Edit Learning Material</h2>
+            <p class="text-sm text-slate-500 mt-1">Update lecture notes, replace file attachments, or change publish visibility.</p>
+        </div>
+        <a href="/teacher/content?class_subject_id=<?= $item->classSubjectId ?>" 
+           class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 shadow-sm transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+            Back to List
+        </a>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+        <form action="/teacher/content/<?= $item->id ?>/edit" method="POST" enctype="multipart/form-data" class="space-y-6">
+            <?= csrf_field() ?>
+
+            <!-- Target Class-Subject -->
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1.5">Class & Subject</label>
+                <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700">
+                    <?= e($item->classSubject?->subject?->name ?? 'Subject') ?> — <?= e($item->classSubject?->schoolClass?->name ?? 'Class') ?>
+                </div>
+            </div>
+
+            <!-- Title & Topic Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="sm:col-span-2">
+                    <label for="title" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                        Lesson / Material Title <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="text" name="title" id="title" required maxlength="200"
+                           value="<?= e(old('title', $item->title)) ?>"
+                           class="w-full rounded-xl border-slate-300 text-sm focus:border-brand-500 focus:ring-brand-500 bg-slate-50 py-2.5 px-3 border">
+                </div>
+
+                <div>
+                    <label for="topic" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                        Topic / Module Name
+                    </label>
+                    <input type="text" name="topic" id="topic" maxlength="100"
+                           value="<?= e(old('topic', $item->topic ?? '')) ?>"
+                           class="w-full rounded-xl border-slate-300 text-sm focus:border-brand-500 focus:ring-brand-500 bg-slate-50 py-2.5 px-3 border">
+                </div>
+            </div>
+
+            <!-- Content Type -->
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">
+                    Material Type <span class="text-rose-500">*</span>
+                </label>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <?php $currType = old('type', $item->type); ?>
+                    <label class="relative flex flex-col items-center p-3 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50/40">
+                        <input type="radio" name="type" value="note" class="sr-only" <?= $currType === 'note' ? 'checked' : '' ?>>
+                        <svg class="w-5 h-5 text-blue-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <span class="text-xs font-semibold text-slate-800">Lesson Note</span>
+                    </label>
+
+                    <label class="relative flex flex-col items-center p-3 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50/40">
+                        <input type="radio" name="type" value="document" class="sr-only" <?= $currType === 'document' ? 'checked' : '' ?>>
+                        <svg class="w-5 h-5 text-emerald-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                        <span class="text-xs font-semibold text-slate-800">Document / PDF</span>
+                    </label>
+
+                    <label class="relative flex flex-col items-center p-3 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50/40">
+                        <input type="radio" name="type" value="video" class="sr-only" <?= $currType === 'video' ? 'checked' : '' ?>>
+                        <svg class="w-5 h-5 text-purple-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                        <span class="text-xs font-semibold text-slate-800">Video Lesson</span>
+                    </label>
+
+                    <label class="relative flex flex-col items-center p-3 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50/40">
+                        <input type="radio" name="type" value="link" class="sr-only" <?= $currType === 'link' ? 'checked' : '' ?>>
+                        <svg class="w-5 h-5 text-amber-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                        <span class="text-xs font-semibold text-slate-800">Web Resource</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Description / Body Text -->
+            <div>
+                <label for="description" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                    Lesson Description / Summary / Notes
+                </label>
+                <textarea name="description" id="description" rows="5"
+                          class="w-full rounded-xl border-slate-300 text-sm focus:border-brand-500 focus:ring-brand-500 bg-slate-50 py-2.5 px-3 border leading-relaxed"><?= e(old('description', $item->description ?? '')) ?></textarea>
+            </div>
+
+            <!-- External URL -->
+            <div>
+                <label for="external_url" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                    External Resource URL
+                </label>
+                <input type="url" name="external_url" id="external_url"
+                       value="<?= e(old('external_url', $item->externalUrl ?? '')) ?>"
+                       class="w-full rounded-xl border-slate-300 text-sm focus:border-brand-500 focus:ring-brand-500 bg-slate-50 py-2.5 px-3 border">
+            </div>
+
+            <!-- Existing & Replacement File -->
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                    File Attachment
+                </label>
+                <?php if ($item->file): ?>
+                    <div class="mb-3 p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <svg class="w-4 h-4 text-brand-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                            <span class="text-xs font-medium text-slate-700 truncate"><?= e($item->file->originalName) ?></span>
+                            <span class="text-[11px] text-slate-400 font-mono">(<?= e($item->file->getFormattedSize()) ?>)</span>
+                        </div>
+                        <a href="/files/<?= $item->file->id ?>/download" class="text-xs text-brand-600 hover:underline">Download current</a>
+                    </div>
+                <?php endif; ?>
+
+                <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-xl bg-slate-50 hover:bg-slate-100/60 transition cursor-pointer" onclick="document.getElementById('attachment').click()">
+                    <div class="space-y-1 text-center">
+                        <svg class="mx-auto h-10 w-10 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <div class="flex text-xs text-slate-600 justify-center">
+                            <label for="attachment" class="relative cursor-pointer font-semibold text-brand-600 hover:text-brand-500">
+                                <span>Upload new replacement file</span>
+                            </label>
+                        </div>
+                        <p class="text-[11px] text-slate-400">Leave blank to retain current file</p>
+                        <p id="file-chosen-name" class="text-xs font-semibold text-brand-600 pt-1"></p>
+                    </div>
+                </div>
+                <input id="attachment" name="attachment" type="file" class="sr-only" onchange="document.getElementById('file-chosen-name').textContent = this.files[0] ? this.files[0].name + ' (' + (this.files[0].size/1024/1024).toFixed(2) + ' MB)' : ''">
+            </div>
+
+            <!-- Published Status -->
+            <div class="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                <input type="checkbox" name="is_published" id="is_published" value="1" <?= old('is_published', $item->isPublished() ? '1' : '0') === '1' ? 'checked' : '' ?>
+                       class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                <div>
+                    <label for="is_published" class="text-sm font-semibold text-slate-800 cursor-pointer">
+                        Published to enrolled students
+                    </label>
+                    <p class="text-xs text-slate-500">When checked, enrolled learners can view and download this material.</p>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
+                <a href="/teacher/content?class_subject_id=<?= $item->classSubjectId ?>" class="px-4 py-2.5 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition shadow-sm">
+                    Cancel
+                </a>
+                <button type="submit" class="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl shadow-sm transition">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

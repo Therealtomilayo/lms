@@ -1,0 +1,35 @@
+# Composer & Dependencies
+/vendor/
+
+# Environment Configuration
+/.env
+/config/.env
+*.env
+*.env.local
+
+# AI & Prompt Specifications
+/.ai/
+/ui-ux-pro-max-skill-main/
+
+# Testing & Cache
+/.phpunit.result.cache
+/phpunit.xml.bak
+/coverage/
+
+# Storage & User Generated Content
+/storage/backups/*
+!/storage/backups/.gitkeep
+/storage/logs/*
+!/storage/logs/.gitkeep
+/storage/uploads/*
+!/storage/uploads/.gitkeep
+!/storage/uploads/.htaccess
+
+# IDE & OS Specific
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
