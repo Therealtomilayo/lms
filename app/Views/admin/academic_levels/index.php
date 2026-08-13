@@ -1,150 +1,226 @@
+<?php
+$this->layout('layouts/admin', [
+    'title' => $title ?? 'Academic Levels — Claret LMS',
+    'headerTitle' => $headerTitle ?? 'Academic Levels'
+]);
+
+// Build grading scale options for the select components
+$scaleOptions = ['' => 'Default Scale'];
+foreach ($gradingScales as $scale) {
+    $scaleOptions[$scale->id] = e($scale->name);
+}
+?>
 <div class="space-y-6">
-    <!-- Header with Action -->
+    <!-- Page Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
             <h2 class="text-2xl font-bold text-slate-900">Academic Levels</h2>
             <p class="text-sm text-slate-500 mt-1">Configure institutional stages (e.g. Primary, Junior Secondary) and grading scales.</p>
         </div>
-        <button type="button" onclick="document.getElementById('create-modal').classList.remove('hidden')" class="inline-flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium shadow-sm transition">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Create Level
-        </button>
+        <div>
+            <?php $this->include('components/button', [
+                'type' => 'button',
+                'variant' => 'primary',
+                'label' => 'Create Level',
+                'icon' => '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>',
+                'attributes' => 'onclick="window.LMS.showModal(\'create-modal\')"'
+            ]); ?>
+        </div>
     </div>
 
-    <!-- Levels List -->
-    <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-        <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
-            <thead class="bg-slate-50 text-slate-600 font-semibold">
-                <tr>
-                    <th scope="col" class="px-6 py-3.5">Rank Order</th>
-                    <th scope="col" class="px-6 py-3.5">Level Name</th>
-                    <th scope="col" class="px-6 py-3.5">Stage</th>
-                    <th scope="col" class="px-6 py-3.5">Grading Scale</th>
-                    <th scope="col" class="px-6 py-3.5 text-right">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-200">
-                <?php if (empty($levels)): ?>
-                    <tr>
-                        <td colspan="5" class="px-6 py-8 text-center text-slate-500">
-                            No academic levels configured yet.
-                        </td>
-                    </tr>
-                <?php else: ?>
-                    <?php foreach ($levels as $lvl): ?>
-                        <tr class="hover:bg-slate-50 transition">
-                            <td class="px-6 py-4 font-mono text-xs text-slate-500">
-                                <?= e((string)$lvl->rankOrder) ?>
-                            </td>
-                            <td class="px-6 py-4 font-semibold text-slate-900">
-                                <?= e($lvl->name) ?>
-                            </td>
-                            <td class="px-6 py-4 text-slate-600">
-                                <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-800">
-                                    <?= e($lvl->stage) ?>
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 text-slate-600">
-                                <?= $lvl->gradingScaleId ? 'Scale #' . e((string)$lvl->gradingScaleId) : '<span class="text-slate-400 text-xs italic">Default Scale</span>' ?>
-                            </td>
-                            <td class="px-6 py-4 text-right space-x-2">
-                                <button type="button" 
-                                        onclick="openEditModal(<?= $lvl->id ?>, '<?= e(addslashes($lvl->name)) ?>', '<?= e(addslashes($lvl->stage)) ?>', <?= $lvl->rankOrder ?>, '<?= $lvl->gradingScaleId ?? '' ?>')" 
-                                        class="text-xs font-medium px-2.5 py-1.5 rounded bg-slate-100 text-slate-700 hover:bg-slate-200 transition">
-                                    Edit
-                                </button>
-                            </td>
+    <!-- Levels Table -->
+    <?php if (empty($levels)): ?>
+        <?php $this->include('components/empty_state', [
+            'title' => 'No Academic Levels',
+            'message' => 'No academic levels configured yet. Click "Create Level" to get started.'
+        ]); ?>
+    <?php else: ?>
+        <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
+                    <thead class="bg-slate-50 text-slate-600 font-semibold">
+                        <tr>
+                            <th scope="col" class="px-6 py-3.5">Rank</th>
+                            <th scope="col" class="px-6 py-3.5">Level Name</th>
+                            <th scope="col" class="px-6 py-3.5">Stage</th>
+                            <th scope="col" class="px-6 py-3.5">Grading Scale</th>
+                            <th scope="col" class="px-6 py-3.5 text-right">Actions</th>
                         </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                        <?php foreach ($levels as $lvl): ?>
+                            <tr class="hover:bg-slate-50/50 transition">
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-600 text-xs font-bold font-mono">
+                                        <?= e((string)$lvl->rankOrder) ?>
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 font-semibold text-slate-900">
+                                    <?= e($lvl->name) ?>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <?php $this->include('components/badge', ['label' => $lvl->stage, 'variant' => 'info']); ?>
+                                </td>
+                                <td class="px-6 py-4 text-slate-600">
+                                    <?php if ($lvl->gradingScaleId): ?>
+                                        <?php
+                                        $scaleName = 'Scale #' . $lvl->gradingScaleId;
+                                        foreach ($gradingScales as $s) {
+                                            if ($s->id === $lvl->gradingScaleId) {
+                                                $scaleName = e($s->name);
+                                                break;
+                                            }
+                                        }
+                                        ?>
+                                        <span class="text-sm font-medium text-slate-700"><?= $scaleName ?></span>
+                                    <?php else: ?>
+                                        <span class="text-xs text-slate-400 italic">Default Scale</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    <?php $this->include('components/button', [
+                                        'type' => 'button',
+                                        'variant' => 'secondary',
+                                        'label' => 'Edit',
+                                        'class' => 'px-2.5 py-1 min-h-0 text-xs font-semibold',
+                                        'attributes' => 'onclick="openEditModal(' . $lvl->id . ', \'' . e(addslashes($lvl->name)) . '\', \'' . e(addslashes($lvl->stage)) . '\', ' . $lvl->rankOrder . ', \'' . ($lvl->gradingScaleId ?? '') . '\')"'
+                                    ]); ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    <?php endif; ?>
 </div>
 
 <!-- Create Modal -->
-<div id="create-modal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-xl border border-slate-200">
-        <div class="flex items-center justify-between pb-4 border-b border-slate-100">
-            <h3 class="text-lg font-bold text-slate-900">Create Academic Level</h3>
-            <button type="button" onclick="document.getElementById('create-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
-        </div>
-        <form method="POST" action="/admin/academic-levels" class="mt-4 space-y-4">
-            <?= csrf_field() ?>
-            <div>
-                <label for="create_level_name" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Level Name</label>
-                <input type="text" id="create_level_name" name="name" required placeholder="e.g. JSS 1, Grade 7" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
-            </div>
-            <div>
-                <label for="create_level_stage" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Stage</label>
-                <input type="text" id="create_level_stage" name="stage" required placeholder="e.g. Junior Secondary, Primary" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label for="create_rank_order" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Rank Order</label>
-                    <input type="number" id="create_rank_order" name="rank_order" value="1" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
-                </div>
-                <div>
-                    <label for="create_scale" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Grading Scale</label>
-                    <select id="create_scale" name="grading_scale_id" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
-                        <option value="">Default Scale</option>
-                        <?php foreach ($gradingScales as $scale): ?>
-                            <option value="<?= $scale->id ?>"><?= e($scale->name) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-            </div>
-            <div class="pt-4 flex justify-end gap-3 border-t border-slate-100">
-                <button type="button" onclick="document.getElementById('create-modal').classList.add('hidden')" class="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition">Cancel</button>
-                <button type="submit" class="px-4 py-2 rounded-lg text-sm font-medium bg-brand-600 hover:bg-brand-700 text-white shadow-sm transition">Create Level</button>
-            </div>
-        </form>
+<?php ob_start(); ?>
+<form method="POST" action="/admin/academic-levels" class="space-y-4" novalidate>
+    <?= csrf_field() ?>
+
+    <?php $this->include('components/input', [
+        'name' => 'name',
+        'id' => 'create_level_name',
+        'label' => 'Level Name',
+        'placeholder' => 'e.g. JSS 1, Grade 7',
+        'required' => true
+    ]); ?>
+
+    <?php $this->include('components/input', [
+        'name' => 'stage',
+        'id' => 'create_level_stage',
+        'label' => 'Stage',
+        'placeholder' => 'e.g. Junior Secondary, Primary',
+        'required' => true
+    ]); ?>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <?php $this->include('components/input', [
+            'name' => 'rank_order',
+            'id' => 'create_rank_order',
+            'label' => 'Rank Order',
+            'type' => 'number',
+            'value' => '1',
+            'required' => true,
+            'helpText' => 'Determines the sort position in lists.'
+        ]); ?>
+
+        <?php $this->include('components/select', [
+            'name' => 'grading_scale_id',
+            'id' => 'create_scale',
+            'label' => 'Grading Scale',
+            'options' => $scaleOptions,
+            'selected' => '',
+            'placeholder' => ''
+        ]); ?>
     </div>
-</div>
+
+    <div class="pt-4 border-t border-slate-200 flex justify-end gap-3">
+        <?php $this->include('components/button', [
+            'type' => 'button',
+            'variant' => 'secondary',
+            'label' => 'Cancel',
+            'attributes' => 'onclick="window.LMS.hideModal(\'create-modal\')"'
+        ]); ?>
+        <?php $this->include('components/button', [
+            'type' => 'submit',
+            'variant' => 'primary',
+            'label' => 'Create Level'
+        ]); ?>
+    </div>
+</form>
+<?php $createModalBody = ob_get_clean(); ?>
+
+<?php $this->include('components/modal', [
+    'id' => 'create-modal',
+    'title' => 'Create Academic Level',
+    'body' => $createModalBody,
+    'size' => 'md'
+]); ?>
 
 <!-- Edit Modal -->
-<div id="edit-modal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-xl border border-slate-200">
-        <div class="flex items-center justify-between pb-4 border-b border-slate-100">
-            <h3 class="text-lg font-bold text-slate-900">Edit Academic Level</h3>
-            <button type="button" onclick="document.getElementById('edit-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
-        </div>
-        <form id="edit-form" method="POST" action="" class="mt-4 space-y-4">
-            <?= csrf_field() ?>
-            <div>
-                <label for="edit_level_name" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Level Name</label>
-                <input type="text" id="edit_level_name" name="name" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
-            </div>
-            <div>
-                <label for="edit_level_stage" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Stage</label>
-                <input type="text" id="edit_level_stage" name="stage" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label for="edit_rank_order" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Rank Order</label>
-                    <input type="number" id="edit_rank_order" name="rank_order" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
-                </div>
-                <div>
-                    <label for="edit_scale" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Grading Scale</label>
-                    <select id="edit_scale" name="grading_scale_id" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
-                        <option value="">Default Scale</option>
-                        <?php foreach ($gradingScales as $scale): ?>
-                            <option value="<?= $scale->id ?>"><?= e($scale->name) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-            </div>
-            <div class="pt-4 flex justify-end gap-3 border-t border-slate-100">
-                <button type="button" onclick="document.getElementById('edit-modal').classList.add('hidden')" class="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition">Cancel</button>
-                <button type="submit" class="px-4 py-2 rounded-lg text-sm font-medium bg-brand-600 hover:bg-brand-700 text-white shadow-sm transition">Save Changes</button>
-            </div>
-        </form>
+<?php ob_start(); ?>
+<form id="edit-form" method="POST" action="" class="space-y-4" novalidate>
+    <?= csrf_field() ?>
+
+    <?php $this->include('components/input', [
+        'name' => 'name',
+        'id' => 'edit_level_name',
+        'label' => 'Level Name',
+        'required' => true
+    ]); ?>
+
+    <?php $this->include('components/input', [
+        'name' => 'stage',
+        'id' => 'edit_level_stage',
+        'label' => 'Stage',
+        'required' => true
+    ]); ?>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <?php $this->include('components/input', [
+            'name' => 'rank_order',
+            'id' => 'edit_rank_order',
+            'label' => 'Rank Order',
+            'type' => 'number',
+            'required' => true,
+            'helpText' => 'Determines the sort position in lists.'
+        ]); ?>
+
+        <?php $this->include('components/select', [
+            'name' => 'grading_scale_id',
+            'id' => 'edit_scale',
+            'label' => 'Grading Scale',
+            'options' => $scaleOptions,
+            'selected' => '',
+            'placeholder' => ''
+        ]); ?>
     </div>
-</div>
+
+    <div class="pt-4 border-t border-slate-200 flex justify-end gap-3">
+        <?php $this->include('components/button', [
+            'type' => 'button',
+            'variant' => 'secondary',
+            'label' => 'Cancel',
+            'attributes' => 'onclick="window.LMS.hideModal(\'edit-modal\')"'
+        ]); ?>
+        <?php $this->include('components/button', [
+            'type' => 'submit',
+            'variant' => 'primary',
+            'label' => 'Save Changes'
+        ]); ?>
+    </div>
+</form>
+<?php $editModalBody = ob_get_clean(); ?>
+
+<?php $this->include('components/modal', [
+    'id' => 'edit-modal',
+    'title' => 'Edit Academic Level',
+    'body' => $editModalBody,
+    'size' => 'md'
+]); ?>
 
 <script>
     function openEditModal(id, name, stage, rankOrder, scaleId) {
@@ -153,6 +229,6 @@
         document.getElementById('edit_level_stage').value = stage;
         document.getElementById('edit_rank_order').value = rankOrder;
         document.getElementById('edit_scale').value = scaleId || '';
-        document.getElementById('edit-modal').classList.remove('hidden');
+        window.LMS.showModal('edit-modal');
     }
 </script>

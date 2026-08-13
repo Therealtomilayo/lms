@@ -44,7 +44,7 @@ class SubjectController extends Controller
             'title' => 'Subjects — Claret LMS',
             'headerTitle' => 'Subjects',
             'subjects' => $subjects,
-        ], 'layouts/admin');
+        ]);
     }
 
     public function store(Request $request): Response

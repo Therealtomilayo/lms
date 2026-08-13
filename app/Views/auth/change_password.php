@@ -1,80 +1,119 @@
-<?php $this->layout('layouts/auth', ['title' => 'Change Password - Claret LMS']); ?>
+<?php
+/**
+ * Change Password Screen View
+ * AUTH-04 — Authenticated / Guest (Forced)
+ * 
+ * @var App\Models\User $user User model instance
+ * @var bool $isForced Is the password change mandatory?
+ * @var array|null $errors Form validation errors
+ */
 
-<h2 class="text-xl font-semibold text-slate-900 mb-2">
-    <?= !empty($isForced) ? 'Update Your Password' : 'Change Password' ?>
-</h2>
-<p class="text-sm text-slate-600 mb-6">
-    <?= !empty($isForced) 
-        ? 'For your security, you are required to change your temporary or initial password before continuing.' 
-        : 'Update your account password. Choose a strong password with at least 8 characters.' ?>
-</p>
+// Resolve dynamic layout based on whether user is forced to change password
+if (empty($isForced)) {
+    $roles = $user->roles ?? [];
+    if (in_array('super_admin', $roles, true) || in_array('admin', $roles, true)) {
+        $layoutName = 'layouts/admin';
+    } elseif (in_array('teacher', $roles, true)) {
+        $layoutName = 'layouts/teacher';
+    } elseif (in_array('student', $roles, true)) {
+        $layoutName = 'layouts/student';
+    } elseif (in_array('parent', $roles, true)) {
+        $layoutName = 'layouts/parent';
+    } else {
+        $layoutName = 'layouts/app';
+    }
+} else {
+    $layoutName = 'layouts/auth';
+}
 
+$this->layout($layoutName, ['title' => 'Change Password — Claret LMS']);
+?>
+
+<?php ob_start(); ?>
+<!-- General Error Banner -->
 <?php if (!empty($errors['general'])): ?>
-    <div role="alert" class="mb-4 rounded-lg bg-danger-100 p-3 border border-red-200 text-danger-700 text-sm">
-        <?= e($errors['general'][0]) ?>
+    <div class="mb-4">
+        <?php $this->include('components/alert', [
+            'type' => 'error',
+            'message' => e($errors['general'][0]),
+            'dismissible' => false
+        ]); ?>
     </div>
 <?php endif; ?>
 
+<!-- Change Password Form -->
 <form action="/profile/password" method="POST" class="space-y-4" novalidate>
     <?= csrf_field() ?>
 
-    <div>
-        <label for="current_password" class="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
-        <input type="password" 
-               id="current_password" 
-               name="current_password" 
-               required 
-               autocomplete="current-password"
-               aria-describedby="<?= !empty($errors['current_password']) ? 'current-password-error' : '' ?>"
-               class="w-full px-3 py-2 border <?= !empty($errors['current_password']) ? 'border-danger-700' : 'border-slate-300' ?> rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-brand-600 sm:text-sm text-slate-900"
-               placeholder="••••••••">
-        <?php if (!empty($errors['current_password'])): ?>
-            <p id="current-password-error" class="mt-1 text-xs text-danger-700"><?= e($errors['current_password'][0]) ?></p>
-        <?php endif; ?>
-    </div>
+    <!-- Current Password Input Component -->
+    <?php $this->include('components/input', [
+        'name' => 'current_password',
+        'label' => 'Current Password',
+        'type' => 'password',
+        'placeholder' => '••••••••',
+        'required' => true,
+        'error' => !empty($errors['current_password']) ? $errors['current_password'][0] : '',
+        'attributes' => 'autocomplete="current-password"'
+    ]); ?>
 
-    <div>
-        <label for="password" class="block text-sm font-medium text-slate-700 mb-1">New Password</label>
-        <input type="password" 
-               id="password" 
-               name="password" 
-               required 
-               autocomplete="new-password"
-               aria-describedby="<?= !empty($errors['password']) ? 'password-error' : '' ?>"
-               class="w-full px-3 py-2 border <?= !empty($errors['password']) ? 'border-danger-700' : 'border-slate-300' ?> rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-brand-600 sm:text-sm text-slate-900"
-               placeholder="Minimum 8 characters">
-        <?php if (!empty($errors['password'])): ?>
-            <p id="password-error" class="mt-1 text-xs text-danger-700"><?= e($errors['password'][0]) ?></p>
-        <?php endif; ?>
-    </div>
+    <!-- New Password Input Component -->
+    <?php $this->include('components/input', [
+        'name' => 'password',
+        'label' => 'New Password',
+        'type' => 'password',
+        'placeholder' => 'Minimum 8 characters',
+        'required' => true,
+        'error' => !empty($errors['password']) ? $errors['password'][0] : '',
+        'attributes' => 'autocomplete="new-password"'
+    ]); ?>
 
-    <div>
-        <label for="password_confirmation" class="block text-sm font-medium text-slate-700 mb-1">Confirm New Password</label>
-        <input type="password" 
-               id="password_confirmation" 
-               name="password_confirmation" 
-               required 
-               autocomplete="new-password"
-               aria-describedby="<?= !empty($errors['password_confirmation']) ? 'confirmation-error' : '' ?>"
-               class="w-full px-3 py-2 border <?= !empty($errors['password_confirmation']) ? 'border-danger-700' : 'border-slate-300' ?> rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-brand-600 sm:text-sm text-slate-900"
-               placeholder="Repeat new password">
-        <?php if (!empty($errors['password_confirmation'])): ?>
-            <p id="confirmation-error" class="mt-1 text-xs text-danger-700"><?= e($errors['password_confirmation'][0]) ?></p>
-        <?php endif; ?>
-    </div>
+    <!-- Confirm Password Input Component -->
+    <?php $this->include('components/input', [
+        'name' => 'password_confirmation',
+        'label' => 'Confirm New Password',
+        'type' => 'password',
+        'placeholder' => 'Repeat new password',
+        'required' => true,
+        'error' => !empty($errors['password_confirmation']) ? $errors['password_confirmation'][0] : '',
+        'attributes' => 'autocomplete="new-password"'
+    ]); ?>
 
-    <div class="pt-2">
-        <button type="submit" 
-                class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-600 transition-colors">
-            Update Password
-        </button>
-    </div>
-
-    <?php if (empty($isForced)): ?>
-        <div class="text-center pt-2">
-            <a href="/dashboard" class="text-sm font-medium text-slate-600 hover:text-slate-900 hover:underline">
-                Cancel and return
+    <!-- Action Buttons Row -->
+    <div class="flex items-center justify-between gap-4 pt-2">
+        <?php if (empty($isForced)): ?>
+            <a href="/dashboard" class="inline-flex items-center text-sm font-semibold text-slate-500 hover:text-slate-900 focus:underline transition">
+                Cancel
             </a>
-        </div>
-    <?php endif; ?>
+        <?php else: ?>
+            <div></div> <!-- Spacer -->
+        <?php endif; ?>
+
+        <?php $this->include('components/button', [
+            'type' => 'submit',
+            'variant' => 'primary',
+            'label' => 'Update Password'
+        ]); ?>
+    </div>
 </form>
+<?php $formContent = ob_get_clean(); ?>
+
+<!-- Wrapper Shell Layout Scaffolding -->
+<?php if (!empty($isForced)): ?>
+    <h2 class="text-xl font-bold text-slate-900 mb-2">Update Your Password</h2>
+    <p class="text-sm text-slate-500 mb-6">
+        For your security, you are required to change your temporary or initial password before continuing.
+    </p>
+    <?= $formContent ?>
+<?php else: ?>
+    <div class="max-w-xl">
+        <div class="mb-6">
+            <h2 class="text-2xl font-bold tracking-tight text-slate-900">Account Settings</h2>
+            <p class="text-sm text-slate-500 mt-1">Manage and update your security credentials.</p>
+        </div>
+        <?php $this->include('components/card', [
+            'title' => 'Change Password',
+            'subtitle' => 'Update your account password. Choose a strong password with at least 8 characters.',
+            'body' => $formContent
+        ]); ?>
+    </div>
+<?php endif; ?>

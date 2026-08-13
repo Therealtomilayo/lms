@@ -1,102 +1,181 @@
+<?php
+$this->layout('layouts/admin', [
+    'title' => $title ?? 'Create User — Claret LMS',
+    'headerTitle' => $headerTitle ?? 'Create New User Account'
+]);
+
+$classOptions = ['' => '-- No Class Selected --'];
+foreach ($classes as $c) {
+    $classOptions[$c->id] = e($c->name);
+}
+?>
+
 <div class="max-w-4xl mx-auto space-y-6">
-    <div class="flex items-center justify-between">
+    <!-- Page Header & Back Link -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h2 class="text-xl font-bold text-slate-900">Create New User Account</h2>
-            <p class="text-sm text-slate-500">Provide account credentials, profile details, and role assignments.</p>
+            <h2 class="text-2xl font-bold text-slate-900">Create New User Account</h2>
+            <p class="text-sm text-slate-500 mt-1">Provide account credentials, profile details, and role assignments.</p>
         </div>
-        <a href="/admin/users" class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition">
-            Back to Directory
-        </a>
+        <div>
+            <?php $this->include('components/button', [
+                'type' => 'button',
+                'variant' => 'secondary',
+                'label' => 'Back to Directory',
+                'icon' => '<svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>',
+                'attributes' => 'onclick="window.location.href=\'/admin/users\''
+            ]); ?>
+        </div>
     </div>
 
-    <form method="POST" action="/admin/users" class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
+    <!-- Form Container -->
+    <form method="POST" action="/admin/users" class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-8" novalidate>
         <?= csrf_field() ?>
 
-        <div class="border-b border-slate-200 pb-5">
-            <h3 class="text-base font-semibold text-slate-900 mb-4">1. Primary Account Details</h3>
+        <!-- 1. Primary Account Details -->
+        <div class="space-y-4 border-b border-slate-200 pb-6">
+            <div>
+                <h3 class="text-base font-bold text-slate-900">1. Primary Account Details</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Core login credentials and personal identity details.</p>
+            </div>
+
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Full Name *</label>
-                    <input type="text" name="name" required placeholder="e.g. John Doe"
-                           class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Email Address *</label>
-                    <input type="email" name="email" required placeholder="e.g. jdoe@claret.edu.ng"
-                           class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Phone Number</label>
-                    <input type="text" name="phone" placeholder="e.g. +234 801 234 5678"
-                           class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Initial Password *</label>
-                    <input type="password" name="password" required minlength="8" value="Password123!"
-                           class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
-                    <p class="text-xs text-slate-500 mt-1">Minimum 8 characters. Defaults to Password123!</p>
-                </div>
+                <?php $this->include('components/input', [
+                    'name' => 'name',
+                    'id' => 'user_name',
+                    'label' => 'Full Name',
+                    'placeholder' => 'e.g. John Doe',
+                    'required' => true
+                ]); ?>
+
+                <?php $this->include('components/input', [
+                    'name' => 'email',
+                    'id' => 'user_email',
+                    'type' => 'email',
+                    'label' => 'Email Address',
+                    'placeholder' => 'e.g. jdoe@claret.edu.ng',
+                    'required' => true
+                ]); ?>
+
+                <?php $this->include('components/input', [
+                    'name' => 'phone',
+                    'id' => 'user_phone',
+                    'type' => 'tel',
+                    'label' => 'Phone Number',
+                    'placeholder' => 'e.g. +234 801 234 5678'
+                ]); ?>
+
+                <?php $this->include('components/input', [
+                    'name' => 'password',
+                    'id' => 'user_password',
+                    'type' => 'password',
+                    'label' => 'Initial Password',
+                    'value' => 'Password123!',
+                    'required' => true,
+                    'helpText' => 'Minimum 8 characters. Defaults to Password123!'
+                ]); ?>
             </div>
         </div>
 
-        <div class="border-b border-slate-200 pb-5">
-            <h3 class="text-base font-semibold text-slate-900 mb-4">2. Role Allocations *</h3>
+        <!-- 2. Role Allocations -->
+        <div class="space-y-4 border-b border-slate-200 pb-6">
+            <div>
+                <h3 class="text-base font-bold text-slate-900">2. Role Allocations <span class="text-brand-600">*</span></h3>
+                <p class="text-xs text-slate-500 mt-0.5">Select one or more permission roles for this account.</p>
+            </div>
+
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <?php if ($actor->hasRole('super_admin')): ?>
-                    <label class="flex items-center gap-2 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
-                        <input type="checkbox" name="roles[]" value="super_admin" class="rounded text-brand-600 focus:ring-brand-500">
-                        <span class="text-sm font-medium text-slate-900">Super Admin</span>
+                    <label class="flex items-center gap-3 p-3.5 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50/80 transition">
+                        <input type="checkbox" name="roles[]" value="super_admin" class="w-4 h-4 rounded text-brand-600 focus:ring-brand-500 border-slate-300">
+                        <div>
+                            <span class="text-sm font-semibold text-slate-900 block">Super Admin</span>
+                            <span class="text-xs text-slate-500 block">Full system access</span>
+                        </div>
                     </label>
                 <?php endif; ?>
-                <label class="flex items-center gap-2 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
-                    <input type="checkbox" name="roles[]" value="admin" class="rounded text-brand-600 focus:ring-brand-500">
-                    <span class="text-sm font-medium text-slate-900">Admin</span>
+
+                <label class="flex items-center gap-3 p-3.5 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50/80 transition">
+                    <input type="checkbox" name="roles[]" value="admin" class="w-4 h-4 rounded text-brand-600 focus:ring-brand-500 border-slate-300">
+                    <div>
+                        <span class="text-sm font-semibold text-slate-900 block">Admin</span>
+                        <span class="text-xs text-slate-500 block">Academic management</span>
+                    </div>
                 </label>
-                <label class="flex items-center gap-2 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
-                    <input type="checkbox" name="roles[]" value="teacher" class="rounded text-brand-600 focus:ring-brand-500">
-                    <span class="text-sm font-medium text-slate-900">Teacher</span>
+
+                <label class="flex items-center gap-3 p-3.5 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50/80 transition">
+                    <input type="checkbox" name="roles[]" value="teacher" class="w-4 h-4 rounded text-brand-600 focus:ring-brand-500 border-slate-300">
+                    <div>
+                        <span class="text-sm font-semibold text-slate-900 block">Teacher</span>
+                        <span class="text-xs text-slate-500 block">Grading & attendance</span>
+                    </div>
                 </label>
-                <label class="flex items-center gap-2 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
-                    <input type="checkbox" name="roles[]" value="student" checked class="rounded text-brand-600 focus:ring-brand-500">
-                    <span class="text-sm font-medium text-slate-900">Student</span>
+
+                <label class="flex items-center gap-3 p-3.5 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50/80 transition">
+                    <input type="checkbox" name="roles[]" value="student" checked class="w-4 h-4 rounded text-brand-600 focus:ring-brand-500 border-slate-300">
+                    <div>
+                        <span class="text-sm font-semibold text-slate-900 block">Student</span>
+                        <span class="text-xs text-slate-500 block">Coursework & results</span>
+                    </div>
                 </label>
-                <label class="flex items-center gap-2 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
-                    <input type="checkbox" name="roles[]" value="parent" class="rounded text-brand-600 focus:ring-brand-500">
-                    <span class="text-sm font-medium text-slate-900">Parent / Guardian</span>
+
+                <label class="flex items-center gap-3 p-3.5 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50/80 transition">
+                    <input type="checkbox" name="roles[]" value="parent" class="w-4 h-4 rounded text-brand-600 focus:ring-brand-500 border-slate-300">
+                    <div>
+                        <span class="text-sm font-semibold text-slate-900 block">Parent / Guardian</span>
+                        <span class="text-xs text-slate-500 block">Child progress tracking</span>
+                    </div>
                 </label>
             </div>
         </div>
 
-        <div class="border-b border-slate-200 pb-5">
-            <h3 class="text-base font-semibold text-slate-900 mb-4">3. Specialized Profile Metadata (Optional)</h3>
+        <!-- 3. Specialized Profile Metadata -->
+        <div class="space-y-4 border-b border-slate-200 pb-6">
+            <div>
+                <h3 class="text-base font-bold text-slate-900">3. Specialized Profile Metadata (Optional)</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Role-specific identifiers and class placements.</p>
+            </div>
+
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Student Admission No.</label>
-                    <input type="text" name="admission_number" placeholder="e.g. STD-2026-001"
-                           class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Teacher Staff ID</label>
-                    <input type="text" name="staff_id" placeholder="e.g. TCH-0042"
-                           class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Current Class (Students)</label>
-                    <select name="current_class_id" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
-                        <option value="">-- No Class Selected --</option>
-                        <?php foreach ($classes as $c): ?>
-                            <option value="<?= e($c->id) ?>"><?= e($c->name) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
+                <?php $this->include('components/input', [
+                    'name' => 'admission_number',
+                    'id' => 'user_admission_number',
+                    'label' => 'Student Admission No.',
+                    'placeholder' => 'e.g. STD-2026-001'
+                ]); ?>
+
+                <?php $this->include('components/input', [
+                    'name' => 'staff_id',
+                    'id' => 'user_staff_id',
+                    'label' => 'Teacher Staff ID',
+                    'placeholder' => 'e.g. TCH-0042'
+                ]); ?>
+
+                <?php $this->include('components/select', [
+                    'name' => 'current_class_id',
+                    'id' => 'user_current_class_id',
+                    'label' => 'Current Class (Students)',
+                    'options' => $classOptions,
+                    'selected' => '',
+                    'placeholder' => ''
+                ]); ?>
             </div>
         </div>
 
+        <!-- Form Actions -->
         <div class="flex items-center justify-end gap-3 pt-2">
-            <a href="/admin/users" class="px-5 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-900">Cancel</a>
-            <button type="submit" class="px-6 py-2.5 bg-brand-600 text-white font-semibold rounded-lg hover:bg-brand-700 shadow-sm transition">
-                Create User Account
-            </button>
+            <?php $this->include('components/button', [
+                'type' => 'button',
+                'variant' => 'secondary',
+                'label' => 'Cancel',
+                'attributes' => 'onclick="window.location.href=\'/admin/users\''
+            ]); ?>
+
+            <?php $this->include('components/button', [
+                'type' => 'submit',
+                'variant' => 'primary',
+                'label' => 'Create User Account'
+            ]); ?>
         </div>
     </form>
 </div>

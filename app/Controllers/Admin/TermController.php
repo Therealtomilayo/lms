@@ -50,7 +50,7 @@ class TermController extends Controller
             'sessions' => $sessions,
             'selectedSessionId' => $selectedSessionId,
             'terms' => $terms,
-        ], 'layouts/admin');
+        ]);
     }
 
     public function store(Request $request): Response

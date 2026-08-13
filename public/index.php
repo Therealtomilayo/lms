@@ -92,6 +92,9 @@ try {
     $router->get('/password/reset/{token}', [AuthController::class, 'showResetPassword']);
     $router->post('/password/reset', [AuthController::class, 'resetPassword'], [$passwordResetThrottle, CsrfMiddleware::class]);
 
+    // Developer Showcase Route (Environment-restricted inside the controller)
+    $router->get('/dev/showcase', [\App\Controllers\Dev\ShowcaseController::class, 'index']);
+
     // Authenticated Routes
     $router->post('/logout', [AuthController::class, 'logout'], [AuthMiddleware::class, CsrfMiddleware::class]);
 

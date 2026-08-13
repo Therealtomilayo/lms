@@ -46,7 +46,7 @@ class ClassController extends Controller
             'headerTitle' => 'Classes & Arms',
             'classes' => $classes,
             'levels' => $levels,
-        ], 'layouts/admin');
+        ]);
     }
 
     public function store(Request $request): Response

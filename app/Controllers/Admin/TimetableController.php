@@ -30,6 +30,7 @@ class TimetableController extends Controller
         ?AcademicRepository $academicRepo = null,
         ?TimetableRepository $timetableRepo = null
     ) {
+        parent::__construct();
         $this->timetableService = $timetableService ?? new TimetableService();
         $this->academicRepo = $academicRepo ?? new AcademicRepository();
         $this->timetableRepo = $timetableRepo ?? new TimetableRepository();

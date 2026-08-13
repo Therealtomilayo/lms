@@ -44,7 +44,7 @@ class SessionController extends Controller
             'title' => 'Academic Sessions — Claret LMS',
             'headerTitle' => 'Academic Sessions',
             'sessions' => $sessions,
-        ], 'layouts/admin');
+        ]);
     }
 
     public function store(Request $request): Response

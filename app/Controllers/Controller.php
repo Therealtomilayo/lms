@@ -112,6 +112,9 @@ abstract class Controller
 
     protected function user(Request $request): ?UserContext
     {
+        if (!isset($this->authenticator)) {
+            $this->authenticator = new WebAuthenticator();
+        }
         return $this->authenticator->user($request);
     }
 

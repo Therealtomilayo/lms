@@ -46,7 +46,7 @@ class AcademicLevelController extends Controller
             'headerTitle' => 'Academic Levels',
             'levels' => $levels,
             'gradingScales' => $gradingScales,
-        ], 'layouts/admin');
+        ]);
     }
 
     public function store(Request $request): Response
