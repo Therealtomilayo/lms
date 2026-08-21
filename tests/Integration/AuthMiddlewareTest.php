@@ -22,6 +22,7 @@ final class AuthMiddlewareTest extends TestCase
             public function authenticate(Request $request): ?UserContext { return $this->context; }
             public function check(Request $request): bool { return $this->context !== null; }
             public function user(Request $request): ?UserContext { return $this->context; }
+            public function getUserContext(?Request $request = null): ?UserContext { return $this->context; }
         };
     }
 

@@ -1,123 +1,159 @@
+<?php
+$this->layout('layouts/admin', [
+    'title' => 'Assessment Categories & Weights — Claret LMS',
+    'headerTitle' => 'Assessment Categories & Weights',
+    'headerSubtitle' => 'Define term assessment components (e.g., CA1, CA2, Exam) and assign weights that sum to 100%.'
+]);
+
+$sessionOptions = [];
+foreach ($sessions as $s) {
+    $sessionOptions[$s->id] = $s->name;
+}
+
+$termOptions = [];
+foreach ($terms as $t) {
+    $termOptions[$t->id] = $t->name;
+}
+?>
 <div class="space-y-6">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-            <h2 class="text-2xl font-bold text-slate-900 tracking-tight">Assessment Categories & Weights</h2>
-            <p class="text-sm text-slate-500 mt-1">Define term assessment components (e.g., CA1, CA2, Exam) and assign weights that sum to 100%.</p>
-        </div>
-    </div>
-
     <!-- Context Filter Bar -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
-        <form method="GET" action="/admin/assessment-categories" class="flex flex-wrap items-center gap-4">
-            <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase">Academic Session</label>
-                <select name="session_id" class="mt-1 px-3 py-1.5 text-sm rounded-xl border border-slate-300">
-                    <?php foreach ($sessions as $s): ?>
-                        <option value="<?= $s->id ?>" <?= $s->id == $selectedSessionId ? 'selected' : '' ?>>
-                            <?= e($s->name) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+        <form method="GET" action="/admin/assessment-categories" class="flex flex-col md:flex-row md:items-end gap-4 w-full">
+            <div class="w-full md:w-72">
+                <?php $this->include('components/select', [
+                    'name' => 'session_id',
+                    'id' => 'session_id',
+                    'label' => 'Academic Session',
+                    'options' => $sessionOptions,
+                    'selected' => $selectedSessionId
+                ]); ?>
+            </div>
+
+            <div class="w-full md:w-60">
+                <?php $this->include('components/select', [
+                    'name' => 'term_id',
+                    'id' => 'term_id',
+                    'label' => 'Term',
+                    'options' => $termOptions,
+                    'selected' => $selectedTermId
+                ]); ?>
             </div>
 
             <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase">Term</label>
-                <select name="term_id" class="mt-1 px-3 py-1.5 text-sm rounded-xl border border-slate-300">
-                    <?php foreach ($terms as $t): ?>
-                        <option value="<?= $t->id ?>" <?= $t->id == $selectedTermId ? 'selected' : '' ?>>
-                            <?= e($t->name) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
-            <div class="pt-5">
-                <button type="submit" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition">
-                    Filter
-                </button>
+                <?php $this->include('components/button', [
+                    'type' => 'submit',
+                    'variant' => 'secondary',
+                    'label' => 'Apply Filter',
+                    'class' => 'w-full md:w-auto min-h-[44px]'
+                ]); ?>
             </div>
         </form>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Categories List -->
-        <div class="lg:col-span-2 space-y-4">
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-base font-bold text-slate-900">Configured Categories</h3>
+        <div class="lg:col-span-2 space-y-6">
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
+                <div class="flex items-center justify-between flex-wrap gap-2">
+                    <h3 class="text-lg font-bold text-slate-900">Configured Categories</h3>
                     <?php 
                         $totalWeight = array_sum(array_map(fn($c) => $c->weightPercentage, $categories));
                         $isComplete = abs($totalWeight - 100.0) < 0.01;
                     ?>
-                    <span class="px-3 py-1 rounded-full text-xs font-bold <?= $isComplete ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200' ?>">
-                        Total Weight: <?= number_format($totalWeight, 1) ?>% / 100%
-                    </span>
+                    <?php $this->include('components/badge', [
+                        'label' => 'Total Weight: ' . number_format($totalWeight, 1) . '% / 100%',
+                        'variant' => $isComplete ? 'success' : 'danger'
+                    ]); ?>
                 </div>
 
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm border-collapse">
-                        <thead>
-                            <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-600 uppercase">
-                                <th class="py-3 px-4">Name</th>
-                                <th class="py-3 px-3">Weight (%)</th>
-                                <th class="py-3 px-3">Max Points</th>
-                                <th class="py-3 px-3 text-right">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100 font-medium">
-                            <?php if (empty($categories)): ?>
-                                <tr>
-                                    <td colspan="4" class="py-6 text-center text-slate-400 text-xs">
-                                        No categories defined for this session and term.
-                                    </td>
+                <?php if (empty($categories)): ?>
+                    <div class="py-6 text-center shadow-none">
+                        <?php $this->include('components/empty_state', [
+                            'title' => 'No Assessment Categories',
+                            'message' => 'No assessment categories or weights have been configured for the selected session and term.'
+                        ]); ?>
+                    </div>
+                <?php else: ?>
+                    <div class="overflow-x-auto rounded-lg border border-slate-200">
+                        <table class="w-full text-left text-sm border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                                    <th class="py-3 px-4">Name</th>
+                                    <th class="py-3 px-3">Weight (%)</th>
+                                    <th class="py-3 px-3">Max Points</th>
+                                    <th class="py-3 px-3 text-right">Action</th>
                                 </tr>
-                            <?php else: ?>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 font-medium text-slate-700">
                                 <?php foreach ($categories as $cat): ?>
-                                    <tr>
+                                    <tr class="hover:bg-slate-50/50 transition">
                                         <td class="py-3 px-4 font-bold text-slate-900"><?= e($cat->name) ?></td>
-                                        <td class="py-3 px-3"><?= number_format($cat->weightPercentage, 1) ?>%</td>
-                                        <td class="py-3 px-3"><?= number_format($cat->maxPoints, 1) ?></td>
+                                        <td class="py-3 px-3 font-mono"><?= number_format($cat->weightPercentage, 1) ?>%</td>
+                                        <td class="py-3 px-3 font-mono"><?= number_format($cat->maxPoints, 1) ?></td>
                                         <td class="py-3 px-3 text-right">
                                             <form method="POST" action="/admin/assessment-categories/<?= $cat->id ?>/delete" onsubmit="return confirm('Delete this category?');" class="inline">
-                                                <input type="hidden" name="csrf_token" value="<?= e(\App\Middleware\CsrfMiddleware::getToken()) ?>">
-                                                <button type="submit" class="text-xs text-rose-600 hover:text-rose-800 font-semibold">Delete</button>
+                                                <?= csrf_field() ?>
+                                                <?php $this->include('components/button', [
+                                                    'type' => 'submit',
+                                                    'variant' => 'danger',
+                                                    'label' => 'Delete',
+                                                    'class' => 'px-3 py-1.5 text-xs'
+                                                ]); ?>
                                             </form>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
 
         <!-- Add Category Form -->
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
-            <h3 class="text-base font-bold text-slate-900">Add Category</h3>
-            <form method="POST" action="/admin/assessment-categories" class="space-y-4">
-                <input type="hidden" name="csrf_token" value="<?= e(\App\Middleware\CsrfMiddleware::getToken()) ?>">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-5 h-fit">
+            <h3 class="text-lg font-bold text-slate-900">Add Category</h3>
+            <form method="POST" action="/admin/assessment-categories" class="space-y-5" novalidate>
+                <?= csrf_field() ?>
                 <input type="hidden" name="session_id" value="<?= e((string)$selectedSessionId) ?>">
                 <input type="hidden" name="term_id" value="<?= e((string)$selectedTermId) ?>">
 
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase">Category Name</label>
-                    <input type="text" name="name" required placeholder="e.g. Continuous Assessment 1" class="mt-1 w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500">
-                </div>
+                <?php $this->include('components/input', [
+                    'name' => 'name',
+                    'id' => 'category_name',
+                    'label' => 'Category Name',
+                    'required' => true,
+                    'placeholder' => 'e.g. Continuous Assessment 1'
+                ]); ?>
 
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase">Weight Percentage (%)</label>
-                    <input type="number" step="0.01" min="0.01" max="100" name="weight_percentage" required placeholder="e.g. 20.00" class="mt-1 w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500">
-                </div>
+                <?php $this->include('components/input', [
+                    'name' => 'weight_percentage',
+                    'id' => 'weight_percentage',
+                    'label' => 'Weight Percentage (%)',
+                    'type' => 'number',
+                    'required' => true,
+                    'placeholder' => 'e.g. 20.00',
+                    'attributes' => 'step="0.01" min="0.01" max="100"'
+                ]); ?>
 
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase">Max Points</label>
-                    <input type="number" step="0.01" min="1" name="max_points" value="100" required class="mt-1 w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500">
-                </div>
+                <?php $this->include('components/input', [
+                    'name' => 'max_points',
+                    'id' => 'max_points',
+                    'label' => 'Max Points',
+                    'type' => 'number',
+                    'required' => true,
+                    'value' => '100',
+                    'attributes' => 'step="0.01" min="1"'
+                ]); ?>
 
-                <button type="submit" class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs rounded-xl shadow-sm transition">
-                    Add Category
-                </button>
+                <div class="pt-2">
+                    <?php $this->include('components/button', [
+                        'type' => 'submit',
+                        'variant' => 'primary',
+                        'label' => 'Add Category',
+                        'class' => 'w-full justify-center'
+                    ]); ?>
+                </div>
             </form>
         </div>
     </div>

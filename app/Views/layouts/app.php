@@ -54,6 +54,7 @@
             $flashError = Session::getFlash('error') ?? ($_SESSION['flash_error'] ?? null);
             $flashWarning = Session::getFlash('warning') ?? ($_SESSION['flash_warning'] ?? null);
             $flashInfo = Session::getFlash('info') ?? ($_SESSION['flash_info'] ?? null);
+            $flashErrors = Session::getFlash('errors') ?? ($_SESSION['flash_errors'] ?? []);
             ?>
 
             <?php if (!empty($flashSuccess)): ?>
@@ -65,6 +66,18 @@
             <?php if (!empty($flashError)): ?>
                 <div class="mb-6">
                     <?php $this->include('components/alert', ['type' => 'error', 'message' => e($flashError), 'dismissible' => true]); ?>
+                </div>
+            <?php elseif (!empty($flashErrors)): ?>
+                <div class="mb-6 space-y-2">
+                    <?php foreach ($flashErrors as $errVal): ?>
+                        <?php if (is_array($errVal)): ?>
+                            <?php foreach ($errVal as $errMsg): ?>
+                                <?php $this->include('components/alert', ['type' => 'error', 'message' => e($errMsg), 'dismissible' => true]); ?>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <?php $this->include('components/alert', ['type' => 'error', 'message' => e($errVal), 'dismissible' => true]); ?>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
                 </div>
             <?php endif; ?>
 

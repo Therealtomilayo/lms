@@ -80,6 +80,23 @@ final class ClassSubject
         return $this->status === self::STATUS_ACTIVE;
     }
 
+    public function __get(string $name): mixed
+    {
+        return match ($name) {
+            'subjectName' => $this->subject?->name ?? '',
+            'subjectCode' => $this->subject?->code ?? '',
+            'teacherName' => $this->teacher?->user?->name ?? ($this->teacher?->name ?? ''),
+            'className' => $this->schoolClass?->name ?? '',
+            'sectionArm' => $this->schoolClass?->sectionArm ?? '',
+            default => null,
+        };
+    }
+
+    public function __isset(string $name): bool
+    {
+        return in_array($name, ['subjectName', 'subjectCode', 'teacherName', 'className', 'sectionArm'], true);
+    }
+
     public function toArray(): array
     {
         return [

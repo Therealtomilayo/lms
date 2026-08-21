@@ -108,7 +108,7 @@ $this->layout('layouts/admin', [
         'name' => 'code',
         'id' => 'create_sub_code',
         'label' => 'Subject Code',
-        'placeholder' => 'e.g. MTH101, ENG',
+        'placeholder' => 'e.g. jss1_mth, jss1_eng',
         'required' => true,
         'class' => 'uppercase'
     ]); ?>

@@ -68,6 +68,11 @@ class AcademicRepository
         return $this->findActiveSession();
     }
 
+    public function getActiveSession(): ?AcademicSession
+    {
+        return $this->findActiveSession();
+    }
+
     /**
      * @return AcademicSession[]
      */
@@ -233,6 +238,16 @@ class AcademicRepository
             }
         }
         return $this->findCurrentTerm();
+    }
+
+    public function findActiveTerm(): ?Term
+    {
+        return $this->getCurrentTerm();
+    }
+
+    public function getActiveTerm(): ?Term
+    {
+        return $this->getCurrentTerm();
     }
 
     public function getAllTerms(): array
@@ -723,6 +738,14 @@ class AcademicRepository
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         return array_map(fn(array $row) => $this->hydrateClassSubject($row), $rows);
+    }
+
+    /**
+     * @return ClassSubject[]
+     */
+    public function getClassSubjectsByClassAndSession(int $classId, int $sessionId): array
+    {
+        return $this->getClassSubjectsBySession($sessionId, $classId);
     }
 
     /**

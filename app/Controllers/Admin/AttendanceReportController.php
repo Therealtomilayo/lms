@@ -29,10 +29,10 @@ class AttendanceReportController extends Controller
         $terms = $this->academicRepo->getAllTerms();
         $currentTerm = $this->academicRepo->getCurrentTerm();
 
-        $selectedClassId = $request->getQuery('class_id') ? (int)$request->getQuery('class_id') : ($classes[0]->id ?? 0);
-        $selectedTermId = $request->getQuery('term_id') ? (int)$request->getQuery('term_id') : ($currentTerm?->id ?? 0);
-        $startDate = $request->getQuery('start_date') ? (string)$request->getQuery('start_date') : null;
-        $endDate = $request->getQuery('end_date') ? (string)$request->getQuery('end_date') : null;
+        $selectedClassId = $request->query('class_id') ? (int)$request->query('class_id') : ($classes[0]->id ?? 0);
+        $selectedTermId = $request->query('term_id') ? (int)$request->query('term_id') : ($currentTerm?->id ?? 0);
+        $startDate = $request->query('start_date') ? (string)$request->query('start_date') : null;
+        $endDate = $request->query('end_date') ? (string)$request->query('end_date') : null;
 
         $reportData = [];
         if ($selectedClassId > 0 && $selectedTermId > 0) {

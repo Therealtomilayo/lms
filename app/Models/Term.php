@@ -101,4 +101,17 @@ final class Term
             'updated_at' => $this->updatedAt,
         ];
     }
+
+    public function __get(string $name): mixed
+    {
+        if ($name === 'isCurrent') {
+            return $this->isActive();
+        }
+        return null;
+    }
+
+    public function __isset(string $name): bool
+    {
+        return $name === 'isCurrent';
+    }
 }

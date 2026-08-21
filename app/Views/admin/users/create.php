@@ -19,11 +19,10 @@ foreach ($classes as $c) {
         </div>
         <div>
             <?php $this->include('components/button', [
-                'type' => 'button',
                 'variant' => 'secondary',
                 'label' => 'Back to Directory',
-                'icon' => '<svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>',
-                'attributes' => 'onclick="window.location.href=\'/admin/users\''
+                'href' => '/admin/users',
+                'icon' => '<svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>'
             ]); ?>
         </div>
     </div>
@@ -165,10 +164,9 @@ foreach ($classes as $c) {
         <!-- Form Actions -->
         <div class="flex items-center justify-end gap-3 pt-2">
             <?php $this->include('components/button', [
-                'type' => 'button',
                 'variant' => 'secondary',
                 'label' => 'Cancel',
-                'attributes' => 'onclick="window.location.href=\'/admin/users\''
+                'href' => '/admin/users'
             ]); ?>
 
             <?php $this->include('components/button', [

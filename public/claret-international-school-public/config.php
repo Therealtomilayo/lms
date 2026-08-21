@@ -5,6 +5,11 @@
  * Swap this for DB-driven data later without touching the templates.
  */
 
+// ─── SEO / deployment ────────────────────────────────────────────────────────
+$site_base_url   = 'https://claretschools.xo.je';   // no trailing slash
+$og_image_default = $site_base_url . '/assets/img/hero-carousel.jpg';
+// ─────────────────────────────────────────────────────────────────────────────
+
 $school = [
     'name'        => 'Claret International School',
     'short_name'  => 'Claret',
@@ -41,17 +46,18 @@ $school = [
         'Enrichment' => ['Dance Club'],
     ],
     'stats' => [
-        ['value' => '15+', 'label' => 'Years of excellence'],
-        ['value' => '100%', 'label' => 'Pass rate'],
+        ['value' => '10+', 'label' => 'Years of excellence'],
+        ['value' => '98%', 'label' => 'Pass rate'],
         ['value' => '1:12', 'label' => 'Teacher to learner ratio'],
     ],
 ];
 
 $nav = [
-    'index.php'      => 'Home',
-    'about.php'      => 'About us',
-    'admissions.php' => 'Admissions',
-    'contact.php'    => 'Contact',
+    '/'           => 'Home',
+    '/about'      => 'About us',
+    '/admissions' => 'Admissions',
+    '/contact'    => 'Contact',
 ];
 
-$current_page = basename($_SERVER['SCRIPT_NAME']);
+$current_page = basename($_SERVER['SCRIPT_NAME'], '.php');
+$current_page = $current_page === 'index' ? '/' : '/' . $current_page;

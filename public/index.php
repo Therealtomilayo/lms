@@ -334,18 +334,9 @@ try {
     $router->get('/parent/children/{studentId}/timetable', [\App\Controllers\Parent\TimetableController::class, 'index'], $parentAuth);
 
     // Role-Guarded Dashboards
-    $router->get('/admin/dashboard', function (Request $req): Response {
-        $view = new \App\Core\View();
-        return Response::html($view->render('admin/sessions/index', [
-            'title' => 'Admin Dashboard — Claret LMS',
-            'headerTitle' => 'Admin Overview',
-            'sessions' => (new \App\Repositories\AcademicRepository())->getAllSessions(),
-        ], 'layouts/admin'));
-    }, [AuthMiddleware::class, RoleMiddleware::allow(['admin', 'super_admin'])]);
+    $router->get('/admin/dashboard', [\App\Controllers\Admin\DashboardController::class, 'index'], $adminAuth);
 
-    $router->get('/teacher/dashboard', function (Request $req): Response {
-        return Response::html('<h1>Teacher Dashboard</h1><p>Welcome to the Teacher instructional portal.</p>');
-    }, [AuthMiddleware::class, RoleMiddleware::allow(['teacher'])]);
+    $router->get('/teacher/dashboard', [\App\Controllers\Teacher\DashboardController::class, 'index'], $teacherAuth);
 
     $router->get('/student/dashboard', function (Request $req): Response {
         return Response::html('<h1>Student Dashboard</h1><p>Welcome to the Student learning portal.</p>');

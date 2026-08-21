@@ -164,4 +164,30 @@ final class Assignment
     {
         return $this->status === self::STATUS_ARCHIVED;
     }
+
+    public function __get(string $name): mixed
+    {
+        return match ($name) {
+            'dueDate', 'due_date' => $this->dueAt,
+            'subjectCode', 'subject_code' => $this->classSubject?->subjectCode,
+            'subjectName', 'subject_name' => $this->classSubject?->subjectName,
+            'className', 'class_name' => $this->classSubject?->className,
+            'sectionArm', 'section_arm' => $this->classSubject?->sectionArm,
+            'teacherName', 'teacher_name' => $this->teacher?->userName ?? $this->teacher?->name,
+            default => null,
+        };
+    }
+
+    public function __isset(string $name): bool
+    {
+        return match ($name) {
+            'dueDate', 'due_date' => true,
+            'subjectCode', 'subject_code' => !empty($this->classSubject?->subjectCode),
+            'subjectName', 'subject_name' => !empty($this->classSubject?->subjectName),
+            'className', 'class_name' => !empty($this->classSubject?->className),
+            'sectionArm', 'section_arm' => !empty($this->classSubject?->sectionArm),
+            'teacherName', 'teacher_name' => !empty($this->teacher),
+            default => false,
+        };
+    }
 }

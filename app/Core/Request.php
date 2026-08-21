@@ -77,9 +77,44 @@ class Request
         return $this->queryParams[$key] ?? $default;
     }
 
+    public function getQuery(string $key, mixed $default = null): mixed
+    {
+        return $this->query($key, $default);
+    }
+
+    public function get(string $key, mixed $default = null): mixed
+    {
+        return $this->queryParams[$key] ?? $this->postParams[$key] ?? $default;
+    }
+
     public function post(string $key, mixed $default = null): mixed
     {
         return $this->postParams[$key] ?? $default;
+    }
+
+    public function getPost(string $key, mixed $default = null): mixed
+    {
+        return $this->post($key, $default);
+    }
+
+    public function getBodyParam(string $key, mixed $default = null): mixed
+    {
+        return $this->post($key, $default);
+    }
+
+    public function getBodyParams(): array
+    {
+        return $this->postParams;
+    }
+
+    public function getQueryParams(): array
+    {
+        return $this->queryParams;
+    }
+
+    public function getRouteParam(string $key, mixed $default = null): mixed
+    {
+        return $this->getAttribute($key, $default);
     }
 
     public function input(string $key, mixed $default = null): mixed
@@ -212,5 +247,11 @@ class Request
     public function getAttribute(string $key, mixed $default = null): mixed
     {
         return $this->attributes[$key] ?? $default;
+    }
+
+    public function getSession(): Session
+    {
+        Session::start();
+        return new Session();
     }
 }

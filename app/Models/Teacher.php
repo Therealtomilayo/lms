@@ -52,4 +52,18 @@ final class Teacher
             'updated_at' => $this->updatedAt,
         ];
     }
+
+    public function __get(string $name): mixed
+    {
+        return match ($name) {
+            'name', 'userName', 'teacherName' => $this->user?->name ?? '',
+            'email', 'userEmail' => $this->user?->email ?? '',
+            default => null,
+        };
+    }
+
+    public function __isset(string $name): bool
+    {
+        return in_array($name, ['name', 'userName', 'teacherName', 'email', 'userEmail'], true);
+    }
 }

@@ -9,11 +9,13 @@ $maps_embed_url = "https://www.google.com/maps?q={$school['lat']},{$school['lng'
 ?>
 
 <!-- PAGE INTRO -->
-<section class="bg-brand-dark text-white px-5 lg:px-8 py-16 lg:py-24">
-  <div class="mx-auto max-w-7xl">
+<section class="relative bg-brand-dark text-white px-5 lg:px-8 py-16 lg:py-24 overflow-hidden">
+  <img src="assets/img/Claret-International-School-9-1024x576.jpg" alt="" class="absolute inset-0 h-full w-full object-cover object-center opacity-20" aria-hidden="true">
+  <div class="absolute inset-0 bg-gradient-to-r from-brand-dark via-brand-dark/90 to-brand-dark/50"></div>
+  <div class="relative mx-auto max-w-7xl">
     <p class="mb-4 text-sm font-bold uppercase tracking-[0.22em] text-brand-accent">Contact</p>
     <h1 class="max-w-3xl text-balance font-serif text-4xl md:text-6xl font-bold leading-tight">Come and see Claret for yourself.</h1>
-    <p class="mt-6 max-w-2xl text-base md:text-lg leading-7 text-white/75">Reach out with any question — admissions, school life, or a campus visit. We'd love to hear from you.</p>
+    <p class="mt-6 max-w-2xl text-base md:text-lg leading-7 text-white/75">Reach out with any question, whether about admissions, school life, or a campus visit. We'd love to hear from you.</p>
   </div>
 </section>
 
@@ -44,7 +46,7 @@ $maps_embed_url = "https://www.google.com/maps?q={$school['lat']},{$school['lng'
           <span class="flex size-11 items-center justify-center rounded-2xl bg-brand-primary/10 text-brand-primary shrink-0"><i data-lucide="clock" class="size-5" aria-hidden="true"></i></span>
           <div>
             <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">School hours</h3>
-            <p class="font-semibold text-brand-dark">Monday – Friday, 8:00am – 3:00pm</p>
+            <p class="font-semibold text-brand-dark">Monday to Friday, 8:00am to 3:00pm</p>
           </div>
         </div>
       </div>
@@ -89,7 +91,7 @@ $maps_embed_url = "https://www.google.com/maps?q={$school['lat']},{$school['lng'
 
       <div id="contact-success" class="hidden items-start gap-3 rounded-xl bg-brand-primary/10 p-5 text-brand-dark mt-2">
         <i data-lucide="check" class="size-5 mt-0.5 text-brand-primary shrink-0" aria-hidden="true"></i>
-        <p class="text-sm leading-6">Thank you — your enquiry has been sent. Our admissions team will be in touch shortly.</p>
+        <p class="text-sm leading-6">Thank you, your enquiry has been sent. Our admissions team will be in touch shortly.</p>
       </div>
     </div>
   </div>

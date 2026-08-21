@@ -4,12 +4,18 @@
   <div class="mx-auto max-w-7xl px-5 lg:px-8 py-16 grid gap-12 md:grid-cols-2 lg:grid-cols-[1.3fr_0.9fr_0.9fr_1.1fr]">
 
     <div>
-      <img src="assets/img/logo.png" alt="<?= htmlspecialchars($school['name']) ?>" class="h-20 w-20 object-contain mb-5 brightness-0 invert">
-      <p class="max-w-xs text-sm leading-6 text-white/70">Raising confident, curious learners who lead with discipline, integrity and ardour — from creche through secondary school.</p>
+      <img src="assets/img/logo.png" alt="<?= htmlspecialchars($school['name']) ?>" class="h-20 w-20 object-contain mb-5 bg-white rounded-2xl p-1.5">
+      <p class="max-w-xs text-sm leading-6 text-white/70">Raising confident, curious learners who lead with discipline, integrity and ardour, from creche through secondary school.</p>
       <div class="flex items-center gap-3 mt-6">
-        <a href="#" aria-label="Facebook" class="rounded-full border border-white/20 p-2.5 hover:bg-white/10 hover:border-white/40 transition-colors"><i data-lucide="facebook" class="size-4" aria-hidden="true"></i></a>
-        <a href="#" aria-label="Instagram" class="rounded-full border border-white/20 p-2.5 hover:bg-white/10 hover:border-white/40 transition-colors"><i data-lucide="instagram" class="size-4" aria-hidden="true"></i></a>
-        <a href="#" aria-label="X (Twitter)" class="rounded-full border border-white/20 p-2.5 hover:bg-white/10 hover:border-white/40 transition-colors"><i data-lucide="twitter" class="size-4" aria-hidden="true"></i></a>
+        <a href="https://www.facebook.com/ClaretInternationalSchool/" target="_blank" rel="noopener noreferrer" aria-label="Facebook" class="rounded-full border border-white/20 p-2.5 hover:bg-white/10 hover:border-white/40 transition-colors">
+          <img src="https://cdn.simpleicons.org/facebook/ffffff" class="size-4" alt="" aria-hidden="true" width="16" height="16">
+        </a>
+        <a href="https://www.instagram.com/claretintlschoolabuja/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" class="rounded-full border border-white/20 p-2.5 hover:bg-white/10 hover:border-white/40 transition-colors">
+          <img src="https://cdn.simpleicons.org/instagram/ffffff" class="size-4" alt="" aria-hidden="true" width="16" height="16">
+        </a>
+        <a href="https://www.youtube.com/channel/UCJN9AQtW-iwW5SnWsyCGz-A" target="_blank" rel="noopener noreferrer" aria-label="YouTube" class="rounded-full border border-white/20 p-2.5 hover:bg-white/10 hover:border-white/40 transition-colors">
+          <img src="https://cdn.simpleicons.org/youtube/ffffff" class="size-4" alt="" aria-hidden="true" width="16" height="16">
+        </a>
       </div>
     </div>
 
@@ -19,7 +25,7 @@
         <?php foreach ($nav as $href => $label): ?>
           <li><a href="<?= $href ?>" class="hover:text-white transition-colors"><?= $label ?></a></li>
         <?php endforeach; ?>
-        <li><a href="portal.php" class="hover:text-white transition-colors">Parent portal</a></li>
+        <li><a href="/portal" class="hover:text-white transition-colors">Parent portal</a></li>
       </ul>
     </div>
 
@@ -35,7 +41,7 @@
 
     <div>
       <h3 class="text-xs font-bold uppercase tracking-[0.2em] text-brand-accent mb-5">Stay in the loop</h3>
-      <p class="text-sm text-white/70 mb-4">Term dates, admissions news and school life — straight to your inbox.</p>
+      <p class="text-sm text-white/70 mb-4">Term dates, admissions news and school life, straight to your inbox.</p>
       <form class="flex items-center gap-2" action="#" method="post">
         <label for="newsletter-email" class="sr-only">Email address</label>
         <input id="newsletter-email" name="email" type="email" required placeholder="you@email.com"

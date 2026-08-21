@@ -68,4 +68,9 @@ class WebAuthenticator implements AuthenticatorInterface
     {
         return $this->authenticate($request);
     }
+
+    public function getUserContext(?Request $request = null): ?UserContext
+    {
+        return $this->authenticate($request ?? Request::createFromGlobals());
+    }
 }

@@ -43,11 +43,12 @@ class BackupController extends Controller
 
         $backups = $this->backupService->listBackups();
 
-        return $this->view('admin/backups/index', [
-            'title' => 'Database Backups — Claret LMS',
+        return Response::html($this->render('admin/backups/index', [
+            'title' => 'Database Backups & Archival — Claret Portal',
             'headerTitle' => 'Database Backups & Archival',
             'backups' => $backups,
-        ], 'layouts/admin');
+            'csrf_token' => $request->getSession()->get('_csrf_token', ''),
+        ], 'layouts/admin'));
     }
 
     public function create(Request $request): Response

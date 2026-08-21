@@ -44,7 +44,8 @@ class ContentController extends Controller
     public function index(Request $request): Response
     {
         $userContext = $this->authenticator->getUserContext();
-        $teacher = $this->teacherRepository->findTeacherByUserId($userContext->userId);
+        $userId = $userContext->id ?? ($userContext->userId ?? 0);
+        $teacher = $this->teacherRepository->findTeacherByUserId((int)$userId);
 
         if (!$teacher && !$userContext->hasAnyRole(['super_admin', 'admin'])) {
             return $this->view('errors/403', ['message' => 'Teacher profile not found.'], 403);
@@ -56,7 +57,7 @@ class ContentController extends Controller
             ? $this->academicRepository->getClassSubjectsByTeacher($teacherId, $activeSession?->id)
             : $this->academicRepository->getAllClassSubjects($activeSession?->id);
 
-        $selectedClassSubjectId = (int)$request->query('class_subject_id', 0);
+        $selectedClassSubjectId = (int)($request->query('class_subject_id', 0) ?: $request->get('class_subject_id', 0));
         if ($selectedClassSubjectId <= 0 && !empty($classSubjects)) {
             $selectedClassSubjectId = $classSubjects[0]->id;
         }
@@ -76,7 +77,9 @@ class ContentController extends Controller
             }
         }
 
-        return $this->view('teacher/content/index', [
+        return Response::html($this->render('teacher/content/index', [
+            'title' => 'Learning Materials — Claret Faculty Portal',
+            'headerTitle' => 'Course Content & Study Materials',
             'classSubjects' => $classSubjects,
             'selectedClassSubjectId' => $selectedClassSubjectId,
             'selectedClassSubject' => $selectedClassSubject,
@@ -84,7 +87,7 @@ class ContentController extends Controller
             'topics' => $topics,
             'activeSession' => $activeSession,
             'user' => $userContext,
-        ]);
+        ], 'layouts/teacher'));
     }
 
     /**
@@ -93,8 +96,13 @@ class ContentController extends Controller
      */
     public function create(Request $request): Response
     {
-        $userContext = $this->authenticator->getUserContext();
-        $teacher = $this->teacherRepository->findTeacherByUserId($userContext->userId);
+        $userContext = $this->getUserContext($request);
+        if (!$userContext) {
+            return Response::redirect('/login');
+        }
+
+        $userId = $userContext->id ?? ($userContext->userId ?? 0);
+        $teacher = $this->teacherRepository->findTeacherByUserId((int)$userId);
         $activeSession = $this->academicRepository->getActiveSession();
 
         $teacherId = $teacher ? $teacher->id : 0;
@@ -102,14 +110,16 @@ class ContentController extends Controller
             ? $this->academicRepository->getClassSubjectsByTeacher($teacherId, $activeSession?->id)
             : $this->academicRepository->getAllClassSubjects($activeSession?->id);
 
-        $presetClassSubjectId = (int)$request->query('class_subject_id', 0);
+        $presetClassSubjectId = (int)($request->query('class_subject_id', 0) ?: $request->get('class_subject_id', 0));
 
-        return $this->view('teacher/content/create', [
+        return Response::html($this->render('teacher/content/create', [
+            'title' => 'Upload Learning Material — Claret Faculty Portal',
+            'headerTitle' => 'Create Learning Material',
             'classSubjects' => $classSubjects,
             'presetClassSubjectId' => $presetClassSubjectId,
             'activeSession' => $activeSession,
             'user' => $userContext,
-        ]);
+        ], 'layouts/teacher'));
     }
 
     /**
@@ -118,8 +128,12 @@ class ContentController extends Controller
      */
     public function store(Request $request): Response
     {
-        $userContext = $this->authenticator->getUserContext();
-        $postData = $request->post();
+        $userContext = $this->getUserContext($request);
+        if (!$userContext) {
+            return Response::redirect('/login');
+        }
+
+        $postData = $request->all();
         $files = $request->files();
         $uploadedFile = $files['attachment'] ?? null;
 
@@ -144,26 +158,33 @@ class ContentController extends Controller
      * Show form to edit an existing content item.
      * Route: GET /teacher/content/{id}/edit
      */
-    public function edit(Request $request, array $params): Response
+    public function edit(Request $request, array|string|int $id): Response
     {
-        $userContext = $this->authenticator->getUserContext();
-        $id = (int)($params['id'] ?? 0);
+        $userContext = $this->getUserContext($request);
+        if (!$userContext) {
+            return Response::redirect('/login');
+        }
+
+        $contentId = is_array($id) ? (int)($id['id'] ?? 0) : (int)$id;
 
         try {
-            $result = $this->contentService->getContentItem($id, $userContext);
+            $result = $this->contentService->getContentItem($contentId, $userContext);
             $item = $result->data['content_item'];
 
             $activeSession = $this->academicRepository->getActiveSession();
-            $teacher = $this->teacherRepository->findTeacherByUserId($userContext->userId);
+            $userId = $userContext->id ?? ($userContext->userId ?? 0);
+            $teacher = $this->teacherRepository->findTeacherByUserId((int)$userId);
             $classSubjects = $teacher
                 ? $this->academicRepository->getClassSubjectsByTeacher($teacher->id, $activeSession?->id)
                 : $this->academicRepository->getAllClassSubjects($activeSession?->id);
 
-            return $this->view('teacher/content/edit', [
+            return Response::html($this->render('teacher/content/edit', [
+                'title' => 'Edit Learning Material — Claret Faculty Portal',
+                'headerTitle' => 'Edit Learning Material',
                 'item' => $item,
                 'classSubjects' => $classSubjects,
                 'user' => $userContext,
-            ]);
+            ], 'layouts/teacher'));
         } catch (ResourceNotFoundException $e) {
             return $this->view('errors/404', ['message' => $e->getMessage()], 404);
         } catch (AuthorizationException $e) {
@@ -175,16 +196,20 @@ class ContentController extends Controller
      * Update an existing content item.
      * Route: POST /teacher/content/{id}/edit
      */
-    public function update(Request $request, array $params): Response
+    public function update(Request $request, array|string|int $id): Response
     {
-        $userContext = $this->authenticator->getUserContext();
-        $id = (int)($params['id'] ?? 0);
-        $postData = $request->post();
+        $userContext = $this->getUserContext($request);
+        if (!$userContext) {
+            return Response::redirect('/login');
+        }
+
+        $contentId = is_array($id) ? (int)($id['id'] ?? 0) : (int)$id;
+        $postData = $request->all();
         $files = $request->files();
         $uploadedFile = $files['attachment'] ?? null;
 
         try {
-            $result = $this->contentService->updateContent($id, $postData, $uploadedFile, $userContext);
+            $result = $this->contentService->updateContent($contentId, $postData, $uploadedFile, $userContext);
             $item = $result->data['content_item'];
 
             return $this->redirectWithSuccess(
@@ -192,13 +217,13 @@ class ContentController extends Controller
                 'Lesson material updated successfully.'
             );
         } catch (ValidationException $e) {
-            return $this->redirectWithErrors("/teacher/content/{$id}/edit", $e->getErrors(), $postData);
+            return $this->redirectWithErrors("/teacher/content/{$contentId}/edit", $e->getErrors(), $postData);
         } catch (ResourceNotFoundException $e) {
             return $this->view('errors/404', ['message' => $e->getMessage()], 404);
         } catch (AuthorizationException $e) {
             return $this->view('errors/403', ['message' => $e->getMessage()], 403);
         } catch (\Throwable $e) {
-            return $this->redirectWithError("/teacher/content/{$id}/edit", $e->getMessage());
+            return $this->redirectWithError("/teacher/content/{$contentId}/edit", $e->getMessage());
         }
     }
 
@@ -206,24 +231,31 @@ class ContentController extends Controller
      * Publish or unpublish a content item.
      * Route: POST /teacher/content/{id}/publish
      */
-    public function togglePublish(Request $request, array $params): Response
+    public function togglePublish(Request $request, array|string|int $id): Response
     {
-        $userContext = $this->authenticator->getUserContext();
-        $id = (int)($params['id'] ?? 0);
+        $userContext = $this->getUserContext($request);
+        if (!$userContext) {
+            return Response::redirect('/login');
+        }
+
+        $contentId = is_array($id) ? (int)($id['id'] ?? 0) : (int)$id;
         $action = $request->post('action', 'publish');
 
         try {
             if ($action === 'unpublish') {
-                $result = $this->contentService->unpublishContent($id, $userContext);
+                $result = $this->contentService->unpublishContent($contentId, $userContext);
+                $message = 'Learning material unpublished (saved as draft).';
             } else {
-                $result = $this->contentService->publishContent($id, $userContext);
+                $result = $this->contentService->publishContent($contentId, $userContext);
+                $message = 'Learning material published successfully to enrolled students.';
             }
 
-            $item = $result->data['content_item'];
+            $item = $result->data['content_item'] ?? null;
+            $classSubjectId = $item ? $item->classSubjectId : 0;
 
             return $this->redirectWithSuccess(
-                '/teacher/content?class_subject_id=' . $item->classSubjectId,
-                $result->message
+                '/teacher/content' . ($classSubjectId > 0 ? '?class_subject_id=' . $classSubjectId : ''),
+                $message
             );
         } catch (\Throwable $e) {
             return $this->redirectWithError('/teacher/content', $e->getMessage());
@@ -234,14 +266,18 @@ class ContentController extends Controller
      * Delete a content item.
      * Route: POST /teacher/content/{id}/delete
      */
-    public function delete(Request $request, array $params): Response
+    public function delete(Request $request, array|string|int $id): Response
     {
-        $userContext = $this->authenticator->getUserContext();
-        $id = (int)($params['id'] ?? 0);
+        $userContext = $this->getUserContext($request);
+        if (!$userContext) {
+            return Response::redirect('/login');
+        }
+
+        $contentId = is_array($id) ? (int)($id['id'] ?? 0) : (int)$id;
         $classSubjectId = (int)$request->post('class_subject_id', 0);
 
         try {
-            $this->contentService->deleteContent($id, $userContext);
+            $this->contentService->deleteContent($contentId, $userContext);
 
             return $this->redirectWithSuccess(
                 '/teacher/content' . ($classSubjectId > 0 ? '?class_subject_id=' . $classSubjectId : ''),

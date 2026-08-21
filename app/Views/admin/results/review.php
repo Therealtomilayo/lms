@@ -1,149 +1,208 @@
+<?php
+$this->layout('layouts/admin', [
+    'title'          => 'Result Review & Publication — Claret LMS',
+    'headerTitle'    => 'Result Review & Publication',
+    'headerSubtitle' => 'Review computed subject grades, calculate class rankings, lock terms, and publish report cards.',
+]);
+
+$termOptions  = [];
+foreach ($terms as $t) {
+    $termOptions[$t->id] = $t->name;
+}
+
+$classOptions = [];
+foreach ($classes as $c) {
+    $classOptions[$c->id] = $c->name;
+}
+?>
+
 <div class="space-y-6">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-            <h2 class="text-2xl font-bold text-slate-900 tracking-tight">Result Review & Publication</h2>
-            <p class="text-sm text-slate-500 mt-1">Review computed subject grades, calculate class rankings, lock terms, and publish report cards.</p>
-        </div>
-    </div>
 
     <!-- Filter Bar -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
-        <form method="GET" action="/admin/results/review" class="flex flex-wrap items-center gap-4">
-            <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase">Academic Term</label>
-                <select name="term_id" class="mt-1 px-3 py-1.5 text-sm rounded-xl border border-slate-300">
-                    <?php foreach ($terms as $t): ?>
-                        <option value="<?= $t->id ?>" <?= $t->id == $selectedTermId ? 'selected' : '' ?>>
-                            <?= e($t->name) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+        <form method="GET" action="/admin/results/review"
+              class="flex flex-col md:flex-row md:items-end gap-4">
+
+            <div class="w-full md:w-64">
+                <?php $this->include('components/select', [
+                    'name'    => 'term_id',
+                    'id'      => 'filter_term_id',
+                    'label'   => 'Academic Term',
+                    'options' => $termOptions,
+                    'selected'=> $selectedTermId,
+                ]); ?>
             </div>
 
-            <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase">Class</label>
-                <select name="class_id" class="mt-1 px-3 py-1.5 text-sm rounded-xl border border-slate-300">
-                    <option value="">-- Select Class --</option>
-                    <?php foreach ($classes as $c): ?>
-                        <option value="<?= $c->id ?>" <?= $c->id == $selectedClassId ? 'selected' : '' ?>>
-                            <?= e($c->name) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+            <div class="w-full md:w-64">
+                <?php $this->include('components/select', [
+                    'name'       => 'class_id',
+                    'id'         => 'filter_class_id',
+                    'label'      => 'Class',
+                    'options'    => $classOptions,
+                    'selected'   => $selectedClassId ?: '',
+                    'placeholder'=> '— Select Class —',
+                ]); ?>
             </div>
 
-            <div class="pt-5">
-                <button type="submit" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition">
-                    View Class Results
-                </button>
+            <div class="flex-shrink-0">
+                <?php $this->include('components/button', [
+                    'type'    => 'submit',
+                    'variant' => 'secondary',
+                    'label'   => 'View Class Results',
+                    'class'   => 'min-h-[44px] w-full md:w-auto',
+                ]); ?>
             </div>
         </form>
     </div>
 
     <?php if ($selectedTermId > 0 && $selectedClassId > 0): ?>
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
-            <!-- Header & Publication Controls -->
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
+
+            <!-- Publication Status Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4
+                        pb-4 border-b border-slate-200">
+
                 <div class="flex items-center gap-3">
                     <span class="text-sm font-bold text-slate-700">Publication Status:</span>
                     <?php if ($isPublished): ?>
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            Published to Students & Guardians
-                        </span>
+                        <?php $this->include('components/badge', [
+                            'label'   => 'Published to Students & Guardians',
+                            'variant' => 'success',
+                        ]); ?>
                     <?php else: ?>
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                            Unpublished (Draft Review)
-                        </span>
+                        <?php $this->include('components/badge', [
+                            'label'   => 'Unpublished — Draft Review',
+                            'variant' => 'warning',
+                        ]); ?>
                     <?php endif; ?>
                 </div>
 
-                <div class="flex items-center gap-3">
+                <div class="flex flex-wrap items-center gap-3">
+
+                    <!-- Recompute & Rank -->
                     <form method="POST" action="/admin/results/compute">
-                        <input type="hidden" name="csrf_token" value="<?= e(\App\Middleware\CsrfMiddleware::getToken()) ?>">
-                        <input type="hidden" name="term_id" value="<?= e((string)$selectedTermId) ?>">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="term_id"  value="<?= e((string)$selectedTermId) ?>">
                         <input type="hidden" name="class_id" value="<?= e((string)$selectedClassId) ?>">
-                        <button type="submit" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl shadow-sm transition">
-                            Recompute & Rank Class
-                        </button>
+                        <?php $this->include('components/button', [
+                            'type'    => 'submit',
+                            'variant' => 'secondary',
+                            'label'   => 'Recompute & Rank Class',
+                        ]); ?>
                     </form>
 
                     <?php if (!$isPublished): ?>
+                        <!-- Publish -->
                         <form method="POST" action="/admin/results/publish">
-                            <input type="hidden" name="csrf_token" value="<?= e(\App\Middleware\CsrfMiddleware::getToken()) ?>">
-                            <input type="hidden" name="term_id" value="<?= e((string)$selectedTermId) ?>">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="term_id"  value="<?= e((string)$selectedTermId) ?>">
                             <input type="hidden" name="class_id" value="<?= e((string)$selectedClassId) ?>">
-                            <button type="submit" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-xl shadow-sm transition">
-                                Publish Results
-                            </button>
+                            <?php $this->include('components/button', [
+                                'type'    => 'submit',
+                                'variant' => 'primary',
+                                'label'   => 'Publish Results',
+                                'icon'    => '<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>',
+                            ]); ?>
                         </form>
                     <?php else: ?>
+                        <!-- Unpublish -->
                         <form method="POST" action="/admin/results/unpublish">
-                            <input type="hidden" name="csrf_token" value="<?= e(\App\Middleware\CsrfMiddleware::getToken()) ?>">
-                            <input type="hidden" name="term_id" value="<?= e((string)$selectedTermId) ?>">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="term_id"  value="<?= e((string)$selectedTermId) ?>">
                             <input type="hidden" name="class_id" value="<?= e((string)$selectedClassId) ?>">
-                            <input type="hidden" name="reason" value="Administrative Review">
-                            <button type="submit" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-xl shadow-sm transition">
-                                Unpublish Results
-                            </button>
+                            <input type="hidden" name="reason"   value="Administrative Review">
+                            <?php $this->include('components/button', [
+                                'type'    => 'submit',
+                                'variant' => 'danger',
+                                'label'   => 'Unpublish Results',
+                            ]); ?>
                         </form>
                     <?php endif; ?>
+
                 </div>
             </div>
 
             <!-- Student Summary Ranking Table -->
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm border-collapse">
-                    <thead>
-                        <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-700 uppercase">
-                            <th class="py-3 px-3 text-center">Rank</th>
-                            <th class="py-3 px-4">Student</th>
-                            <th class="py-3 px-3">Admission No</th>
-                            <th class="py-3 px-3 text-center">Total Score</th>
-                            <th class="py-3 px-3 text-center">Average (%)</th>
-                            <th class="py-3 px-3 text-center">GPA</th>
-                            <th class="py-3 px-3 text-right">Report Card</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100 font-medium">
-                        <?php if (empty($summaries)): ?>
-                            <tr>
-                                <td colspan="7" class="py-8 text-center text-slate-400 text-xs">
-                                    No summaries computed yet. Click "Recompute & Rank Class" to generate rankings.
-                                </td>
+            <?php if (empty($summaries)): ?>
+                <?php $this->include('components/empty_state', [
+                    'title'   => 'No Results Computed',
+                    'message' => 'No summaries have been computed yet. Click "Recompute & Rank Class" to generate rankings for this class and term.',
+                ]); ?>
+            <?php else: ?>
+                <div class="overflow-x-auto rounded-lg border border-slate-200">
+                    <table class="w-full text-left text-sm border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200
+                                       text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                                <th class="py-3 px-3 text-center">Rank</th>
+                                <th class="py-3 px-4">Student</th>
+                                <th class="py-3 px-3">Admission No.</th>
+                                <th class="py-3 px-3 text-center">Total Score</th>
+                                <th class="py-3 px-3 text-center">Average (%)</th>
+                                <th class="py-3 px-3 text-center">GPA</th>
+                                <th class="py-3 px-3 text-right">Report Card</th>
                             </tr>
-                        <?php else: ?>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 font-medium text-slate-700">
                             <?php foreach ($summaries as $s): ?>
-                                <tr>
-                                    <td class="py-3 px-3 text-center font-bold text-brand-600">
-                                        #<?= e((string)$s->rankInClass) ?>
+                                <tr class="hover:bg-slate-50/50 transition">
+                                    <td class="py-3 px-3 text-center">
+                                        <span class="inline-flex items-center justify-center w-8 h-8
+                                                     rounded-full bg-brand-50 text-brand-700
+                                                     font-bold text-xs border border-brand-200">
+                                            <?= e((string)$s->rankInClass) ?>
+                                        </span>
                                     </td>
                                     <td class="py-3 px-4 font-bold text-slate-900">
                                         <?= e($s->student?->user?->name ?? 'Student') ?>
                                     </td>
-                                    <td class="py-3 px-3 text-xs text-slate-500">
-                                        <?= e($s->student?->admissionNumber ?? '') ?>
+                                    <td class="py-3 px-3 text-xs text-slate-500 font-mono">
+                                        <?= e($s->student?->admissionNumber ?? '—') ?>
                                     </td>
-                                    <td class="py-3 px-3 text-center font-semibold">
+                                    <td class="py-3 px-3 text-center font-semibold font-mono">
                                         <?= number_format((float)$s->totalScore, 2) ?>
                                     </td>
-                                    <td class="py-3 px-3 text-center font-bold text-slate-900">
+                                    <td class="py-3 px-3 text-center font-bold text-slate-900 font-mono">
                                         <?= number_format((float)$s->averageScore, 2) ?>%
                                     </td>
-                                    <td class="py-3 px-3 text-center font-semibold">
+                                    <td class="py-3 px-3 text-center font-semibold font-mono">
                                         <?= $s->gpa !== null ? number_format((float)$s->gpa, 2) : '&mdash;' ?>
                                     </td>
                                     <td class="py-3 px-3 text-right">
-                                        <a href="/admin/reports/student/<?= $s->studentId ?>/<?= $selectedTermId ?>.pdf" target="_blank" class="inline-flex items-center gap-1 text-xs text-brand-600 hover:text-brand-800 font-semibold">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                        <a href="/admin/reports/student/<?= $s->studentId ?>/<?= $selectedTermId ?>.pdf"
+                                           target="_blank"
+                                           class="inline-flex items-center gap-1.5 text-xs
+                                                  text-brand-600 hover:text-brand-800
+                                                  font-semibold transition">
+                                            <svg class="w-4 h-4 flex-shrink-0" fill="none"
+                                                 stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                      stroke-width="2"
+                                                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                            </svg>
                                             PDF Report
                                         </a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+
         </div>
+
+    <?php else: ?>
+
+        <!-- No context selected yet -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-10">
+            <?php $this->include('components/empty_state', [
+                'title'   => 'Select a Term and Class',
+                'message' => 'Use the filters above to choose an academic term and class, then click "View Class Results".',
+            ]); ?>
+        </div>
+
     <?php endif; ?>
+
 </div>

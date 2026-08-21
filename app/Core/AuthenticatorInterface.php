@@ -23,4 +23,9 @@ interface AuthenticatorInterface
      * Get currently authenticated user context
      */
     public function user(Request $request): ?UserContext;
+
+    /**
+     * Resolve currently authenticated user context (with optional request instance)
+     */
+    public function getUserContext(?Request $request = null): ?UserContext;
 }

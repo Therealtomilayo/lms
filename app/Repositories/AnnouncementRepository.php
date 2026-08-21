@@ -158,18 +158,23 @@ class AnnouncementRepository
                 LEFT JOIN classes c2 ON c2.id = cs.class_id
                 LEFT JOIN subjects sub ON sub.id = cs.subject_id
                 LEFT JOIN announcement_reads ar ON ar.announcement_id = a.id AND ar.user_id = :user_id
-                LEFT JOIN teachers t ON t.user_id = :user_id2
-                LEFT JOIN class_subjects teacher_cs ON teacher_cs.teacher_id = t.id
                 WHERE a.published_at IS NOT NULL 
                   AND a.published_at <= CURRENT_TIMESTAMP
                   AND (a.expires_at IS NULL OR a.expires_at >= CURRENT_TIMESTAMP)
                   AND (
                       a.scope = 'school' 
                       OR a.author_id = :user_id3
-                      OR (a.scope = 'class_subject' AND a.scope_id = teacher_cs.id)
-                      OR (a.scope = 'class' AND a.scope_id = teacher_cs.class_id)
+                      OR (a.scope = 'class_subject' AND a.scope_id IN (
+                          SELECT teacher_cs.id FROM class_subjects teacher_cs
+                          JOIN teachers t ON t.id = teacher_cs.teacher_id
+                          WHERE t.user_id = :user_id2
+                      ))
+                      OR (a.scope = 'class' AND a.scope_id IN (
+                          SELECT teacher_cs2.class_id FROM class_subjects teacher_cs2
+                          JOIN teachers t2 ON t2.id = teacher_cs2.teacher_id
+                          WHERE t2.user_id = :user_id4
+                      ))
                   )
-                GROUP BY a.id
                 ORDER BY a.published_at DESC
                 LIMIT :limit OFFSET :offset
             ";
@@ -177,6 +182,7 @@ class AnnouncementRepository
             $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
             $stmt->bindValue(':user_id2', $userId, PDO::PARAM_INT);
             $stmt->bindValue(':user_id3', $userId, PDO::PARAM_INT);
+            $stmt->bindValue(':user_id4', $userId, PDO::PARAM_INT);
             $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
             $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
             $stmt->execute();
@@ -211,17 +217,20 @@ class AnnouncementRepository
             LEFT JOIN classes c2 ON c2.id = cs.class_id
             LEFT JOIN subjects sub ON sub.id = cs.subject_id
             LEFT JOIN announcement_reads ar ON ar.announcement_id = a.id AND ar.user_id = :user_id
-            LEFT JOIN class_enrollments ce ON ce.student_id = :student_id AND ce.status = 'active'
-            LEFT JOIN student_subject_enrollments sse ON sse.student_id = :student_id2 AND sse.status = 'active'
             WHERE a.published_at IS NOT NULL 
               AND a.published_at <= CURRENT_TIMESTAMP
               AND (a.expires_at IS NULL OR a.expires_at >= CURRENT_TIMESTAMP)
               AND (
                   a.scope = 'school'
-                  OR (a.scope = 'class' AND a.scope_id = ce.class_id)
-                  OR (a.scope = 'class_subject' AND a.scope_id = sse.class_subject_id)
+                  OR (a.scope = 'class' AND a.scope_id IN (
+                      SELECT ce.class_id FROM class_enrollments ce
+                      WHERE ce.student_id = :student_id AND ce.status = 'active'
+                  ))
+                  OR (a.scope = 'class_subject' AND a.scope_id IN (
+                      SELECT sse.class_subject_id FROM student_subject_enrollments sse
+                      WHERE sse.student_id = :student_id2 AND sse.status = 'active'
+                  ))
               )
-            GROUP BY a.id
             ORDER BY a.published_at DESC
             LIMIT :limit OFFSET :offset
         ";

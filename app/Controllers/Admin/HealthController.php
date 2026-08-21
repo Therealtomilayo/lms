@@ -40,10 +40,10 @@ class HealthController extends Controller
             return Response::json($result->toArray(), $result->isHealthy() ? 200 : 503);
         }
 
-        return $this->view('admin/health/index', [
-            'title' => 'System Health & Diagnostics — Claret LMS',
+        return Response::html($this->render('admin/health/index', [
+            'title' => 'System Health & Diagnostics — Claret Portal',
             'headerTitle' => 'System Health & Diagnostics',
             'health' => $result,
-        ], 'layouts/admin');
+        ], 'layouts/admin'));
     }
 }

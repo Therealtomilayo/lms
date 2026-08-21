@@ -45,10 +45,10 @@ class SubmissionController extends Controller
      * List submissions for an assignment.
      * Route: GET /teacher/assignments/{id}/submissions
      */
-    public function index(Request $request, array $params): Response
+    public function index(Request $request, array|string|int $id): Response
     {
-        $userContext = $this->authenticator->getUserContext();
-        $assignmentId = (int)($params['id'] ?? 0);
+        $userContext = $this->getUserContext($request);
+        $assignmentId = is_array($id) ? (int)($id['id'] ?? 0) : (int)$id;
 
         $assignment = $this->assignmentRepository->findById($assignmentId);
         if (!$assignment) {
@@ -77,10 +77,10 @@ class SubmissionController extends Controller
      * Grade a student's submission.
      * Route: POST /teacher/submissions/{id}/grade
      */
-    public function grade(Request $request, array $params): Response
+    public function grade(Request $request, array|string|int $id): Response
     {
-        $userContext = $this->authenticator->getUserContext();
-        $submissionId = (int)($params['id'] ?? 0);
+        $userContext = $this->getUserContext($request);
+        $submissionId = is_array($id) ? (int)($id['id'] ?? 0) : (int)$id;
 
         $score = (float)$request->post('score', 0.0);
         $teacherComment = $request->post('teacher_comment', null);

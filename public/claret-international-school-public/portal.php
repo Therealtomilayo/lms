@@ -10,14 +10,14 @@ require __DIR__ . '/partials/header.php';
 
     <!-- Branding side -->
     <div class="relative hidden md:block bg-brand-dark">
-      <img src="assets/img/hero-carousel.jpg" alt="Claret International School graduates celebrating" class="absolute inset-0 h-full w-full object-cover opacity-40">
+      <img src="assets/img/Claret-International-School-12-1024x576.jpg" alt="Claret International School campus" class="absolute inset-0 h-full w-full object-cover opacity-40">
       <div class="absolute inset-0 bg-gradient-to-t from-brand-dark via-brand-dark/70 to-brand-dark/20"></div>
       <div class="relative flex h-full flex-col justify-between p-10 text-white">
         <img src="assets/img/logo.png" alt="<?= htmlspecialchars($school['name']) ?>" class="h-16 w-16 object-contain">
         <div>
           <p class="text-xs font-bold uppercase tracking-[0.2em] text-brand-accent mb-3">Parent portal</p>
           <h2 class="font-serif text-2xl font-bold leading-snug">Stay close to your child's day, wherever you are.</h2>
-          <p class="mt-3 text-sm text-white/70">Attendance, term reports and school announcements — all in one place.</p>
+          <p class="mt-3 text-sm text-white/70">Attendance, term reports and school announcements, all in one place.</p>
         </div>
       </div>
     </div>
@@ -64,7 +64,7 @@ require __DIR__ . '/partials/header.php';
         </button>
       </form>
 
-      <p class="mt-8 text-center text-sm text-slate-500">Not a Claret parent yet? <a href="admissions.php" class="font-semibold text-brand-primary hover:underline">Apply for admission</a></p>
+      <p class="mt-8 text-center text-sm text-slate-500">Not a Claret parent yet? <a href="/admissions" class="font-semibold text-brand-primary hover:underline">Apply for admission</a></p>
     </div>
   </div>
 </section>

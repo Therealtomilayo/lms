@@ -47,8 +47,13 @@ class AssignmentController extends Controller
      */
     public function index(Request $request): Response
     {
-        $userContext = $this->authenticator->getUserContext();
-        $teacher = $this->teacherRepository->findTeacherByUserId($userContext->id);
+        $userContext = $this->getUserContext($request);
+        if (!$userContext) {
+            return Response::redirect('/login');
+        }
+
+        $userId = $userContext->id ?? ($userContext->userId ?? 0);
+        $teacher = $this->teacherRepository->findTeacherByUserId((int)$userId);
 
         if (!$teacher && !$userContext->hasAnyRole(['super_admin', 'admin'])) {
             return $this->view('errors/403', ['message' => 'Teacher profile not found.'], 403);
@@ -64,13 +69,15 @@ class AssignmentController extends Controller
             $gradedCounts[$assignment->id] = $this->assignmentRepository->countGradedSubmissions($assignment->id);
         }
 
-        return $this->view('teacher/assignments/index', [
+        return Response::html($this->render('teacher/assignments/index', [
+            'title' => 'Coursework Assignments — Claret Faculty Portal',
+            'headerTitle' => 'Coursework Assignments & Grading',
             'assignments' => $assignments,
             'submissionCounts' => $submissionCounts,
             'gradedCounts' => $gradedCounts,
             'activeSession' => $activeSession,
             'user' => $userContext,
-        ]);
+        ], 'layouts/teacher'));
     }
 
     /**
@@ -79,8 +86,13 @@ class AssignmentController extends Controller
      */
     public function create(Request $request): Response
     {
-        $userContext = $this->authenticator->getUserContext();
-        $teacher = $this->teacherRepository->findTeacherByUserId($userContext->id);
+        $userContext = $this->getUserContext($request);
+        if (!$userContext) {
+            return Response::redirect('/login');
+        }
+
+        $userId = $userContext->id ?? ($userContext->userId ?? 0);
+        $teacher = $this->teacherRepository->findTeacherByUserId((int)$userId);
         $activeSession = $this->academicRepository->getActiveSession();
 
         $teacherId = $teacher ? $teacher->id : 0;
@@ -90,15 +102,17 @@ class AssignmentController extends Controller
 
         $terms = $activeSession ? $this->academicRepository->getTermsBySession($activeSession->id) : [];
 
-        $presetClassSubjectId = (int)$request->query('class_subject_id', 0);
+        $presetClassSubjectId = (int)($request->query('class_subject_id', 0) ?: $request->get('class_subject_id', 0));
 
-        return $this->view('teacher/assignments/create', [
+        return Response::html($this->render('teacher/assignments/create', [
+            'title' => 'Create Assignment — Claret Faculty Portal',
+            'headerTitle' => 'Create Assignment',
             'classSubjects' => $classSubjects,
             'terms' => $terms,
             'presetClassSubjectId' => $presetClassSubjectId,
             'activeSession' => $activeSession,
             'user' => $userContext,
-        ]);
+        ], 'layouts/teacher'));
     }
 
     /**
@@ -107,8 +121,12 @@ class AssignmentController extends Controller
      */
     public function store(Request $request): Response
     {
-        $userContext = $this->authenticator->getUserContext();
-        $postData = $request->post();
+        $userContext = $this->getUserContext($request);
+        if (!$userContext) {
+            return Response::redirect('/login');
+        }
+
+        $postData = $request->all();
         $files = $request->files();
         $uploadedFile = $files['attachment'] ?? null;
 
@@ -134,12 +152,16 @@ class AssignmentController extends Controller
      * Show form to edit an assignment.
      * Route: GET /teacher/assignments/{id}/edit
      */
-    public function edit(Request $request, array $params): Response
+    public function edit(Request $request, array|string|int $id): Response
     {
-        $userContext = $this->authenticator->getUserContext();
-        $id = (int)($params['id'] ?? 0);
+        $userContext = $this->getUserContext($request);
+        if (!$userContext) {
+            return Response::redirect('/login');
+        }
 
-        $assignment = $this->assignmentRepository->findById($id);
+        $assignmentId = is_array($id) ? (int)($id['id'] ?? 0) : (int)$id;
+
+        $assignment = $this->assignmentRepository->findById($assignmentId);
         if (!$assignment) {
             return $this->view('errors/404', ['message' => 'Assignment not found.'], 404);
         }
@@ -147,40 +169,42 @@ class AssignmentController extends Controller
         $activeSession = $this->academicRepository->getActiveSession();
         $terms = $activeSession ? $this->academicRepository->getTermsBySession($activeSession->id) : [];
 
-        return $this->view('teacher/assignments/edit', [
+        return Response::html($this->render('teacher/assignments/edit', [
+            'title' => 'Edit Assignment — Claret Faculty Portal',
+            'headerTitle' => 'Edit Assignment',
             'assignment' => $assignment,
             'terms' => $terms,
             'user' => $userContext,
-        ]);
+        ], 'layouts/teacher'));
     }
 
     /**
      * Update an existing assignment.
      * Route: POST /teacher/assignments/{id}/edit
      */
-    public function update(Request $request, array $params): Response
+    public function update(Request $request, array|string|int $id): Response
     {
-        $userContext = $this->authenticator->getUserContext();
-        $id = (int)($params['id'] ?? 0);
-        $postData = $request->post();
+        $userContext = $this->getUserContext($request);
+        $assignmentId = is_array($id) ? (int)($id['id'] ?? 0) : (int)$id;
+        $postData = $request->all();
         $files = $request->files();
         $uploadedFile = $files['attachment'] ?? null;
 
         try {
-            $this->assignmentService->updateAssignment($id, $postData, $uploadedFile, $userContext);
+            $this->assignmentService->updateAssignment($assignmentId, $postData, $uploadedFile, $userContext);
 
             return $this->redirectWithSuccess(
                 '/teacher/assignments',
                 'Assignment updated successfully.'
             );
         } catch (ValidationException $e) {
-            return $this->redirectWithErrors("/teacher/assignments/{$id}/edit", $e->getErrors(), $postData);
+            return $this->redirectWithErrors("/teacher/assignments/{$assignmentId}/edit", $e->getErrors(), $postData);
         } catch (ResourceNotFoundException $e) {
             return $this->view('errors/404', ['message' => $e->getMessage()], 404);
         } catch (AuthorizationException $e) {
             return $this->view('errors/403', ['message' => $e->getMessage()], 403);
         } catch (\Throwable $e) {
-            return $this->redirectWithError("/teacher/assignments/{$id}/edit", $e->getMessage());
+            return $this->redirectWithError("/teacher/assignments/{$assignmentId}/edit", $e->getMessage());
         }
     }
 
@@ -188,13 +212,13 @@ class AssignmentController extends Controller
      * Delete or archive an assignment.
      * Route: POST /teacher/assignments/{id}/delete
      */
-    public function delete(Request $request, array $params): Response
+    public function delete(Request $request, array|string|int $id): Response
     {
-        $userContext = $this->authenticator->getUserContext();
-        $id = (int)($params['id'] ?? 0);
+        $userContext = $this->getUserContext($request);
+        $assignmentId = is_array($id) ? (int)($id['id'] ?? 0) : (int)$id;
 
         try {
-            $this->assignmentService->deleteAssignment($id, $userContext);
+            $this->assignmentService->deleteAssignment($assignmentId, $userContext);
 
             return $this->redirectWithSuccess(
                 '/teacher/assignments',

@@ -37,6 +37,7 @@ class AnnouncementController extends Controller
             'title' => 'Broadcast Announcements — Admin Portal',
             'headerTitle' => 'Announcements Broadcast Hub',
             'announcements' => $announcements,
+            'csrf_token' => $request->getSession()->get('_csrf_token', ''),
         ], 'layouts/admin'));
     }
 
@@ -89,9 +90,9 @@ class AnnouncementController extends Controller
         }
     }
 
-    public function edit(Request $request): Response
+    public function edit(Request $request, string|int $id = 0): Response
     {
-        $id = (int)$request->getRouteParam('id', 0);
+        $id = (int)($id ?: $request->getRouteParam('id', 0));
         $announcement = $this->announcementRepo->findById($id);
         if (!$announcement) {
             return Response::notFound('Announcement not found.');
@@ -111,14 +112,14 @@ class AnnouncementController extends Controller
         ], 'layouts/admin'));
     }
 
-    public function update(Request $request): Response
+    public function update(Request $request, string|int $id = 0): Response
     {
         $user = $this->getUserContext($request);
         if (!$user) {
             return Response::redirect('/login');
         }
 
-        $id = (int)$request->getRouteParam('id', 0);
+        $id = (int)($id ?: $request->getRouteParam('id', 0));
         $title = (string)$request->getBodyParam('title', '');
         $body = (string)$request->getBodyParam('body', '');
         $scope = (string)$request->getBodyParam('scope', 'school');
@@ -146,14 +147,14 @@ class AnnouncementController extends Controller
         }
     }
 
-    public function delete(Request $request): Response
+    public function delete(Request $request, string|int $id = 0): Response
     {
         $user = $this->getUserContext($request);
         if (!$user) {
             return Response::redirect('/login');
         }
 
-        $id = (int)$request->getRouteParam('id', 0);
+        $id = (int)($id ?: $request->getRouteParam('id', 0));
 
         try {
             $this->announcementService->deleteAnnouncement($id, $user);

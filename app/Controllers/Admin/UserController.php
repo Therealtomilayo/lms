@@ -10,6 +10,7 @@ use App\Core\Exceptions\ResourceNotFoundException;
 use App\Core\Exceptions\ValidationException;
 use App\Core\Request;
 use App\Core\Response;
+use App\Core\Session;
 use App\Core\UserContext;
 use App\Policies\UserPolicy;
 use App\Repositories\AcademicRepository;
@@ -127,11 +128,16 @@ class UserController extends Controller
             return Response::html('User not found', 404);
         }
 
+        if (!UserPolicy::canEditUser($userContext, $user)) {
+            return $this->forbidden('You do not have permission to edit this user.');
+        }
+
         return $this->view('admin/users/edit', [
             'title' => "Edit {$user->name} — Claret LMS",
             'headerTitle' => "Edit User: {$user->name}",
             'user' => $user,
             'actor' => $userContext,
+            'errors' => Session::getFlash('errors', []),
         ]);
     }
 
@@ -164,7 +170,9 @@ class UserController extends Controller
             $this->userService->updateUser($userId, $data, $userContext);
 
             return $this->redirectWithSuccess('/admin/users', 'User updated successfully.');
-        } catch (ValidationException|DomainRuleException $e) {
+        } catch (ValidationException $e) {
+            return $this->redirectWithErrors("/admin/users/{$userId}/edit", $e->getErrors(), $request->all());
+        } catch (DomainRuleException $e) {
             return $this->redirectWithError("/admin/users/{$userId}/edit", $e->getMessage());
         } catch (ResourceNotFoundException $e) {
             return Response::html($e->getMessage(), 404);

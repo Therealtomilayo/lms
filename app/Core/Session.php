@@ -125,4 +125,21 @@ class Session
             self::$started = false;
         }
     }
+
+    /**
+     * Instance method delegation for Request->getSession()->...
+     */
+    public function __call(string $name, array $arguments): mixed
+    {
+        if ($name === 'flash') {
+            self::setFlash(...$arguments);
+            return null;
+        }
+
+        if (method_exists(self::class, $name)) {
+            return forward_static_call_array([self::class, $name], $arguments);
+        }
+
+        throw new \BadMethodCallException("Method Session::{$name}() does not exist.");
+    }
 }

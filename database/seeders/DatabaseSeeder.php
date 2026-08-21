@@ -304,10 +304,10 @@ class DatabaseSeeder
     private function seedSubjects(PDO $pdo): array
     {
         $subjects = [
-            'MTH' => ['name' => 'Mathematics', 'code' => 'MTH101'],
-            'ENG' => ['name' => 'English Language', 'code' => 'ENG101'],
-            'SCI' => ['name' => 'Basic Science', 'code' => 'SCI101'],
-            'CIV' => ['name' => 'Civic Education', 'code' => 'CIV101'],
+            'MTH' => ['name' => 'Mathematics', 'code' => 'jss1_mth'],
+            'ENG' => ['name' => 'English Language', 'code' => 'jss1_eng'],
+            'SCI' => ['name' => 'Basic Science', 'code' => 'jss1_sci'],
+            'CIV' => ['name' => 'Civic Education', 'code' => 'jss1_civ'],
         ];
 
         $subjectIds = [];

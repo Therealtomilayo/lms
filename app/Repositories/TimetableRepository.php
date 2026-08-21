@@ -45,7 +45,7 @@ class TimetableRepository
                 tm.start_date AS term_start_date,
                 tm.end_date AS term_end_date,
                 tm.status AS term_status,
-                tm.is_current AS term_is_current
+                (tm.status = 'active') AS term_is_current
             FROM timetable_slots ts
             JOIN class_subjects cs ON cs.id = ts.class_subject_id
             JOIN subjects sub ON sub.id = cs.subject_id
@@ -203,7 +203,7 @@ class TimetableRepository
                 tm.start_date AS term_start_date,
                 tm.end_date AS term_end_date,
                 tm.status AS term_status,
-                tm.is_current AS term_is_current
+                (tm.status = 'active') AS term_is_current
             FROM timetable_slots ts
             JOIN class_subjects cs ON cs.id = ts.class_subject_id
             JOIN subjects sub ON sub.id = cs.subject_id
@@ -242,12 +242,13 @@ class TimetableRepository
     }
 
     /**
-     * Find all timetable slots for a teacher in a specific term.
+     * Find all timetable slots for a teacher in a specific term (or all terms if null).
      *
      * @return array<int, TimetableSlot>
      */
-    public function findByTeacher(int $teacherId, int $termId): array
+    public function findByTeacher(int $teacherId, ?int $termId = null): array
     {
+        $termClause = $termId !== null ? "AND ts.term_id = :term_id" : "";
         $sql = "
             SELECT 
                 ts.*,
@@ -267,7 +268,7 @@ class TimetableRepository
                 tm.start_date AS term_start_date,
                 tm.end_date AS term_end_date,
                 tm.status AS term_status,
-                tm.is_current AS term_is_current
+                (tm.status = 'active') AS term_is_current
             FROM timetable_slots ts
             JOIN class_subjects cs ON cs.id = ts.class_subject_id
             JOIN subjects sub ON sub.id = cs.subject_id
@@ -276,7 +277,7 @@ class TimetableRepository
             LEFT JOIN teachers t ON t.id = cs.teacher_id
             LEFT JOIN users u ON u.id = t.user_id
             WHERE cs.teacher_id = :teacher_id
-              AND ts.term_id = :term_id
+              {$termClause}
             ORDER BY 
                 CASE ts.day_of_week
                     WHEN 'mon' THEN 1
@@ -292,11 +293,13 @@ class TimetableRepository
                 ts.end_time ASC
         ";
 
+        $params = [':teacher_id' => $teacherId];
+        if ($termId !== null) {
+            $params[':term_id'] = $termId;
+        }
+
         $stmt = $this->db->prepare($sql);
-        $stmt->execute([
-            ':teacher_id' => $teacherId,
-            ':term_id' => $termId,
-        ]);
+        $stmt->execute($params);
 
         $slots = [];
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
@@ -338,7 +341,7 @@ class TimetableRepository
                 tm.start_date AS term_start_date,
                 tm.end_date AS term_end_date,
                 tm.status AS term_status,
-                tm.is_current AS term_is_current
+                (tm.status = 'active') AS term_is_current
             FROM timetable_slots ts
             JOIN class_subjects cs ON cs.id = ts.class_subject_id
             JOIN subjects sub ON sub.id = cs.subject_id
@@ -441,7 +444,7 @@ class TimetableRepository
                 tm.start_date AS term_start_date,
                 tm.end_date AS term_end_date,
                 tm.status AS term_status,
-                tm.is_current AS term_is_current
+                (tm.status = 'active') AS term_is_current
             FROM timetable_slots ts
             JOIN class_subjects cs ON cs.id = ts.class_subject_id
             JOIN subjects sub ON sub.id = cs.subject_id

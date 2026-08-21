@@ -33,3 +33,11 @@
 *~
 .DS_Store
 Thumbs.db
+
+# Archives & Large Binaries
+node_modules/
+*.zip
+*.tar.gz
+*.exe
+*.dll
+

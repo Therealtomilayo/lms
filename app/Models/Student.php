@@ -19,7 +19,8 @@ final class Student
         public readonly ?string $createdAt = null,
         public readonly ?string $updatedAt = null,
         public readonly ?User $user = null,
-        public readonly ?SchoolClass $currentClass = null
+        public readonly ?SchoolClass $currentClass = null,
+        public readonly ?string $relationshipType = null
     ) {
     }
 
@@ -52,7 +53,8 @@ final class Student
                 'name' => $data['class_name'],
                 'section_arm' => $data['section_arm'] ?? null,
                 'status' => $data['class_status'] ?? 'active',
-            ]) : null)
+            ]) : null),
+            relationshipType: $data['relationship_type'] ?? null
         );
     }
 
@@ -63,6 +65,7 @@ final class Student
             'email', 'user_email', 'userEmail' => $this->user?->email ?? '',
             'phone', 'user_phone', 'userPhone' => $this->user?->phone,
             'class_name', 'className' => $this->currentClass?->name ?? '',
+            'relationship_type', 'relationshipType' => $this->relationshipType,
             default => null,
         };
     }

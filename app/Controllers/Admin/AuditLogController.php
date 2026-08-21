@@ -51,14 +51,14 @@ class AuditLogController extends Controller
             return Response::json($paginated);
         }
 
-        return $this->view('admin/audit_logs/index', [
-            'title' => 'Audit Trail — Claret LMS',
+        return Response::html($this->render('admin/audit_logs/index', [
+            'title' => 'Audit Trail & Event Log — Claret Portal',
             'headerTitle' => 'System Audit Logs',
             'logs' => $paginated['data'],
             'pagination' => $paginated,
             'actions' => $actions,
             'entityTypes' => $entityTypes,
             'filters' => $filters,
-        ], 'layouts/admin');
+        ], 'layouts/admin'));
     }
 }

@@ -1,0 +1,31 @@
+Options -Indexes
+
+RewriteEngine On
+
+# Serve existing files and directories as-is
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# --- Clean URL rewrites ---
+# / -> index.php
+RewriteRule ^$ index.php [L]
+
+# /about -> about.php
+RewriteRule ^about/?$ about.php [L]
+
+# /admissions -> admissions.php
+RewriteRule ^admissions/?$ admissions.php [L]
+
+# /contact -> contact.php
+RewriteRule ^contact/?$ contact.php [L]
+
+# /portal -> portal.php
+RewriteRule ^portal/?$ portal.php [L]
+
+# Redirect bare .php URLs to clean equivalents (301 permanent)
+RewriteCond %{THE_REQUEST} \s/+index\.php[\s?] [NC]
+RewriteRule ^ / [R=301,L]
+
+RewriteCond %{THE_REQUEST} \s/+(about|admissions|contact|portal)\.php[\s?] [NC]
+RewriteRule ^([^.]+)\.php$ /$1 [R=301,L]

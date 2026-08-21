@@ -56,6 +56,23 @@ abstract class Controller
     {
         Session::start();
         Session::setFlash('errors', $errors);
+        
+        if (!empty($errors)) {
+            $flat = [];
+            foreach ($errors as $val) {
+                if (is_array($val)) {
+                    foreach ($val as $sub) {
+                        $flat[] = is_string($sub) ? $sub : json_encode($sub);
+                    }
+                } elseif (is_string($val)) {
+                    $flat[] = $val;
+                }
+            }
+            if (!empty($flat)) {
+                Session::setFlash('error', implode(' ', $flat));
+            }
+        }
+
         foreach ($oldInput as $key => $val) {
             // Never preserve passwords or sensitive tokens
             if (!str_contains($key, 'password') && !str_contains($key, 'token')) {
@@ -66,34 +83,42 @@ abstract class Controller
         return Response::redirect($url);
     }
 
-    protected function redirectWithSuccess(string $url, string $message): Response
+    protected function redirectWithSuccess(string $url, ?string $message = null): Response
     {
         Session::start();
-        Session::setFlash('success', $message);
+        if ($message !== null && $message !== '') {
+            Session::setFlash('success', $message);
+        }
 
         return Response::redirect($url);
     }
 
-    protected function redirectWithError(string $url, string $message): Response
+    protected function redirectWithError(string $url, ?string $message = null): Response
     {
         Session::start();
-        Session::setFlash('error', $message);
+        if ($message !== null && $message !== '') {
+            Session::setFlash('error', $message);
+        }
 
         return Response::redirect($url);
     }
 
-    protected function redirectWithWarning(string $url, string $message): Response
+    protected function redirectWithWarning(string $url, ?string $message = null): Response
     {
         Session::start();
-        Session::setFlash('warning', $message);
+        if ($message !== null && $message !== '') {
+            Session::setFlash('warning', $message);
+        }
 
         return Response::redirect($url);
     }
 
-    protected function redirectWithFlash(string $url, string $message, string $type = 'success'): Response
+    protected function redirectWithFlash(string $url, ?string $message = null, string $type = 'success'): Response
     {
         Session::start();
-        Session::setFlash($type, $message);
+        if ($message !== null && $message !== '') {
+            Session::setFlash($type, $message);
+        }
 
         return Response::redirect($url);
     }
@@ -110,15 +135,15 @@ abstract class Controller
         return $validator->validated();
     }
 
-    protected function user(Request $request): ?UserContext
+    protected function user(?Request $request = null): ?UserContext
     {
         if (!isset($this->authenticator)) {
             $this->authenticator = new WebAuthenticator();
         }
-        return $this->authenticator->user($request);
+        return $request !== null ? $this->authenticator->user($request) : $this->authenticator->getUserContext();
     }
 
-    protected function getUserContext(Request $request): ?UserContext
+    protected function getUserContext(?Request $request = null): ?UserContext
     {
         return $this->user($request);
     }

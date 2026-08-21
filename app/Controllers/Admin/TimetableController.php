@@ -80,14 +80,14 @@ class TimetableController extends Controller
     /**
      * Edit screen: Weekly schedule matrix for a specific class cohort.
      */
-    public function edit(Request $request): Response
+    public function edit(Request $request, string|int $classId = 0): Response
     {
         $user = $this->getUserContext($request);
         if (!$user) {
             return Response::redirect('/login');
         }
 
-        $classId = (int)$request->getRouteParam('classId', 0);
+        $classId = (int)($classId ?: $request->getRouteParam('classId', 0));
         $termId = $request->getQuery('term_id') ? (int)$request->getQuery('term_id') : null;
 
         $class = $this->academicRepo->findClassById($classId);
@@ -126,20 +126,21 @@ class TimetableController extends Controller
             'terms' => $terms,
             'scheduleData' => $scheduleData,
             'classSubjects' => $classSubjects,
+            'csrf_token' => $request->getSession()->get('_csrf_token', ''),
         ], 'layouts/admin'));
     }
 
     /**
      * Store new timetable slot.
      */
-    public function store(Request $request): Response
+    public function store(Request $request, string|int $classId = 0): Response
     {
         $user = $this->getUserContext($request);
         if (!$user) {
             return Response::redirect('/login');
         }
 
-        $classId = (int)$request->getRouteParam('classId', 0);
+        $classId = (int)($classId ?: $request->getRouteParam('classId', 0));
         $termId = (int)$request->input('term_id', 0);
 
         try {
@@ -178,15 +179,15 @@ class TimetableController extends Controller
     /**
      * Update an existing timetable slot.
      */
-    public function update(Request $request): Response
+    public function update(Request $request, string|int $classId = 0, string|int $slotId = 0): Response
     {
         $user = $this->getUserContext($request);
         if (!$user) {
             return Response::redirect('/login');
         }
 
-        $classId = (int)$request->getRouteParam('classId', 0);
-        $slotId = (int)$request->getRouteParam('slotId', 0);
+        $classId = (int)($classId ?: $request->getRouteParam('classId', 0));
+        $slotId = (int)($slotId ?: $request->getRouteParam('slotId', 0));
         $termId = (int)$request->input('term_id', 0);
 
         try {
@@ -225,15 +226,15 @@ class TimetableController extends Controller
     /**
      * Delete a timetable slot.
      */
-    public function delete(Request $request): Response
+    public function delete(Request $request, string|int $classId = 0, string|int $slotId = 0): Response
     {
         $user = $this->getUserContext($request);
         if (!$user) {
             return Response::redirect('/login');
         }
 
-        $classId = (int)$request->getRouteParam('classId', 0);
-        $slotId = (int)$request->getRouteParam('slotId', 0);
+        $classId = (int)($classId ?: $request->getRouteParam('classId', 0));
+        $slotId = (int)($slotId ?: $request->getRouteParam('slotId', 0));
         $termId = (int)$request->input('term_id', $request->getQuery('term_id', 0));
 
         try {

@@ -21,11 +21,15 @@ $activeChildId = $activeChild ? (int)$activeChild->id : 0;
 // Helper to check active state
 if (!function_exists('is_sidebar_item_active')) {
     function is_sidebar_item_active(string $route, string $currentUri): bool {
-        if ($currentUri === $route) {
+        $parsedUri = parse_url($currentUri, PHP_URL_PATH) ?: $currentUri;
+        if ($parsedUri === $route) {
             return true;
         }
-        if ($route !== '/' && $route !== '/admin/dashboard' && $route !== '/teacher/dashboard' && $route !== '/student/dashboard' && $route !== '/parent/dashboard') {
-            return str_starts_with($currentUri, $route);
+        if ($route === '/admin/attendance') {
+            return $parsedUri === '/admin/attendance' || preg_match('#^/admin/attendance/\d+/#', $parsedUri) === 1;
+        }
+        if ($route !== '/' && !in_array($route, ['/admin/dashboard', '/teacher/dashboard', '/student/dashboard', '/parent/dashboard'], true)) {
+            return str_starts_with($parsedUri, $route);
         }
         return false;
     }
@@ -74,6 +78,12 @@ if (!function_exists('get_sidebar_icon')) {
                 return '<svg class="' . $svgClass . '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>';
             case 'user-profile':
                 return '<svg class="' . $svgClass . '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>';
+            case 'check-circle':
+                return '<svg class="' . $svgClass . '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+            case 'chart':
+                return '<svg class="' . $svgClass . '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>';
+            case 'scale':
+                return '<svg class="' . $svgClass . '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>';
             default:
                 return '<svg class="' . $svgClass . '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>';
         }
@@ -97,6 +107,15 @@ $navConfig = [
         ['label' => 'Class Enrollments', 'route' => '/admin/enrollments', 'icon' => 'document-text'],
         ['label' => 'Guardian Links', 'route' => '/admin/guardians', 'icon' => 'users-link'],
         ['label' => 'CSV Imports', 'route' => '/admin/imports/users', 'icon' => 'upload'],
+        ['category' => 'Attendance & Reports'],
+        ['label' => 'Attendance Registers', 'route' => '/admin/attendance', 'icon' => 'check-circle'],
+        ['label' => 'Attendance Analytics', 'route' => '/admin/attendance/report', 'icon' => 'chart'],
+        ['category' => 'Grading & Results'],
+        ['label' => 'Grading Scales', 'route' => '/admin/grading-scales', 'icon' => 'scale'],
+        ['label' => 'Assessment Config', 'route' => '/admin/assessment-categories', 'icon' => 'clipboard'],
+        ['label' => 'Results Review', 'route' => '/admin/results/review', 'icon' => 'document-text'],
+        ['category' => 'Communication'],
+        ['label' => 'Announcements', 'route' => '/admin/announcements', 'icon' => 'announcement'],
         ['category' => 'System & Security'],
         ['label' => 'System Health', 'route' => '/admin/health', 'icon' => 'shield'],
         ['label' => 'Database Backups', 'route' => '/admin/backups', 'icon' => 'database'],
