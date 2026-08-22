@@ -99,7 +99,7 @@
         </main>
     </div>
 
-    <!-- Reusable Vanilla Modal & Overlay Javascript Utility -->
+    <!-- Reusable Vanilla Modal, Sidebar & Overlay Javascript Utility -->
     <script>
         window.LMS = {
             showModal(id) {
@@ -122,14 +122,42 @@
                     modal.classList.add('hidden');
                     document.body.classList.remove('overflow-hidden');
                 }
+            },
+            toggleSidebar(show) {
+                const sidebar = document.getElementById('sidebar-navigation');
+                const backdrop = document.getElementById('sidebar-backdrop');
+                if (!sidebar) return;
+
+                const isCurrentlyHidden = sidebar.classList.contains('hidden');
+                const shouldOpen = show !== undefined ? Boolean(show) : isCurrentlyHidden;
+
+                if (shouldOpen) {
+                    sidebar.classList.remove('hidden');
+                    sidebar.classList.add('flex');
+                    if (backdrop) {
+                        backdrop.classList.remove('hidden');
+                    }
+                    document.body.classList.add('overflow-hidden', 'md:overflow-auto');
+                } else {
+                    sidebar.classList.add('hidden');
+                    sidebar.classList.remove('flex');
+                    if (backdrop) {
+                        backdrop.classList.add('hidden');
+                    }
+                    document.body.classList.remove('overflow-hidden', 'md:overflow-auto');
+                }
             }
         };
 
-        // Listen for ESC key to close any active modal safely
+        // Listen for ESC key to close any active modal or mobile sidebar safely
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 const openModals = document.querySelectorAll('.lms-modal:not(.hidden)');
                 openModals.forEach(modal => window.LMS.hideModal(modal.id));
+
+                if (window.innerWidth < 768) {
+                    window.LMS.toggleSidebar(false);
+                }
             }
         });
     </script>

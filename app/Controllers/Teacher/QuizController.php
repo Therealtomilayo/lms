@@ -47,6 +47,7 @@ class QuizController extends Controller
 
     /**
      * List quizzes created by teacher.
+     * Route: GET /teacher/quizzes
      */
     public function index(Request $request): Response
     {
@@ -62,18 +63,21 @@ class QuizController extends Controller
 
         $quizzes = $this->quizService->getTeacherQuizzes($userContext, $selectedClassSubjectId, $selectedTermId);
 
-        return $this->view('teacher/quizzes/index', [
+        return Response::html($this->render('teacher/quizzes/index', [
+            'title' => 'CBT Quizzes & Assessments — Claret Faculty Portal',
+            'headerTitle' => 'Computer-Based Testing (CBT)',
             'user' => $userContext,
             'quizzes' => $quizzes,
             'classSubjects' => $classSubjects,
             'terms' => $terms,
             'selectedClassSubjectId' => $selectedClassSubjectId,
             'selectedTermId' => $selectedTermId,
-        ]);
+        ], 'layouts/teacher'));
     }
 
     /**
      * Show quiz creation form.
+     * Route: GET /teacher/quizzes/create
      */
     public function create(Request $request): Response
     {
@@ -85,93 +89,99 @@ class QuizController extends Controller
         $currentTerm = $this->academicRepository->findCurrentTerm();
         $terms = $this->academicRepository->findAllTerms();
 
-        return $this->view('teacher/quizzes/create', [
+        return Response::html($this->render('teacher/quizzes/create', [
+            'title' => 'Create CBT Quiz — Claret Faculty Portal',
+            'headerTitle' => 'Setup New CBT Exam',
             'user' => $userContext,
             'classSubjects' => $classSubjects,
             'currentTerm' => $currentTerm,
             'terms' => $terms,
             'errors' => $request->getSession()?->getFlash('errors') ?? [],
             'old' => $request->getSession()?->getFlash('old') ?? [],
-        ]);
+        ], 'layouts/teacher'));
     }
 
     /**
      * Store a newly created quiz.
+     * Route: POST /teacher/quizzes/create
      */
     public function store(Request $request): Response
     {
         $userContext = $this->requireAuthContext($request);
-        $data = $request->getBody();
+        $data = $request->all();
 
         try {
             $result = $this->quizService->createQuiz($data, $userContext);
-            $request->getSession()?->flash('success', $result->message);
-            return $this->redirect('/teacher/quizzes/' . $result->data->id . '/questions');
+            return $this->redirectWithSuccess(
+                '/teacher/quizzes/' . $result->data->id . '/questions',
+                $result->message
+            );
         } catch (ValidationException $e) {
-            $request->getSession()?->flash('errors', $e->getErrors());
-            $request->getSession()?->flash('old', $data);
-            return $this->redirect('/teacher/quizzes/create');
+            return $this->redirectWithErrors('/teacher/quizzes/create', $e->getErrors(), $data);
         } catch (AuthorizationException|DomainRuleException $e) {
-            $request->getSession()?->flash('error', $e->getMessage());
-            return $this->redirect('/teacher/quizzes/create');
+            return $this->redirectWithError('/teacher/quizzes/create', $e->getMessage());
         }
     }
 
     /**
      * Show form to edit quiz settings.
+     * Route: GET /teacher/quizzes/{id}/edit
      */
-    public function edit(Request $request, int $id): Response
+    public function edit(Request $request, array|string|int $id): Response
     {
         $userContext = $this->requireAuthContext($request);
-        $quiz = $this->quizRepository->findById($id, false);
+        $quizId = is_array($id) ? (int)($id['id'] ?? 0) : (int)$id;
+        $quiz = $this->quizRepository->findById($quizId, false);
 
         if (!$quiz) {
-            return $this->notFound();
+            return $this->notFound('Quiz not found.');
         }
 
         $terms = $this->academicRepository->findAllTerms();
 
-        return $this->view('teacher/quizzes/edit', [
+        return Response::html($this->render('teacher/quizzes/edit', [
+            'title' => 'Edit Quiz Settings — ' . htmlspecialchars($quiz->title),
+            'headerTitle' => 'Edit Quiz Settings',
             'user' => $userContext,
             'quiz' => $quiz,
             'terms' => $terms,
             'errors' => $request->getSession()?->getFlash('errors') ?? [],
             'old' => $request->getSession()?->getFlash('old') ?? [],
-        ]);
+        ], 'layouts/teacher'));
     }
 
     /**
      * Update quiz settings.
+     * Route: POST /teacher/quizzes/{id}/edit
      */
-    public function update(Request $request, int $id): Response
+    public function update(Request $request, array|string|int $id): Response
     {
         $userContext = $this->requireAuthContext($request);
-        $data = $request->getBody();
+        $quizId = is_array($id) ? (int)($id['id'] ?? 0) : (int)$id;
+        $data = $request->all();
 
         try {
-            $result = $this->quizService->updateQuiz($id, $data, $userContext);
-            $request->getSession()?->flash('success', $result->message);
-            return $this->redirect('/teacher/quizzes');
+            $result = $this->quizService->updateQuiz($quizId, $data, $userContext);
+            return $this->redirectWithSuccess('/teacher/quizzes', $result->message);
         } catch (ValidationException $e) {
-            $request->getSession()?->flash('errors', $e->getErrors());
-            $request->getSession()?->flash('old', $data);
-            return $this->redirect("/teacher/quizzes/{$id}/edit");
+            return $this->redirectWithErrors("/teacher/quizzes/{$quizId}/edit", $e->getErrors(), $data);
         } catch (AuthorizationException|DomainRuleException $e) {
-            $request->getSession()?->flash('error', $e->getMessage());
-            return $this->redirect("/teacher/quizzes/{$id}/edit");
+            return $this->redirectWithError("/teacher/quizzes/{$quizId}/edit", $e->getMessage());
         }
     }
 
     /**
      * Show quiz question builder / question picker.
+     * Route: GET /teacher/quizzes/{id}/questions
      */
-    public function questions(Request $request, int $id): Response
+    public function questions(Request $request, array|string|int $id): Response
     {
         $userContext = $this->requireAuthContext($request);
-        $quiz = $this->quizRepository->findById($id, true);
+        $quizId = is_array($id) ? (int)($id['id'] ?? 0) : (int)$id;
+        $quiz = $this->quizRepository->findById($quizId, true);
 
         if (!$quiz) {
-            return $this->notFound();
+            return $this->notFound('Quiz not found.');
         }
 
         $classSubject = $this->academicRepository->findClassSubjectById($quiz->classSubjectId);
@@ -183,66 +193,69 @@ class QuizController extends Controller
         // Get currently selected question IDs and their points
         $selectedQuestions = $quiz->quizQuestions;
 
-        return $this->view('teacher/quizzes/questions', [
+        return Response::html($this->render('teacher/quizzes/questions', [
+            'title' => 'Question Builder — ' . htmlspecialchars($quiz->title),
+            'headerTitle' => 'Quiz Questions & Point Allocation',
             'user' => $userContext,
             'quiz' => $quiz,
             'classSubject' => $classSubject,
             'availableQuestions' => $availableQuestions,
             'selectedQuestions' => $selectedQuestions,
-        ]);
+        ], 'layouts/teacher'));
     }
 
     /**
      * Save questions attached to a quiz.
+     * Route: POST /teacher/quizzes/{id}/questions
      */
-    public function saveQuestions(Request $request, int $id): Response
+    public function saveQuestions(Request $request, array|string|int $id): Response
     {
         $userContext = $this->requireAuthContext($request);
-        $data = $request->getBody();
+        $quizId = is_array($id) ? (int)($id['id'] ?? 0) : (int)$id;
+        $data = $request->all();
         $rawQuestions = $data['questions'] ?? [];
 
         try {
-            $result = $this->quizService->setQuestions($id, is_array($rawQuestions) ? $rawQuestions : [], $userContext);
-            $request->getSession()?->flash('success', $result->message);
-            return $this->redirect("/teacher/quizzes/{$id}/questions");
+            $result = $this->quizService->setQuestions($quizId, is_array($rawQuestions) ? $rawQuestions : [], $userContext);
+            return $this->redirectWithSuccess("/teacher/quizzes/{$quizId}/questions", $result->message);
         } catch (\Throwable $e) {
-            $request->getSession()?->flash('error', $e->getMessage());
-            return $this->redirect("/teacher/quizzes/{$id}/questions");
+            return $this->redirectWithError("/teacher/quizzes/{$quizId}/questions", $e->getMessage());
         }
     }
 
     /**
      * Toggle quiz publication status.
+     * Route: POST /teacher/quizzes/{id}/publish
      */
-    public function publish(Request $request, int $id): Response
+    public function publish(Request $request, array|string|int $id): Response
     {
         $userContext = $this->requireAuthContext($request);
-        $isPublished = !empty($request->getBody()['is_published']);
+        $quizId = is_array($id) ? (int)($id['id'] ?? 0) : (int)$id;
+        $data = $request->all();
+        $isPublished = !empty($data['is_published']);
 
         try {
-            $result = $this->quizService->publishQuiz($id, $isPublished, $userContext);
-            $request->getSession()?->flash('success', $result->message);
+            $result = $this->quizService->publishQuiz($quizId, $isPublished, $userContext);
+            return $this->redirectWithSuccess('/teacher/quizzes', $result->message);
         } catch (\Throwable $e) {
-            $request->getSession()?->flash('error', $e->getMessage());
+            return $this->redirectWithError('/teacher/quizzes', $e->getMessage());
         }
-
-        return $this->redirect('/teacher/quizzes');
     }
 
     /**
      * Delete quiz.
+     * Route: POST /teacher/quizzes/{id}/delete
      */
-    public function delete(Request $request, int $id): Response
+    public function delete(Request $request, array|string|int $id): Response
     {
         $userContext = $this->requireAuthContext($request);
+        $quizId = is_array($id) ? (int)($id['id'] ?? 0) : (int)$id;
 
         try {
-            $result = $this->quizService->deleteQuiz($id, $userContext);
-            $request->getSession()?->flash('success', $result->message);
+            $result = $this->quizService->deleteQuiz($quizId, $userContext);
+            return $this->redirectWithSuccess('/teacher/quizzes', $result->message);
         } catch (\Throwable $e) {
-            $request->getSession()?->flash('error', $e->getMessage());
+            return $this->redirectWithError('/teacher/quizzes', $e->getMessage());
         }
-
-        return $this->redirect('/teacher/quizzes');
     }
 }

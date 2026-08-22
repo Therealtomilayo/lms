@@ -66,11 +66,13 @@ class SubmissionController extends Controller
 
         $submissions = $this->assignmentRepository->getSubmissionsForAssignment($assignmentId);
 
-        return $this->view('teacher/assignments/submissions', [
+        return Response::html($this->render('teacher/assignments/submissions', [
+            'title' => 'Student Submissions — Claret Faculty Portal',
+            'headerTitle' => 'Submission Grading & Evaluation',
             'assignment' => $assignment,
             'submissions' => $submissions,
             'user' => $userContext,
-        ]);
+        ], 'layouts/teacher'));
     }
 
     /**

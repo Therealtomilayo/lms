@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers\Teacher;
 
 use App\Controllers\Controller;
+use App\Core\AuthenticatorInterface;
 use App\Core\Exceptions\AuthorizationException;
 use App\Core\Exceptions\ValidationException;
 use App\Core\Request;
@@ -13,6 +14,9 @@ use App\Repositories\AcademicRepository;
 use App\Repositories\TeacherRepository;
 use App\Services\AttendanceService;
 
+/**
+ * Controller for Teacher Daily & Subject Attendance Roll Call
+ */
 class AttendanceController extends Controller
 {
     private AttendanceService $attendanceService;
@@ -20,29 +24,35 @@ class AttendanceController extends Controller
     private TeacherRepository $teacherRepo;
 
     public function __construct(
+        ?AuthenticatorInterface $authenticator = null,
         ?AttendanceService $attendanceService = null,
         ?AcademicRepository $academicRepo = null,
         ?TeacherRepository $teacherRepo = null
     ) {
+        parent::__construct($authenticator);
         $this->attendanceService = $attendanceService ?? new AttendanceService();
         $this->academicRepo = $academicRepo ?? new AcademicRepository();
         $this->teacherRepo = $teacherRepo ?? new TeacherRepository();
     }
 
+    /**
+     * Attendance Overview / Directory of allocated classes and subjects.
+     * Route: GET /teacher/attendance
+     */
     public function index(Request $request): Response
     {
-        $user = $this->getUserContext($request);
-        if (!$user) {
-            return Response::redirect('/login');
-        }
+        $userContext = $this->requireAuthContext($request);
+        $teacher = $this->teacherRepo->findTeacherByUserId($userContext->id);
 
-        $teacher = $this->teacherRepo->findByUserId($user->getUserId());
-        if (!$teacher) {
+        if (!$teacher && !$userContext->isAdmin()) {
             return Response::forbidden('Teacher profile not found.');
         }
 
-        $currentSession = $this->academicRepo->getCurrentSession();
-        $allocations = $currentSession ? $this->teacherRepo->getTeachingAllocations($teacher->id, $currentSession->id) : [];
+        $teacherId = $teacher ? $teacher->id : 0;
+        $currentSession = $this->academicRepo->findCurrentSession();
+        $allocations = ($currentSession && $teacherId > 0)
+            ? $this->teacherRepo->getTeachingAllocations($teacherId, $currentSession->id)
+            : [];
 
         // Collect distinct classes
         $classes = [];
@@ -55,37 +65,44 @@ class AttendanceController extends Controller
         }
 
         return Response::html($this->render('teacher/attendance/index', [
-            'title' => 'Attendance Management — Teacher Portal',
+            'title' => 'Attendance Management — Faculty Portal',
+            'headerTitle' => 'Daily & Subject Attendance Register',
+            'user' => $userContext,
             'classes' => array_values($classes),
             'allocations' => $allocations,
+            'currentSession' => $currentSession,
             'today' => date('Y-m-d'),
         ], 'layouts/teacher'));
     }
 
-    public function form(Request $request): Response
+    /**
+     * Show attendance marking roll-call sheet.
+     * Route: GET /teacher/attendance/{classId}/{date}
+     */
+    public function form(Request $request, array|string|int|null $classId = null, array|string|null $date = null): Response
     {
-        $user = $this->getUserContext($request);
-        if (!$user) {
-            return Response::redirect('/login');
-        }
+        $userContext = $this->requireAuthContext($request);
+        
+        $cId = is_array($classId) ? (int)($classId['classId'] ?? $classId['id'] ?? 0) : (int)($classId ?? $request->getRouteParam('classId', 0));
+        $today = date('Y-m-d');
+        // Teachers are strictly restricted to today's date only
+        $markingDate = $today;
 
-        $classId = (int)$request->getRouteParam('classId', 0);
-        $date = (string)$request->getRouteParam('date', date('Y-m-d'));
-        $classSubjectId = $request->getQuery('class_subject_id') ? (int)$request->getQuery('class_subject_id') : null;
-        $periodNumber = $request->getQuery('period_number') ? (int)$request->getQuery('period_number') : null;
+        $classSubjectId = (int)$request->get('class_subject_id', 0) ?: null;
+        $periodNumber = (int)$request->get('period_number', 0) ?: null;
 
-        $class = $this->academicRepo->findClassById($classId);
+        $class = $this->academicRepo->findClassById($cId);
         if (!$class) {
-            return Response::notFound('Class not found.');
+            return Response::notFound('Class cohort not found.');
         }
 
         try {
             $roster = $this->attendanceService->getRoster(
-                classId: $classId,
-                date: $date,
+                classId: $cId,
+                date: $markingDate,
                 classSubjectId: $classSubjectId,
                 periodNumber: $periodNumber,
-                user: $user
+                user: $userContext
             );
         } catch (AuthorizationException $e) {
             return Response::forbidden($e->getMessage());
@@ -94,30 +111,35 @@ class AttendanceController extends Controller
         $classSubject = $classSubjectId ? $this->academicRepo->findClassSubjectById($classSubjectId) : null;
 
         return Response::html($this->render('teacher/attendance/form', [
-            'title' => "Mark Attendance - {$class->name} ({$date})",
+            'title' => "Mark Attendance — {$class->name} (" . date('M d, Y', strtotime($markingDate)) . ")",
+            'headerTitle' => 'Student Attendance Register',
+            'user' => $userContext,
             'class' => $class,
-            'date' => $date,
+            'date' => $markingDate,
             'classSubjectId' => $classSubjectId,
             'classSubject' => $classSubject,
             'periodNumber' => $periodNumber,
             'roster' => $roster,
-            'csrf_token' => $request->getSession()->get('_csrf_token', ''),
         ], 'layouts/teacher'));
     }
 
-    public function store(Request $request): Response
+    /**
+     * Persist attendance roll-call records.
+     * Route: POST /teacher/attendance/{classId}/{date}
+     */
+    public function store(Request $request, array|string|int|null $classId = null, array|string|null $date = null): Response
     {
-        $user = $this->getUserContext($request);
-        if (!$user) {
-            return Response::redirect('/login');
-        }
+        $userContext = $this->requireAuthContext($request);
+        
+        $cId = is_array($classId) ? (int)($classId['classId'] ?? $classId['id'] ?? 0) : (int)($classId ?? $request->getRouteParam('classId', 0));
+        $today = date('Y-m-d');
+        $markingDate = $today;
 
-        $classId = (int)$request->getRouteParam('classId', 0);
-        $date = (string)$request->getRouteParam('date', date('Y-m-d'));
-        $classSubjectId = $request->getBodyParam('class_subject_id') ? (int)$request->getBodyParam('class_subject_id') : null;
-        $periodNumber = $request->getBodyParam('period_number') ? (int)$request->getBodyParam('period_number') : null;
-        $statuses = (array)$request->getBodyParam('status', []);
-        $correctionReason = $request->getBodyParam('correction_reason') ? (string)$request->getBodyParam('correction_reason') : null;
+        $data = $request->all();
+        $classSubjectId = (int)($data['class_subject_id'] ?? 0) ?: null;
+        $periodNumber = (int)($data['period_number'] ?? 0) ?: null;
+        $statuses = (array)($data['status'] ?? []);
+        $correctionReason = isset($data['correction_reason']) && trim((string)$data['correction_reason']) !== '' ? trim((string)$data['correction_reason']) : null;
 
         $records = [];
         foreach ($statuses as $studentId => $status) {
@@ -129,27 +151,29 @@ class AttendanceController extends Controller
 
         try {
             $this->attendanceService->recordRoster(
-                classId: $classId,
-                date: $date,
+                classId: $cId,
+                date: $markingDate,
                 classSubjectId: $classSubjectId,
                 periodNumber: $periodNumber,
                 records: $records,
-                user: $user,
+                user: $userContext,
                 correctionReason: $correctionReason
             );
 
-            $this->setFlash($request, 'success', 'Attendance saved successfully.');
-            $redirectUrl = "/teacher/attendance/{$classId}/{$date}";
+            $redirectUrl = "/teacher/attendance/{$cId}/{$today}";
             if ($classSubjectId) {
                 $redirectUrl .= "?class_subject_id={$classSubjectId}";
                 if ($periodNumber) {
                     $redirectUrl .= "&period_number={$periodNumber}";
                 }
             }
-            return Response::redirect($redirectUrl);
+
+            return $this->redirectWithSuccess($redirectUrl, 'Attendance register saved successfully.');
         } catch (ValidationException $e) {
-            $this->setFlash($request, 'error', implode(' ', $e->getErrors()));
-            return Response::redirect("/teacher/attendance/{$classId}/{$date}");
+            return $this->redirectWithError(
+                "/teacher/attendance/{$cId}/{$today}",
+                implode(' ', $e->getErrors())
+            );
         } catch (AuthorizationException $e) {
             return Response::forbidden($e->getMessage());
         }

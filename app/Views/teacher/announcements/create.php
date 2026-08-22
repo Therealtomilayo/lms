@@ -1,76 +1,128 @@
-<div class="max-w-3xl mx-auto space-y-6">
-    <div class="flex items-center gap-2">
-        <a href="/teacher/announcements" class="text-sm font-medium text-slate-500 hover:text-brand-600">&larr; Back to Announcements</a>
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Header Card -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <!-- Breadcrumbs -->
+                <nav class="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                    <a href="/teacher/dashboard" class="text-slate-400 hover:text-emerald-600 transition">Faculty Portal</a>
+                    <span class="text-slate-300">/</span>
+                    <a href="/teacher/announcements" class="text-slate-400 hover:text-emerald-600 transition">Announcements</a>
+                    <span class="text-slate-300">/</span>
+                    <span class="text-slate-700">Post Announcement</span>
+                </nav>
+                <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight leading-tight">
+                    Compose Class Announcement
+                </h1>
+                <p class="text-xs text-slate-500 mt-1">
+                    Broadcast a news bulletin, project deadline reminder, or academic update to your enrolled students.
+                </p>
+            </div>
+
+            <div class="flex items-center gap-2.5">
+                <?php $this->include('components/button', [
+                    'label' => 'Back to Announcements',
+                    'variant' => 'secondary',
+                    'href' => '/teacher/announcements',
+                    'icon' => '<svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>'
+                ]); ?>
+            </div>
+        </div>
     </div>
 
-    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
-        <div>
-            <h1 class="text-xl font-bold text-slate-900">Post Announcement</h1>
-            <p class="text-sm text-slate-600 mt-1">Broadcast an announcement to your class or specific subject group.</p>
-        </div>
+    <!-- Form Container -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 sm:p-8">
+        <form action="/teacher/announcements/create" method="POST" class="space-y-6">
+            <?= csrf_field() ?>
 
-        <form method="POST" action="/teacher/announcements" class="space-y-5">
-            <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+            <!-- Target Scope Selection Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                        Target Audience Scope <span class="text-rose-500">*</span>
+                    </label>
+                    <select name="scope" id="scopeSelect" onchange="toggleScopeInputs()" required
+                            class="w-full rounded-xl border border-slate-300 text-xs focus:border-emerald-500 focus:ring-emerald-500 bg-slate-50 py-2.5 px-3 font-semibold text-slate-900 transition">
+                        <option value="class" <?= old('scope', 'class') === 'class' ? 'selected' : '' ?>>Entire Homeroom Class</option>
+                        <option value="class_subject" <?= old('scope') === 'class_subject' ? 'selected' : '' ?>>Subject Specific Cohort</option>
+                    </select>
+                </div>
 
-            <!-- Target Scope Selection -->
-            <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-1">Target Audience <span class="text-rose-500">*</span></label>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-medium text-slate-500 mb-1">Target Scope</label>
-                        <select name="scope" id="scopeSelect" onchange="toggleScopeInputs()" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 outline-none">
-                            <option value="class">Entire Class</option>
-                            <option value="class_subject">Subject Specific</option>
-                        </select>
-                    </div>
+                <div id="classSelectWrap">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                        Select Class Cohort <span class="text-rose-500">*</span>
+                    </label>
+                    <select name="scope_id" id="classScopeId"
+                            class="w-full rounded-xl border border-slate-300 text-xs focus:border-emerald-500 focus:ring-emerald-500 bg-slate-50 py-2.5 px-3 font-semibold text-slate-900 transition">
+                        <?php foreach ($classes as $cls): ?>
+                            <option value="<?= (int)$cls['id'] ?>" <?= (int)old('scope_id') === (int)$cls['id'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($cls['name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
 
-                    <div id="classSelectWrap">
-                        <label class="block text-xs font-medium text-slate-500 mb-1">Select Class</label>
-                        <select name="scope_id" id="classScopeId" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 outline-none">
-                            <?php foreach ($classes as $cls): ?>
-                                <option value="<?= (int)$cls['id'] ?>"><?= htmlspecialchars($cls['name']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-
-                    <div id="subjectSelectWrap" class="hidden">
-                        <label class="block text-xs font-medium text-slate-500 mb-1">Select Subject</label>
-                        <select id="subjectScopeId" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 outline-none">
-                            <?php foreach ($allocations as $alloc): ?>
-                                <option value="<?= (int)$alloc['class_subject_id'] ?>"><?= htmlspecialchars($alloc['class_name']) ?> &mdash; <?= htmlspecialchars($alloc['subject_name']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
+                <div id="subjectSelectWrap" class="hidden">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                        Select Subject Allocation <span class="text-rose-500">*</span>
+                    </label>
+                    <select id="subjectScopeId"
+                            class="w-full rounded-xl border border-slate-300 text-xs focus:border-emerald-500 focus:ring-emerald-500 bg-slate-50 py-2.5 px-3 font-semibold text-slate-900 transition">
+                        <?php foreach ($allocations as $alloc): ?>
+                            <option value="<?= (int)$alloc['class_subject_id'] ?>" <?= (int)old('scope_id') === (int)$alloc['class_subject_id'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($alloc['class_name']) ?> &mdash; <?= htmlspecialchars($alloc['subject_name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
             </div>
 
             <!-- Title -->
             <div>
-                <label for="title" class="block text-sm font-semibold text-slate-700 mb-1">Announcement Title <span class="text-rose-500">*</span></label>
-                <input type="text" name="title" id="title" required placeholder="e.g., Midterm Project Submission Deadline"
-                       class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                <label for="title" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                    Announcement Title <span class="text-rose-500">*</span>
+                </label>
+                <input type="text" name="title" id="title" required maxlength="200"
+                       value="<?= htmlspecialchars((string)old('title', '')) ?>"
+                       placeholder="e.g. Science Project Submission Deadline & Guidelines"
+                       class="w-full rounded-xl border border-slate-300 text-xs focus:border-emerald-500 focus:ring-emerald-500 bg-slate-50 py-2.5 px-3 font-medium text-slate-900 transition">
             </div>
 
             <!-- Body -->
             <div>
-                <label for="body" class="block text-sm font-semibold text-slate-700 mb-1">Announcement Content <span class="text-rose-500">*</span></label>
-                <textarea name="body" id="body" rows="6" required placeholder="Enter the full message details..."
-                          class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 outline-none"></textarea>
+                <label for="body" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                    Announcement Content <span class="text-rose-500">*</span>
+                </label>
+                <textarea name="body" id="body" rows="6" required
+                          placeholder="Type the full announcement message, instructions, or notification details..."
+                          class="w-full rounded-xl border border-slate-300 text-xs focus:border-emerald-500 focus:ring-emerald-500 bg-slate-50 py-2.5 px-3 font-medium text-slate-900 leading-relaxed transition"><?= htmlspecialchars((string)old('body', '')) ?></textarea>
             </div>
 
-            <!-- Expiry -->
+            <!-- Expiration Date -->
             <div>
-                <label for="expires_at" class="block text-sm font-semibold text-slate-700 mb-1">Expiration Date (Optional)</label>
+                <label for="expires_at" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                    Expiration Date (Optional)
+                </label>
                 <input type="date" name="expires_at" id="expires_at"
-                       class="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 outline-none">
-                <p class="text-xs text-slate-500 mt-1">If left blank, the announcement will remain active indefinitely.</p>
+                       value="<?= htmlspecialchars((string)old('expires_at', '')) ?>"
+                       class="rounded-xl border border-slate-300 text-xs focus:border-emerald-500 focus:ring-emerald-500 bg-slate-50 py-2 px-3 font-semibold text-slate-900 transition">
+                <p class="text-[11px] text-slate-400 mt-1">If left blank, the announcement remains pinned indefinitely.</p>
             </div>
 
-            <div class="pt-4 border-t border-slate-200 flex justify-end gap-3">
-                <a href="/teacher/announcements" class="px-5 py-2.5 text-slate-600 hover:text-slate-900 text-sm font-medium">Cancel</a>
-                <button type="submit" class="px-6 py-2.5 bg-brand-600 text-white font-semibold rounded-lg hover:bg-brand-700 transition">
-                    Publish Announcement
-                </button>
+            <!-- Form Actions Footer -->
+            <div class="pt-6 border-t border-slate-100 flex items-center justify-end gap-3">
+                <?php $this->include('components/button', [
+                    'label' => 'Cancel',
+                    'variant' => 'secondary',
+                    'href' => '/teacher/announcements'
+                ]); ?>
+
+                <?php $this->include('components/button', [
+                    'label' => 'Publish Announcement',
+                    'variant' => 'primary',
+                    'type' => 'submit',
+                    'icon' => '<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>'
+                ]); ?>
             </div>
         </form>
     </div>
@@ -96,4 +148,6 @@ function toggleScopeInputs() {
         subjectSelect.name = 'scope_id';
     }
 }
+
+document.addEventListener('DOMContentLoaded', toggleScopeInputs);
 </script>

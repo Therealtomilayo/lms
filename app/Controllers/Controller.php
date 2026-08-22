@@ -148,6 +148,15 @@ abstract class Controller
         return $this->user($request);
     }
 
+    protected function requireAuthContext(?Request $request = null): UserContext
+    {
+        $user = $this->getUserContext($request);
+        if (!$user || !$user->isAuthenticated()) {
+            throw new \App\Core\Exceptions\AuthorizationException('Authentication required.');
+        }
+        return $user;
+    }
+
     protected function setFlash(Request $request, string $type, string $message): void
     {
         Session::start();

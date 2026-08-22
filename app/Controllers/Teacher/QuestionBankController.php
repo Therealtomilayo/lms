@@ -42,6 +42,7 @@ class QuestionBankController extends Controller
 
     /**
      * List Question Bank questions for assigned subjects.
+     * Route: GET /teacher/question-bank
      */
     public function index(Request $request): Response
     {
@@ -83,7 +84,9 @@ class QuestionBankController extends Controller
             }
         }
 
-        return $this->view('teacher/question_bank/index', [
+        return Response::html($this->render('teacher/question_bank/index', [
+            'title' => 'Question Bank Directory — Claret Faculty Portal',
+            'headerTitle' => 'Assessment Question Bank',
             'user' => $userContext,
             'subjects' => $subjects,
             'selectedSubjectId' => $selectedSubjectId,
@@ -92,11 +95,12 @@ class QuestionBankController extends Controller
             'search' => $search,
             'questions' => $questionsData['questions'],
             'topics' => $questionsData['topics'],
-        ]);
+        ], 'layouts/teacher'));
     }
 
     /**
      * Show form to create a new Question.
+     * Route: GET /teacher/question-bank/create
      */
     public function create(Request $request): Response
     {
@@ -114,96 +118,180 @@ class QuestionBankController extends Controller
 
         $subjectId = (int)$request->get('subject_id', !empty($subjects) ? (int)array_key_first($subjects) : 0);
 
-        return $this->view('teacher/question_bank/create', [
+        return Response::html($this->render('teacher/question_bank/create', [
+            'title' => 'Create Question — Question Bank',
+            'headerTitle' => 'Add Assessment Question',
             'user' => $userContext,
             'subjects' => $subjects,
             'selectedSubjectId' => $subjectId,
             'errors' => $request->getSession()?->getFlash('errors') ?? [],
             'old' => $request->getSession()?->getFlash('old') ?? [],
-        ]);
+        ], 'layouts/teacher'));
     }
 
     /**
      * Store a newly created Question.
+     * Route: POST /teacher/question-bank/create
      */
     public function store(Request $request): Response
     {
         $userContext = $this->requireAuthContext($request);
-        $data = $request->getBody();
+        $data = $request->all();
 
         try {
             $result = $this->questionBankService->createQuestion($data, $userContext);
-            $request->getSession()?->flash('success', $result->message);
-            return $this->redirect('/teacher/question-bank?subject_id=' . (int)($data['subject_id'] ?? 0));
+            return $this->redirectWithSuccess(
+                '/teacher/question-bank?subject_id=' . (int)($data['subject_id'] ?? 0),
+                $result->message
+            );
         } catch (ValidationException $e) {
-            $request->getSession()?->flash('errors', $e->getErrors());
-            $request->getSession()?->flash('old', $data);
-            return $this->redirect('/teacher/question-bank/create?subject_id=' . (int)($data['subject_id'] ?? 0));
+            return $this->redirectWithErrors(
+                '/teacher/question-bank/create?subject_id=' . (int)($data['subject_id'] ?? 0),
+                $e->getErrors(),
+                $data
+            );
         } catch (AuthorizationException $e) {
-            $request->getSession()?->flash('error', $e->getMessage());
-            return $this->redirect('/teacher/question-bank');
+            return $this->redirectWithError('/teacher/question-bank', $e->getMessage());
+        }
+    }
+
+    /**
+     * Show bulk question creator / importer interface.
+     * Route: GET /teacher/question-bank/bulk
+     */
+    public function bulkCreate(Request $request): Response
+    {
+        $userContext = $this->requireAuthContext($request);
+        $teacher = $this->teacherRepository->findTeacherByUserId($userContext->id);
+        $teacherId = $teacher ? $teacher->id : 0;
+        $classSubjects = $this->academicRepository->findClassSubjectsByTeacherId($teacherId);
+
+        $subjects = [];
+        foreach ($classSubjects as $cs) {
+            if ($cs->subject && !isset($subjects[$cs->subjectId])) {
+                $subjects[$cs->subjectId] = $cs->subject;
+            }
+        }
+
+        $subjectId = (int)$request->get('subject_id', !empty($subjects) ? (int)array_key_first($subjects) : 0);
+
+        return Response::html($this->render('teacher/question_bank/bulk', [
+            'title' => 'Bulk Import Questions — Question Bank',
+            'headerTitle' => 'Bulk Question Importer',
+            'user' => $userContext,
+            'subjects' => $subjects,
+            'selectedSubjectId' => $subjectId,
+            'errors' => $request->getSession()?->getFlash('errors') ?? [],
+            'old' => $request->getSession()?->getFlash('old') ?? [],
+        ], 'layouts/teacher'));
+    }
+
+    /**
+     * Parse and persist multiple questions in bulk.
+     * Route: POST /teacher/question-bank/bulk
+     */
+    public function bulkStore(Request $request): Response
+    {
+        $userContext = $this->requireAuthContext($request);
+        $data = $request->all();
+
+        $subjectId = (int)($data['subject_id'] ?? 0);
+        $bulkText = (string)($data['bulk_text'] ?? '');
+        $defaultTopic = isset($data['topic']) && trim((string)$data['topic']) !== '' ? trim((string)$data['topic']) : null;
+        $defaultPoints = max(0.25, (float)($data['default_points'] ?? 1.00));
+
+        try {
+            $result = $this->questionBankService->createBulkQuestions(
+                subjectId: $subjectId,
+                bulkText: $bulkText,
+                defaultTopic: $defaultTopic,
+                defaultPoints: $defaultPoints,
+                userContext: $userContext
+            );
+
+            return $this->redirectWithSuccess(
+                '/teacher/question-bank?subject_id=' . $subjectId,
+                $result->message
+            );
+        } catch (ValidationException $e) {
+            return $this->redirectWithErrors(
+                '/teacher/question-bank/bulk?subject_id=' . $subjectId,
+                $e->getErrors(),
+                $data
+            );
+        } catch (AuthorizationException $e) {
+            return $this->redirectWithError('/teacher/question-bank', $e->getMessage());
         }
     }
 
     /**
      * Show form to edit an existing Question.
+     * Route: GET /teacher/question-bank/{id}/edit
      */
-    public function edit(Request $request, int $id): Response
+    public function edit(Request $request, array|string|int $id): Response
     {
         $userContext = $this->requireAuthContext($request);
+        $questionId = is_array($id) ? (int)($id['id'] ?? 0) : (int)$id;
 
         try {
-            $question = $this->questionBankService->getQuestionById($id, $userContext);
+            $question = $this->questionBankService->getQuestionById($questionId, $userContext);
         } catch (ResourceNotFoundException $e) {
-            return $this->notFound();
+            return $this->notFound($e->getMessage());
         } catch (AuthorizationException $e) {
             return $this->forbidden($e->getMessage());
         }
 
-        return $this->view('teacher/question_bank/edit', [
+        return Response::html($this->render('teacher/question_bank/edit', [
+            'title' => 'Edit Question #' . $questionId . ' — Question Bank',
+            'headerTitle' => 'Edit Assessment Question',
             'user' => $userContext,
             'question' => $question,
             'errors' => $request->getSession()?->getFlash('errors') ?? [],
             'old' => $request->getSession()?->getFlash('old') ?? [],
-        ]);
+        ], 'layouts/teacher'));
     }
 
     /**
      * Update an existing Question.
+     * Route: POST /teacher/question-bank/{id}/edit
      */
-    public function update(Request $request, int $id): Response
+    public function update(Request $request, array|string|int $id): Response
     {
         $userContext = $this->requireAuthContext($request);
-        $data = $request->getBody();
+        $questionId = is_array($id) ? (int)($id['id'] ?? 0) : (int)$id;
+        $data = $request->all();
 
         try {
-            $result = $this->questionBankService->updateQuestion($id, $data, $userContext);
-            $request->getSession()?->flash('success', $result->message);
-            return $this->redirect('/teacher/question-bank?subject_id=' . $result->data->subjectId);
+            $result = $this->questionBankService->updateQuestion($questionId, $data, $userContext);
+            return $this->redirectWithSuccess(
+                '/teacher/question-bank?subject_id=' . (int)$result->data->subjectId,
+                $result->message
+            );
         } catch (ValidationException $e) {
-            $request->getSession()?->flash('errors', $e->getErrors());
-            $request->getSession()?->flash('old', $data);
-            return $this->redirect("/teacher/question-bank/{$id}/edit");
+            return $this->redirectWithErrors(
+                "/teacher/question-bank/{$questionId}/edit",
+                $e->getErrors(),
+                $data
+            );
         } catch (AuthorizationException $e) {
-            $request->getSession()?->flash('error', $e->getMessage());
-            return $this->redirect('/teacher/question-bank');
+            return $this->redirectWithError('/teacher/question-bank', $e->getMessage());
         }
     }
 
     /**
      * Delete a question.
+     * Route: POST /teacher/question-bank/{id}/delete
      */
-    public function delete(Request $request, int $id): Response
+    public function delete(Request $request, array|string|int $id): Response
     {
         $userContext = $this->requireAuthContext($request);
+        $questionId = is_array($id) ? (int)($id['id'] ?? 0) : (int)$id;
 
         try {
-            $result = $this->questionBankService->deleteQuestion($id, $userContext);
-            $request->getSession()?->flash('success', $result->message);
+            $result = $this->questionBankService->deleteQuestion($questionId, $userContext);
+            return $this->redirectWithSuccess('/teacher/question-bank', $result->message);
         } catch (\Throwable $e) {
-            $request->getSession()?->flash('error', $e->getMessage());
+            return $this->redirectWithError('/teacher/question-bank', $e->getMessage());
         }
-
-        return $this->redirect('/teacher/question-bank');
     }
 }

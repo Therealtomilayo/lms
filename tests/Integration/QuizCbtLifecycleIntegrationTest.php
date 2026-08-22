@@ -690,4 +690,110 @@ final class QuizCbtLifecycleIntegrationTest extends TestCase
         $this->assertTrue($retryRes->success);
         $this->assertSame(2, $retryRes->data->attemptNumber);
     }
+
+    public function testCreateQuestionWithSingleChoiceCorrectOptionIndex(): void
+    {
+        $teacherContext = UserContext::fromUser($this->teacherUser);
+
+        $res = $this->questionBankService->createQuestion([
+            'subject_id' => 1,
+            'topic' => 'Optics',
+            'type' => Question::TYPE_MCQ,
+            'question_text' => 'What is the speed of light in a vacuum?',
+            'default_points' => 2.0,
+            'correct_option' => 2, // Index 2 is the correct answer
+            'options' => [
+                ['option_text' => '3 x 10^6 m/s'],
+                ['option_text' => '3 x 10^7 m/s'],
+                ['option_text' => '3 x 10^8 m/s'], // Correct
+                ['option_text' => '3 x 10^9 m/s'],
+            ],
+        ], $teacherContext);
+
+        $this->assertTrue($res->success);
+        $question = $this->questionBankRepo->findById($res->data->id);
+        $this->assertNotNull($question);
+        $this->assertCount(4, $question->options);
+        $this->assertFalse($question->options[0]->isCorrect);
+        $this->assertFalse($question->options[1]->isCorrect);
+        $this->assertTrue($question->options[2]->isCorrect);
+        $this->assertFalse($question->options[3]->isCorrect);
+    }
+
+    public function testBulkQuestionImportParsingAndCreation(): void
+    {
+        $teacherContext = UserContext::fromUser($this->teacherUser);
+
+        $bulkText = <<<TXT
+What is the powerhouse of the cell?
+A) Nucleus
+B) Mitochondria
+C) Ribosome
+D) Endoplasmic Reticulum
+ANSWER: B
+TOPIC: Cell Biology
+POINTS: 1.5
+
+Which planet is closest to the Sun?
+1) Venus
+2) Mercury
+3) Earth
+4) Mars
+ANSWER: 2
+TOPIC: Astronomy
+POINTS: 1.0
+
+Explain Newton's third law of motion.
+TYPE: short_answer
+TOPIC: Mechanics
+POINTS: 3.0
+TXT;
+
+        $res = $this->questionBankService->createBulkQuestions(
+            subjectId: 1,
+            bulkText: $bulkText,
+            defaultTopic: 'Physics',
+            defaultPoints: 1.0,
+            userContext: $teacherContext
+        );
+
+        $this->assertTrue($res->success);
+        $this->assertStringContainsString('Successfully created 3 assessment questions', $res->message);
+
+        // Verify questions in subject
+        $list = $this->questionBankRepo->findBySubject(1);
+        $this->assertGreaterThanOrEqual(3, count($list));
+
+        // Find the bulk created questions
+        $q1 = null;
+        $q2 = null;
+        $q3 = null;
+        foreach ($list as $q) {
+            if (str_contains($q->questionText, 'powerhouse of the cell')) {
+                $q1 = $q;
+            } elseif (str_contains($q->questionText, 'closest to the Sun')) {
+                $q2 = $q;
+            } elseif (str_contains($q->questionText, "Newton's third law")) {
+                $q3 = $q;
+            }
+        }
+
+        $this->assertNotNull($q1);
+        $this->assertSame(Question::TYPE_MCQ, $q1->type);
+        $this->assertSame('Cell Biology', $q1->topic);
+        $this->assertSame(1.5, $q1->defaultPoints);
+        $this->assertCount(4, $q1->options);
+        $this->assertFalse($q1->options[0]->isCorrect);
+        $this->assertTrue($q1->options[1]->isCorrect); // B is correct
+
+        $this->assertNotNull($q2);
+        $this->assertSame('Astronomy', $q2->topic);
+        $this->assertCount(4, $q2->options);
+        $this->assertTrue($q2->options[1]->isCorrect); // 2 -> option index 1 (Mercury) is correct
+
+        $this->assertNotNull($q3);
+        $this->assertSame(Question::TYPE_SHORT_ANSWER, $q3->type);
+        $this->assertSame('Mechanics', $q3->topic);
+        $this->assertSame(3.0, $q3->defaultPoints);
+    }
 }

@@ -13,21 +13,23 @@ final class ServiceResult
         public readonly bool $success,
         public readonly mixed $data = null,
         public readonly array $errors = [],
-        public readonly ?string $errorCode = null
+        public readonly ?string $errorCode = null,
+        public readonly ?string $message = null
     ) {
     }
 
-    public static function success(mixed $data = null): self
+    public static function success(mixed $data = null, ?string $message = null): self
     {
         return new self(
             success: true,
             data: $data,
             errors: [],
-            errorCode: null
+            errorCode: null,
+            message: $message
         );
     }
 
-    public static function failure(array|string $errors, ?string $errorCode = null): self
+    public static function failure(array|string $errors, ?string $errorCode = null, ?string $message = null): self
     {
         $normalizedErrors = is_array($errors) ? $errors : ['general' => [$errors]];
 
@@ -35,7 +37,8 @@ final class ServiceResult
             success: false,
             data: null,
             errors: $normalizedErrors,
-            errorCode: $errorCode
+            errorCode: $errorCode,
+            message: $message ?? (is_string($errors) ? $errors : null)
         );
     }
 
@@ -52,6 +55,11 @@ final class ServiceResult
     public function getData(): mixed
     {
         return $this->data;
+    }
+
+    public function getMessage(): ?string
+    {
+        return $this->message;
     }
 
     public function getFirstError(): ?string
@@ -76,11 +84,17 @@ final class ServiceResult
 
     public function toArray(): array
     {
-        return [
+        $arr = [
             'success' => $this->success,
             'data' => $this->data,
             'errors' => $this->errors,
             'error_code' => $this->errorCode,
         ];
+
+        if ($this->message !== null) {
+            $arr['message'] = $this->message;
+        }
+
+        return $arr;
     }
 }

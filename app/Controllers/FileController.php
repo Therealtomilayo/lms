@@ -31,14 +31,14 @@ class FileController extends Controller
      * Stream or download a protected file after authorization.
      * Route: GET /files/{id}/download
      */
-    public function download(Request $request, array $params): Response
+    public function download(Request $request, array|string|int $id): Response
     {
-        $userContext = $this->authenticator->getUserContext();
-        if (!$userContext->isAuthenticated()) {
+        $userContext = $this->getUserContext($request);
+        if (!$userContext || !$userContext->isAuthenticated()) {
             return $this->redirect('/login');
         }
 
-        $fileId = $params['id'] ?? '';
+        $fileId = is_array($id) ? ($id['id'] ?? '') : (string)$id;
         if ($fileId === '') {
             return $this->view('errors/404', ['message' => 'File not found.'], 404);
         }

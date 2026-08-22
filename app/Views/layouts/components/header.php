@@ -14,7 +14,7 @@
     <div class="flex items-center gap-4 min-w-0">
         <!-- Mobile Sidebar Hamburger Toggle -->
         <button type="button" 
-                onclick="document.getElementById('sidebar-navigation').classList.toggle('hidden'); document.getElementById('sidebar-navigation').classList.toggle('flex')" 
+                onclick="window.LMS ? window.LMS.toggleSidebar() : (document.getElementById('sidebar-navigation').classList.toggle('hidden'), document.getElementById('sidebar-navigation').classList.toggle('flex'), document.getElementById('sidebar-backdrop')?.classList.toggle('hidden'))" 
                 class="md:hidden p-2 -ml-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer"
                 aria-label="Toggle Navigation Sidebar">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>

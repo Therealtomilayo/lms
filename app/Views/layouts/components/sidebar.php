@@ -161,21 +161,39 @@ if ($role === 'parent' && $activeChildId > 0) {
 }
 ?>
 
+<!-- Mobile Backdrop Overlay (Click outside to close) -->
+<div id="sidebar-backdrop" 
+     onclick="window.LMS ? window.LMS.toggleSidebar(false) : (document.getElementById('sidebar-navigation').classList.add('hidden'), document.getElementById('sidebar-backdrop').classList.add('hidden'))"
+     class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-40 hidden md:hidden transition-opacity duration-200"
+     aria-hidden="true"></div>
+
 <!-- Sidebar Container -->
 <aside id="sidebar-navigation" 
-       class="hidden md:flex w-64 bg-slate-900 text-slate-200 flex-col flex-shrink-0 min-h-screen border-r border-slate-800 fixed md:sticky inset-y-0 left-0 z-30 transition-transform duration-200">
+       class="hidden md:flex w-64 bg-slate-900 text-slate-200 flex-col flex-shrink-0 min-h-screen border-r border-slate-800 fixed md:sticky inset-y-0 left-0 z-50 md:z-30 transition-transform duration-200 shadow-2xl md:shadow-none">
     
     <!-- Header/Branding -->
-    <div class="p-5 border-b border-slate-800 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg overflow-hidden bg-white flex items-center justify-center p-1 flex-shrink-0 shadow-xs">
-            <img src="/assets/img/logo.png" alt="Claret Academy Logo" class="w-full h-full object-contain" onerror="this.parentElement.innerHTML='<span class=\'font-bold text-slate-900 text-sm\'>CL</span>'">
+    <div class="p-5 border-b border-slate-800 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3 min-w-0">
+            <div class="w-10 h-10 rounded-lg overflow-hidden bg-white flex items-center justify-center p-1 flex-shrink-0 shadow-xs">
+                <img src="/assets/img/logo.png" alt="Claret Academy Logo" class="w-full h-full object-contain" onerror="this.parentElement.innerHTML='<span class=\'font-bold text-slate-900 text-sm\'>CL</span>'">
+            </div>
+            <div class="truncate">
+                <h2 class="font-bold text-white leading-tight truncate">Claret Academy</h2>
+                <span class="text-xs font-semibold tracking-wide uppercase <?= e($roleBadgeColor ?? 'text-brand-400') ?>">
+                    <?= e($roleLabel) ?>
+                </span>
+            </div>
         </div>
-        <div>
-            <h2 class="font-bold text-white leading-tight">Claret Academy</h2>
-            <span class="text-xs font-semibold tracking-wide uppercase <?= e($roleBadgeColor ?? 'text-brand-400') ?>">
-                <?= e($roleLabel) ?>
-            </span>
-        </div>
+
+        <!-- Mobile Close Button (X) -->
+        <button type="button" 
+                onclick="window.LMS ? window.LMS.toggleSidebar(false) : (document.getElementById('sidebar-navigation').classList.add('hidden'), document.getElementById('sidebar-backdrop').classList.add('hidden'))"
+                class="md:hidden p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer flex-shrink-0"
+                aria-label="Close Navigation Sidebar">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
     </div>
 
     <!-- Multi-Child Context Switcher (Parent Portal Only) -->

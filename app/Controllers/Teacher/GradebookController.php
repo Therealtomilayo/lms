@@ -48,56 +48,79 @@ class GradebookController extends Controller
         $this->teacherRepo = $teacherRepo ?? new TeacherRepository();
     }
 
+    /**
+     * List gradebooks for assigned class-subjects.
+     * Route: GET /teacher/gradebook
+     */
     public function index(Request $request): Response
     {
-        $userContext = $this->user($request);
-        if (!$userContext) {
-            return $this->redirect('/login');
-        }
+        $userContext = $this->requireAuthContext($request);
+        $teacher = $this->teacherRepo->findTeacherByUserId($userContext->id);
+        $teacherId = $teacher ? $teacher->id : null;
 
-        $teacherId = $userContext->getTeacherId();
         if (!$teacherId && !$userContext->isAdmin()) {
             throw new AuthorizationException('Teacher profile required.');
         }
 
-        $activeSession = $this->academicRepo->getCurrentSession();
-        $activeTerm = $this->academicRepo->getCurrentTerm();
+        $activeSession = $this->academicRepo->findCurrentSession();
+        $activeTerm = $this->academicRepo->findCurrentTerm();
 
         $classSubjects = $teacherId !== null
-            ? $this->academicRepo->getClassSubjectsByTeacher($teacherId)
-            : $this->academicRepo->getAllClassSubjects();
+            ? $this->academicRepo->findClassSubjectsByTeacherId($teacherId)
+            : $this->academicRepo->findAllClassSubjects();
 
-        return $this->view('teacher/gradebook/index', [
+        return Response::html($this->render('teacher/gradebook/index', [
+            'title' => 'Gradebooks & Continuous Assessment — Claret Faculty Portal',
+            'headerTitle' => 'Academic Gradebooks',
+            'user' => $userContext,
             'classSubjects' => $classSubjects,
             'activeSession' => $activeSession,
             'activeTerm' => $activeTerm,
-        ]);
+        ], 'layouts/teacher'));
     }
 
-    public function show(Request $request, int|string $classSubjectId, int|string|null $termId = null): Response
+    /**
+     * Show gradebook sheet for a specific class-subject.
+     * Route: GET /teacher/gradebook/{classSubjectId}
+     */
+    public function show(Request $request, array|string|int $classSubjectId, array|string|int|null $termId = null): Response
     {
-        $userContext = $this->user($request);
-        if (!$userContext) {
-            return $this->redirect('/login');
-        }
-
-        $csId = (int)$classSubjectId;
+        $userContext = $this->requireAuthContext($request);
+        $csId = is_array($classSubjectId) ? (int)($classSubjectId['classSubjectId'] ?? $classSubjectId['id'] ?? 0) : (int)$classSubjectId;
+        
         $classSubject = $this->academicRepo->findClassSubjectById($csId);
         if (!$classSubject) {
-            throw new ResourceNotFoundException('Class subject not found.');
+            return $this->notFound('Class subject not found.');
         }
 
         if (!GradebookPolicy::canView($userContext, $classSubject)) {
-            throw new AuthorizationException('You are not authorized to view this gradebook.');
+            return $this->forbidden('You are not authorized to view this gradebook.');
         }
 
-        $tId = $termId !== null ? (int)$termId : (int)($request->get('term_id', 0) ?: 0);
+        $allTerms = $this->academicRepo->findAllTerms();
+
+        $rawTermId = $termId !== null ? $termId : $request->get('term_id', 0);
+        $tId = is_array($rawTermId) ? (int)($rawTermId['termId'] ?? 0) : (int)$rawTermId;
+        
         $term = $tId > 0
             ? $this->academicRepo->findTermById($tId)
-            : $this->academicRepo->getCurrentTerm();
+            : $this->academicRepo->findCurrentTerm();
 
         if (!$term) {
-            throw new ResourceNotFoundException('Academic term not found.');
+            $session = $this->academicRepo->getCurrentSession() ?? $this->academicRepo->findActiveSession();
+            if ($session) {
+                $term = $this->academicRepo->createTerm([
+                    'session_id' => $session->id,
+                    'name' => '1st Term',
+                    'start_date' => date('Y-m-d'),
+                    'end_date' => date('Y-m-d', strtotime('+90 days')),
+                    'status' => 'active',
+                ]);
+            }
+        }
+
+        if (!$term) {
+            return $this->notFound('Academic term not found.');
         }
 
         $session = $this->academicRepo->findSessionById($term->sessionId);
@@ -123,65 +146,101 @@ class GradebookController extends Controller
             $resultMap[$tr->studentId] = $tr;
         }
 
-        return $this->view('teacher/gradebook/sheet', [
+        $sName = $classSubject->subject?->name ?? 'Subject';
+        $cName = $classSubject->schoolClass?->name ?? 'Class';
+
+        return Response::html($this->render('teacher/gradebook/sheet', [
+            'title' => "{$sName} ({$cName}) — Gradebook Sheet",
+            'headerTitle' => 'Score Sheet & Evaluation',
+            'user' => $userContext,
             'classSubject' => $classSubject,
             'session' => $session,
             'term' => $term,
+            'allTerms' => $allTerms,
             'categories' => $categories,
             'students' => $enrolledStudents,
             'scoreMatrix' => $scoreMatrix,
             'resultMap' => $resultMap,
             'isLocked' => $isLocked,
-        ]);
+        ], 'layouts/teacher'));
     }
 
-    public function save(Request $request, int|string $classSubjectId): Response
+    /**
+     * Save score records for class-subject gradebook.
+     * Route: POST /teacher/gradebook/{classSubjectId}/save
+     */
+    public function save(Request $request, array|string|int $classSubjectId): Response
     {
-        $userContext = $this->user($request);
-        if (!$userContext) {
-            return $this->redirect('/login');
-        }
-
-        $csId = (int)$classSubjectId;
+        $userContext = $this->requireAuthContext($request);
+        $csId = is_array($classSubjectId) ? (int)($classSubjectId['classSubjectId'] ?? $classSubjectId['id'] ?? 0) : (int)$classSubjectId;
+        
         $classSubject = $this->academicRepo->findClassSubjectById($csId);
         if (!$classSubject) {
-            throw new ResourceNotFoundException('Class subject not found.');
+            return $this->notFound('Class subject not found.');
         }
 
-        $termId = (int)($request->input('term_id') ?? $request->get('term_id') ?? 0);
+        $data = $request->all();
+        $termId = (int)($data['term_id'] ?? $request->get('term_id', 0));
+        
         $term = $termId > 0
             ? $this->academicRepo->findTermById($termId)
-            : $this->academicRepo->getCurrentTerm();
+            : $this->academicRepo->findCurrentTerm();
 
         if (!$term) {
-            throw new ResourceNotFoundException('Academic term not found.');
+            $session = $this->academicRepo->getCurrentSession() ?? $this->academicRepo->findActiveSession();
+            if ($session) {
+                $term = $this->academicRepo->createTerm([
+                    'session_id' => $session->id,
+                    'name' => '1st Term',
+                    'start_date' => date('Y-m-d'),
+                    'end_date' => date('Y-m-d', strtotime('+90 days')),
+                    'status' => 'active',
+                ]);
+            }
+        }
+
+        if (!$term) {
+            return $this->notFound('Academic term not found.');
         }
 
         $isLocked = $this->gradebookRepo->isClassSubjectLocked($csId, $term->id);
         if (!GradebookPolicy::canSaveScores($userContext, $classSubject, $isLocked)) {
-            throw new AuthorizationException('Cannot save scores. Gradebook is locked or unauthorized.');
-        }
-
-        $scoresInput = $request->input('scores', []);
-        $sessionId = $term->sessionId;
-
-        $result = $this->gradebookService->saveScores(
-            $csId,
-            $sessionId,
-            $term->id,
-            is_array($scoresInput) ? $scoresInput : [],
-            $userContext->getUserId()
-        );
-
-        if ($request->input('compute_results')) {
-            $this->gradebookService->computeClassSubjectResults(
-                $csId,
-                $sessionId,
-                $term->id,
-                false
+            return $this->redirectWithError(
+                "/teacher/gradebook/{$csId}?term_id={$term->id}",
+                'Cannot save scores. Gradebook is locked by administration or unauthorized.'
             );
         }
 
-        return $this->redirectWithSuccess("/teacher/gradebook/{$csId}?term_id={$term->id}", $result->message);
+        $scoresInput = $data['scores'] ?? [];
+        $sessionId = $term->sessionId;
+
+        try {
+            $result = $this->gradebookService->saveScores(
+                $csId,
+                $sessionId,
+                $term->id,
+                is_array($scoresInput) ? $scoresInput : [],
+                $userContext->id
+            );
+
+            if (!empty($data['compute_results'])) {
+                $this->gradebookService->computeClassSubjectResults(
+                    $csId,
+                    $sessionId,
+                    $term->id,
+                    false
+                );
+            }
+
+            return $this->redirectWithSuccess(
+                "/teacher/gradebook/{$csId}?term_id={$term->id}",
+                $result->message
+            );
+        } catch (\Throwable $e) {
+            return $this->redirectWithError(
+                "/teacher/gradebook/{$csId}?term_id={$term->id}",
+                $e->getMessage()
+            );
+        }
     }
 }

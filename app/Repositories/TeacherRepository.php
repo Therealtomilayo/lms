@@ -58,6 +58,37 @@ class TeacherRepository
         return $row ? Teacher::fromArray($row) : null;
     }
 
+    public function findByUserId(int $userId): ?Teacher
+    {
+        return $this->findTeacherByUserId($userId);
+    }
+
+    /**
+     * Get teaching allocations for a teacher in a given academic session.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getTeachingAllocations(int $teacherId, int $sessionId): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT cs.id as class_subject_id, cs.class_id, cs.subject_id, cs.session_id,
+                    c.name as class_name, c.section_arm, al.name as academic_level_name,
+                    s.name as subject_name, s.code as subject_code
+             FROM `class_subjects` cs
+             JOIN `classes` c ON c.id = cs.class_id
+             LEFT JOIN `academic_levels` al ON al.id = c.academic_level_id
+             JOIN `subjects` s ON s.id = cs.subject_id
+             WHERE cs.teacher_id = :teacher_id AND cs.session_id = :session_id
+             ORDER BY c.name ASC, s.name ASC'
+        );
+        $stmt->execute([
+            ':teacher_id' => $teacherId,
+            ':session_id' => $sessionId,
+        ]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function findTeacherByStaffId(string $staffId): ?Teacher
     {
         $stmt = $this->pdo->prepare(

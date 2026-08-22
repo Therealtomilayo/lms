@@ -68,6 +68,11 @@ class AcademicRepository
         return $this->findActiveSession();
     }
 
+    public function findCurrentSession(): ?AcademicSession
+    {
+        return $this->findActiveSession();
+    }
+
     public function getActiveSession(): ?AcademicSession
     {
         return $this->findActiveSession();
@@ -181,14 +186,23 @@ class AcademicRepository
 
     public function findActiveTermForSession(int $sessionId): ?Term
     {
-        $stmt = $this->pdo->prepare('SELECT * FROM `terms` WHERE `session_id` = :session_id AND `status` = :status LIMIT 1');
+        $stmt = $this->pdo->prepare('SELECT * FROM `terms` WHERE `session_id` = :session_id AND LOWER(`status`) = :status LIMIT 1');
         $stmt->execute([
             ':session_id' => $sessionId,
-            ':status' => Term::STATUS_ACTIVE,
+            ':status' => strtolower(Term::STATUS_ACTIVE),
         ]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        return $row ? Term::fromArray($row) : null;
+        if ($row) {
+            return Term::fromArray($row);
+        }
+
+        // Fallback: Return first term in session if none explicitly marked active
+        $stmt = $this->pdo->prepare('SELECT * FROM `terms` WHERE `session_id` = :session_id ORDER BY `id` ASC LIMIT 1');
+        $stmt->execute([':session_id' => $sessionId]);
+        $fallbackRow = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $fallbackRow ? Term::fromArray($fallbackRow) : null;
     }
 
     public function findActiveTermInSession(int $sessionId): ?Term
@@ -219,16 +233,15 @@ class AcademicRepository
         return array_map(fn(array $row) => Term::fromArray($row), $rows);
     }
 
-    public function findCurrentTerm(): ?Term
+    /**
+     * @return Term[]
+     */
+    public function getAllTerms(): array
     {
-        $stmt = $this->pdo->prepare('SELECT * FROM `terms` WHERE `status` = :status LIMIT 1');
-        $stmt->execute([':status' => Term::STATUS_ACTIVE]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        return $row ? Term::fromArray($row) : null;
+        return $this->findAllTerms();
     }
 
-    public function getCurrentTerm(): ?Term
+    public function findCurrentTerm(): ?Term
     {
         $activeSession = $this->findActiveSession();
         if ($activeSession) {
@@ -237,23 +250,37 @@ class AcademicRepository
                 return $term;
             }
         }
+
+        $stmt = $this->pdo->prepare('SELECT * FROM `terms` WHERE LOWER(`status`) = :status LIMIT 1');
+        $stmt->execute([':status' => strtolower(Term::STATUS_ACTIVE)]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($row) {
+            return Term::fromArray($row);
+        }
+
+        // Final fallback: Get the latest term in database
+        $stmt = $this->pdo->query('SELECT * FROM `terms` ORDER BY `id` DESC LIMIT 1');
+        $lastRow = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $lastRow ? Term::fromArray($lastRow) : null;
+    }
+
+    public function getCurrentTerm(): ?Term
+    {
         return $this->findCurrentTerm();
     }
 
     public function findActiveTerm(): ?Term
     {
-        return $this->getCurrentTerm();
+        return $this->findCurrentTerm();
     }
 
     public function getActiveTerm(): ?Term
     {
-        return $this->getCurrentTerm();
+        return $this->findCurrentTerm();
     }
 
-    public function getAllTerms(): array
-    {
-        return $this->findAllTerms();
-    }
 
     public function createTerm(array $data): Term
     {

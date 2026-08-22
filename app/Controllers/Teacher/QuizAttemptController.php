@@ -33,82 +33,94 @@ class QuizAttemptController extends Controller
 
     /**
      * View list of student attempts for a quiz.
+     * Route: GET /teacher/quizzes/{id}/attempts
      */
-    public function index(Request $request, int $id): Response
+    public function index(Request $request, array|string|int $id): Response
     {
         $userContext = $this->requireAuthContext($request);
+        $quizId = is_array($id) ? (int)($id['id'] ?? 0) : (int)$id;
 
         try {
-            $data = $this->quizService->getQuizAttempts($id, $userContext);
+            $data = $this->quizService->getQuizAttempts($quizId, $userContext);
         } catch (ResourceNotFoundException $e) {
-            return $this->notFound();
+            return $this->notFound($e->getMessage());
         } catch (AuthorizationException $e) {
             return $this->forbidden($e->getMessage());
         }
 
-        return $this->view('teacher/quizzes/attempts', [
+        return Response::html($this->render('teacher/quizzes/attempts', [
+            'title' => 'Student Attempts — ' . htmlspecialchars($data['quiz']->title),
+            'headerTitle' => 'Student Exam Results & Attempts',
             'user' => $userContext,
             'quiz' => $data['quiz'],
             'attempts' => $data['attempts'],
-        ]);
+        ], 'layouts/teacher'));
     }
 
     /**
      * Show grading interface for an individual student attempt.
+     * Route: GET /teacher/quizzes/{quizId}/attempts/{attemptId}/grade
      */
-    public function showGradeForm(Request $request, int $quizId, int $attemptId): Response
+    public function showGradeForm(Request $request, array|string|int $quizId, array|string|int $attemptId): Response
     {
         $userContext = $this->requireAuthContext($request);
+        $quizIdInt = is_array($quizId) ? (int)($quizId['quizId'] ?? $quizId['id'] ?? 0) : (int)$quizId;
+        $attemptIdInt = is_array($attemptId) ? (int)($attemptId['attemptId'] ?? $attemptId['id'] ?? 0) : (int)$attemptId;
 
         try {
-            $data = $this->quizService->getAttemptResult($attemptId, $userContext);
+            $data = $this->quizService->getAttemptResult($attemptIdInt, $userContext);
         } catch (ResourceNotFoundException $e) {
-            return $this->notFound();
+            return $this->notFound($e->getMessage());
         } catch (AuthorizationException $e) {
             return $this->forbidden($e->getMessage());
         }
 
-        return $this->view('teacher/quizzes/grade_attempt', [
+        return Response::html($this->render('teacher/quizzes/grade_attempt', [
+            'title' => 'Grade Attempt #' . $attemptIdInt . ' — ' . htmlspecialchars($data['quiz']->title),
+            'headerTitle' => 'Manual Evaluation & Grading',
             'user' => $userContext,
             'quiz' => $data['quiz'],
             'attempt' => $data['attempt'],
             'answers' => $data['answers'],
-        ]);
+        ], 'layouts/teacher'));
     }
 
     /**
      * Submit manual grades and comments for short answer questions.
+     * Route: POST /teacher/quizzes/{quizId}/attempts/{attemptId}/grade
      */
-    public function gradeShortAnswers(Request $request, int $quizId, int $attemptId): Response
+    public function gradeShortAnswers(Request $request, array|string|int $quizId, array|string|int $attemptId): Response
     {
         $userContext = $this->requireAuthContext($request);
-        $data = $request->getBody();
+        $quizIdInt = is_array($quizId) ? (int)($quizId['quizId'] ?? $quizId['id'] ?? 0) : (int)$quizId;
+        $attemptIdInt = is_array($attemptId) ? (int)($attemptId['attemptId'] ?? $attemptId['id'] ?? 0) : (int)$attemptId;
+
+        $data = $request->all();
         $rawGrades = $data['grades'] ?? [];
 
         try {
-            $result = $this->quizService->gradeAttemptShortAnswers($attemptId, is_array($rawGrades) ? $rawGrades : [], $userContext);
-            $request->getSession()?->flash('success', $result->message);
+            $result = $this->quizService->gradeAttemptShortAnswers($attemptIdInt, is_array($rawGrades) ? $rawGrades : [], $userContext);
+            return $this->redirectWithSuccess("/teacher/quizzes/{$quizIdInt}/attempts", $result->message);
         } catch (\Throwable $e) {
-            $request->getSession()?->flash('error', $e->getMessage());
+            return $this->redirectWithError("/teacher/quizzes/{$quizIdInt}/attempts/{$attemptIdInt}/grade", $e->getMessage());
         }
-
-        return $this->redirect("/teacher/quizzes/{$quizId}/attempts");
     }
 
     /**
      * Reset a student attempt.
+     * Route: POST /teacher/quizzes/{quizId}/attempts/{attemptId}/reset
      */
-    public function reset(Request $request, int $quizId, int $attemptId): Response
+    public function reset(Request $request, array|string|int $quizId, array|string|int $attemptId): Response
     {
         $userContext = $this->requireAuthContext($request);
+        $quizIdInt = is_array($quizId) ? (int)($quizId['quizId'] ?? $quizId['id'] ?? 0) : (int)$quizId;
+        $attemptIdInt = is_array($attemptId) ? (int)($attemptId['attemptId'] ?? $attemptId['id'] ?? 0) : (int)$attemptId;
 
         try {
-            $result = $this->quizService->resetStudentAttempt($attemptId, $userContext);
-            $request->getSession()?->flash('success', $result->message);
+            $result = $this->quizService->resetStudentAttempt($attemptIdInt, $userContext);
+            return $this->redirectWithSuccess("/teacher/quizzes/{$quizIdInt}/attempts", $result->message);
         } catch (\Throwable $e) {
-            $request->getSession()?->flash('error', $e->getMessage());
+            return $this->redirectWithError("/teacher/quizzes/{$quizIdInt}/attempts", $e->getMessage());
         }
-
-        return $this->redirect("/teacher/quizzes/{$quizId}/attempts");
     }
 }

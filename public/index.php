@@ -240,6 +240,8 @@ try {
     $router->get('/teacher/question-bank', [\App\Controllers\Teacher\QuestionBankController::class, 'index'], $teacherAuth);
     $router->get('/teacher/question-bank/create', [\App\Controllers\Teacher\QuestionBankController::class, 'create'], $teacherAuth);
     $router->post('/teacher/question-bank/create', [\App\Controllers\Teacher\QuestionBankController::class, 'store'], $teacherFormAuth);
+    $router->get('/teacher/question-bank/bulk', [\App\Controllers\Teacher\QuestionBankController::class, 'bulkCreate'], $teacherAuth);
+    $router->post('/teacher/question-bank/bulk', [\App\Controllers\Teacher\QuestionBankController::class, 'bulkStore'], $teacherFormAuth);
     $router->get('/teacher/question-bank/{id}/edit', [\App\Controllers\Teacher\QuestionBankController::class, 'edit'], $teacherAuth);
     $router->post('/teacher/question-bank/{id}/edit', [\App\Controllers\Teacher\QuestionBankController::class, 'update'], $teacherFormAuth);
     $router->post('/teacher/question-bank/{id}/delete', [\App\Controllers\Teacher\QuestionBankController::class, 'delete'], $teacherFormAuth);
@@ -266,6 +268,8 @@ try {
 
     // Teacher Attendance & Announcements Routes
     $router->get('/teacher/attendance', [\App\Controllers\Teacher\AttendanceController::class, 'index'], $teacherAuth);
+    $router->get('/teacher/attendance/{classId}', [\App\Controllers\Teacher\AttendanceController::class, 'form'], $teacherAuth);
+    $router->post('/teacher/attendance/{classId}', [\App\Controllers\Teacher\AttendanceController::class, 'store'], $teacherFormAuth);
     $router->get('/teacher/attendance/{classId}/{date}', [\App\Controllers\Teacher\AttendanceController::class, 'form'], $teacherAuth);
     $router->post('/teacher/attendance/{classId}/{date}', [\App\Controllers\Teacher\AttendanceController::class, 'store'], $teacherFormAuth);
     $router->get('/teacher/announcements', [\App\Controllers\Teacher\AnnouncementController::class, 'index'], $teacherAuth);
