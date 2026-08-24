@@ -85,9 +85,17 @@ final class Quiz
     {
         $total = 0.0;
         foreach ($this->quizQuestions as $qq) {
-            $total += $qq->points;
+            $total += (float)$qq->points;
         }
         return $total;
+    }
+
+    public function __get(string $name): mixed
+    {
+        if ($name === 'totalMarks' || $name === 'total_marks' || $name === 'total_max_score') {
+            return $this->getTotalMaxScore();
+        }
+        return null;
     }
 
     /**

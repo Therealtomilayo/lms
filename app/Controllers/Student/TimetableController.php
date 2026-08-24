@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers\Student;
 
 use App\Controllers\Controller;
+use App\Core\AuthenticatorInterface;
 use App\Core\Exceptions\AuthorizationException;
 use App\Core\Exceptions\ResourceNotFoundException;
 use App\Core\Request;
@@ -24,10 +25,12 @@ class TimetableController extends Controller
     private StudentRepository $studentRepo;
 
     public function __construct(
+        ?AuthenticatorInterface $authenticator = null,
         ?TimetableService $timetableService = null,
         ?AcademicRepository $academicRepo = null,
         ?StudentRepository $studentRepo = null
     ) {
+        parent::__construct($authenticator);
         $this->timetableService = $timetableService ?? new TimetableService();
         $this->academicRepo = $academicRepo ?? new AcademicRepository();
         $this->studentRepo = $studentRepo ?? new StudentRepository();
@@ -35,54 +38,43 @@ class TimetableController extends Controller
 
     /**
      * View personal weekly learning timetable.
+     * Route: GET /student/timetable
      */
     public function index(Request $request): Response
     {
-        $user = $this->getUserContext($request);
-        if (!$user) {
-            return Response::redirect('/login');
+        $user = $this->requireAuthContext($request);
+        $student = $this->studentRepo->findByUserId($user->id);
+
+        if (!$student && !$user->isAdmin()) {
+            return Response::forbidden('Student profile not found.');
         }
 
-        // Student identity resolved strictly from session user context
-        $studentId = $user->getStudentId($this->studentRepo);
-        if (!$studentId) {
-            return Response::html($this->render('student/timetable/index', [
-                'title' => 'My Class Timetable — Student Portal',
-                'headerTitle' => 'Class Schedule',
-                'error' => 'No active student record found for your account.',
-                'scheduleData' => null,
-                'terms' => [],
-                'selectedTerm' => null,
-            ], 'layouts/student'));
-        }
-
-        $termId = $request->getQuery('term_id') ? (int)$request->getQuery('term_id') : null;
+        $activeSession = $this->academicRepo->findCurrentSession();
         $terms = $this->academicRepo->getAllTerms();
-        $selectedTerm = null;
+        $termId = $request->get('term_id') ? (int)$request->get('term_id') : null;
 
+        $selectedTerm = null;
         if ($termId) {
             $selectedTerm = $this->academicRepo->findTermById($termId);
         }
         if (!$selectedTerm) {
-            $selectedTerm = $this->academicRepo->findCurrentTerm() ?? $this->academicRepo->findActiveTerm() ?? (!empty($terms) ? $terms[0] : null);
+            $selectedTerm = $this->academicRepo->findCurrentTerm() ?? (!empty($terms) ? $terms[0] : null);
         }
+
+        $studentId = $student ? $student->id : ($user->getStudentId() ?: 0);
 
         try {
             $scheduleData = $this->timetableService->getStudentTimetable($studentId, $selectedTerm?->id, $user);
         } catch (AuthorizationException | ResourceNotFoundException $e) {
-            return Response::html($this->render('student/timetable/index', [
-                'title' => 'My Class Timetable — Student Portal',
-                'headerTitle' => 'Class Schedule',
-                'error' => $e->getMessage(),
-                'scheduleData' => null,
-                'terms' => $terms,
-                'selectedTerm' => $selectedTerm,
-            ], 'layouts/student'));
+            $scheduleData = null;
         }
 
         return Response::html($this->render('student/timetable/index', [
-            'title' => 'My Class Timetable — Student Portal',
-            'headerTitle' => 'Class Timetable',
+            'title' => 'Weekly Class Timetable — Student Portal',
+            'headerTitle' => 'Learning Timetable',
+            'user' => $user,
+            'student' => $student,
+            'activeSession' => $activeSession,
             'scheduleData' => $scheduleData,
             'terms' => $terms,
             'selectedTerm' => $selectedTerm,

@@ -349,6 +349,48 @@ final class GradebookRepository
         return $results;
     }
 
+    public function getTermResult(int $studentId, int $classSubjectId, int $termId): ?TermResult
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT tr.*, 
+                    sub.name AS subject_name, sub.code AS subject_code,
+                    cs.class_id, cs.teacher_id, cs.session_id, cs.subject_id
+             FROM `term_results` tr
+             JOIN `class_subjects` cs ON tr.class_subject_id = cs.id
+             JOIN `subjects` sub ON cs.subject_id = sub.id
+             WHERE tr.student_id = :student_id 
+               AND tr.class_subject_id = :class_subject_id 
+               AND tr.term_id = :term_id
+             LIMIT 1'
+        );
+        $stmt->execute([
+            ':student_id' => $studentId,
+            ':class_subject_id' => $classSubjectId,
+            ':term_id' => $termId,
+        ]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row) {
+            return null;
+        }
+
+        $subject = Subject::fromArray([
+            'id' => $row['subject_id'],
+            'name' => $row['subject_name'],
+            'code' => $row['subject_code'],
+        ]);
+
+        $classSubject = ClassSubject::fromArray([
+            'id' => $row['class_subject_id'],
+            'class_id' => $row['class_id'],
+            'subject_id' => $row['subject_id'],
+            'teacher_id' => $row['teacher_id'],
+            'session_id' => $row['session_id'],
+        ], null, null, $subject);
+
+        return TermResult::fromArray($row, null, $classSubject);
+    }
+
     public function upsertStudentTermSummary(
         int $studentId,
         int $termId,

@@ -14,6 +14,7 @@ use App\Policies\ResultPolicy;
 use App\Repositories\AcademicRepository;
 use App\Repositories\GradebookRepository;
 use App\Repositories\ResultPublicationRepository;
+use App\Repositories\StudentRepository;
 use App\Services\ReportCardService;
 
 /**
@@ -25,35 +26,41 @@ class ReportCardController extends Controller
     private GradebookRepository $gradebookRepo;
     private ResultPublicationRepository $publicationRepo;
     private AcademicRepository $academicRepo;
+    private StudentRepository $studentRepo;
 
     public function __construct(
         ?AuthenticatorInterface $authenticator = null,
         ?ReportCardService $reportCardService = null,
         ?GradebookRepository $gradebookRepo = null,
         ?ResultPublicationRepository $publicationRepo = null,
-        ?AcademicRepository $academicRepo = null
+        ?AcademicRepository $academicRepo = null,
+        ?StudentRepository $studentRepo = null
     ) {
         parent::__construct($authenticator);
         $this->reportCardService = $reportCardService ?? new ReportCardService();
         $this->gradebookRepo = $gradebookRepo ?? new GradebookRepository();
         $this->publicationRepo = $publicationRepo ?? new ResultPublicationRepository();
         $this->academicRepo = $academicRepo ?? new AcademicRepository();
+        $this->studentRepo = $studentRepo ?? new StudentRepository();
     }
 
+    /**
+     * Term Continuous Assessment & Grade Breakdown Overview
+     * Route: GET /student/grades
+     */
     public function index(Request $request): Response
     {
-        $userContext = $this->user($request);
-        if (!$userContext) {
-            return $this->redirect('/login');
+        $userContext = $this->requireAuthContext($request);
+        $student = $this->studentRepo->findByUserId($userContext->id);
+
+        if (!$student && !$userContext->isAdmin()) {
+            return Response::forbidden('Student profile required.');
         }
 
-        $studentId = $userContext->getStudentId();
-        if (!$studentId) {
-            throw new AuthorizationException('Student profile required.');
-        }
-
-        $activeTerm = $this->academicRepo->getCurrentTerm();
-        $termId = (int)($request->get('term_id', 0) ?: ($activeTerm ? $activeTerm->id : 0));
+        $studentId = $student ? $student->id : ($userContext->getStudentId() ?: 0);
+        $activeSession = $this->academicRepo->findCurrentSession();
+        $activeTerm = $this->academicRepo->findCurrentTerm();
+        $termId = (int)($request->get('term_id') ?: ($activeTerm?->id ?? 0));
 
         $terms = $this->academicRepo->getAllTerms();
         $isPublished = $this->publicationRepo->isPublished($termId);
@@ -66,63 +73,56 @@ class ReportCardController extends Controller
             $summary = $this->gradebookRepo->findStudentTermSummary($studentId, $termId);
         }
 
-        return $this->view('student/grades/index', [
+        return Response::html($this->render('student/grades/index', [
+            'title' => 'Academic Grades & Performance — Student Portal',
+            'headerTitle' => 'Terminal Academic Performance',
+            'user' => $userContext,
+            'student' => $student,
+            'activeSession' => $activeSession,
+            'activeTerm' => $activeTerm,
             'terms' => $terms,
             'selectedTermId' => $termId,
             'isPublished' => $isPublished,
             'subjectResults' => $subjectResults,
             'summary' => $summary,
-        ]);
+        ], 'layouts/student'));
     }
 
-    public function show(Request $request, int|string|null $termId = null): Response
+    /**
+     * Official Terminal Report Card View & Print
+     * Route: GET /student/grades/report-card
+     */
+    public function show(Request $request, array|string|int|null $termId = null): Response
     {
-        $userContext = $this->user($request);
-        if (!$userContext) {
-            return $this->redirect('/login');
+        $userContext = $this->requireAuthContext($request);
+        $student = $this->studentRepo->findByUserId($userContext->id);
+
+        if (!$student && !$userContext->isAdmin()) {
+            return Response::forbidden('Student profile required.');
         }
 
-        $studentId = $userContext->getStudentId();
-        if (!$studentId) {
-            throw new AuthorizationException('Student profile required.');
-        }
-
-        $activeTerm = $this->academicRepo->getCurrentTerm();
-        $tId = $termId !== null ? (int)$termId : (int)($request->get('term_id', 0) ?: ($activeTerm ? $activeTerm->id : 0));
+        $studentId = $student ? $student->id : ($userContext->getStudentId() ?: 0);
+        $activeTerm = $this->academicRepo->findCurrentTerm();
+        $tId = is_array($termId) ? (int)($termId['term_id'] ?? 0) : ($termId !== null ? (int)$termId : (int)($request->get('term_id') ?: ($activeTerm?->id ?? 0)));
 
         $isPublished = $this->publicationRepo->isPublished($tId);
         if (!ResultPolicy::canViewStudentResults($userContext, $studentId, $isPublished)) {
-            throw new AuthorizationException('Results for this term are not yet published.');
+            return Response::forbidden('Results for this academic term are not yet published.');
         }
 
         $reportData = $this->reportCardService->getReportCardData($studentId, $tId);
+        $reportData['user'] = $userContext;
+        $reportData['student'] = $student;
 
-        return $this->view('student/grades/report_card', $reportData);
+        return Response::html($this->render('student/grades/report_card', $reportData));
     }
 
-    public function pdf(Request $request, int|string|null $termId = null): Response
+    /**
+     * Downloadable / PDF View
+     * Route: GET /student/grades/report-card/pdf
+     */
+    public function pdf(Request $request, array|string|int|null $termId = null): Response
     {
-        $userContext = $this->user($request);
-        if (!$userContext) {
-            return $this->redirect('/login');
-        }
-
-        $studentId = $userContext->getStudentId();
-        if (!$studentId) {
-            throw new AuthorizationException('Student profile required.');
-        }
-
-        $activeTerm = $this->academicRepo->getCurrentTerm();
-        $tId = $termId !== null ? (int)$termId : (int)($request->get('term_id', 0) ?: ($activeTerm ? $activeTerm->id : 0));
-
-        $isPublished = $this->publicationRepo->isPublished($tId);
-        if (!ResultPolicy::canViewStudentResults($userContext, $studentId, $isPublished)) {
-            throw new AuthorizationException('Results for this term are not yet published.');
-        }
-
-        $reportData = $this->reportCardService->getReportCardData($studentId, $tId);
-        $reportData['isPdf'] = true;
-
-        return $this->view('student/grades/report_card', $reportData);
+        return $this->show($request, $termId);
     }
 }

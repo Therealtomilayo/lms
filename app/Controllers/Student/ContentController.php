@@ -16,49 +16,51 @@ use App\Repositories\StudentRepository;
 use App\Services\ContentService;
 
 /**
- * Controller for Student Learning Materials & Course Content
+ * Controller for Student Learning Materials & Course Study Content
  */
 class ContentController extends Controller
 {
     private ContentService $contentService;
-    private AcademicRepository $academicRepository;
-    private StudentRepository $studentRepository;
-    private EnrollmentRepository $enrollmentRepository;
+    private AcademicRepository $academicRepo;
+    private StudentRepository $studentRepo;
+    private EnrollmentRepository $enrollmentRepo;
 
     public function __construct(
         ?AuthenticatorInterface $authenticator = null,
         ?ContentService $contentService = null,
-        ?AcademicRepository $academicRepository = null,
-        ?StudentRepository $studentRepository = null,
-        ?EnrollmentRepository $enrollmentRepository = null
+        ?AcademicRepository $academicRepo = null,
+        ?StudentRepository $studentRepo = null,
+        ?EnrollmentRepository $enrollmentRepo = null
     ) {
         parent::__construct($authenticator);
         $this->contentService = $contentService ?? new ContentService();
-        $this->academicRepository = $academicRepository ?? new AcademicRepository();
-        $this->studentRepository = $studentRepository ?? new StudentRepository();
-        $this->enrollmentRepository = $enrollmentRepository ?? new EnrollmentRepository();
+        $this->academicRepo = $academicRepo ?? new AcademicRepository();
+        $this->studentRepo = $studentRepo ?? new StudentRepository();
+        $this->enrollmentRepo = $enrollmentRepo ?? new EnrollmentRepository();
     }
 
     /**
-     * List materials for student's enrolled subjects.
+     * List study materials for student's enrolled subjects.
      * Route: GET /student/content
      */
     public function index(Request $request): Response
     {
-        $userContext = $this->authenticator->getUserContext();
-        $student = $this->studentRepository->findByUserId($userContext->userId);
+        $userContext = $this->requireAuthContext($request);
+        $student = $this->studentRepo->findByUserId($userContext->id);
 
-        if (!$student) {
-            return $this->view('errors/403', ['message' => 'Student profile not found.'], 403);
+        if (!$student && !$userContext->isAdmin()) {
+            return Response::forbidden('Student profile not found.');
         }
 
-        $activeSession = $this->academicRepository->getActiveSession();
+        $activeSession = $this->academicRepo->findCurrentSession();
+        $activeTerm = $this->academicRepo->findCurrentTerm();
         $sessionId = $activeSession ? $activeSession->id : 0;
-        $subjectEnrollments = $sessionId > 0
-            ? $this->enrollmentRepository->getStudentSubjectEnrollments($student->id, $sessionId)
+        
+        $subjectEnrollments = ($student && $sessionId > 0)
+            ? $this->enrollmentRepo->getStudentSubjectEnrollments($student->id, $sessionId)
             : [];
 
-        $selectedClassSubjectId = (int)$request->query('class_subject_id', 0);
+        $selectedClassSubjectId = (int)$request->get('class_subject_id', 0);
         $items = [];
         $topics = [];
         $selectedClassSubject = null;
@@ -70,10 +72,10 @@ class ContentController extends Controller
                 $topics = $result->data['topics'] ?? [];
                 $selectedClassSubject = $result->data['class_subject'] ?? null;
             } catch (\Throwable $e) {
-                // Return empty if unauthorized
+                // Ignore error if student isn't enrolled
             }
         } elseif (!empty($subjectEnrollments)) {
-            $firstSubject = $subjectEnrollments[0]->classSubjectId;
+            $firstSubject = (int)$subjectEnrollments[0]->classSubjectId;
             $selectedClassSubjectId = $firstSubject;
             try {
                 $result = $this->contentService->getContentForStudent($firstSubject, $userContext);
@@ -81,41 +83,46 @@ class ContentController extends Controller
                 $topics = $result->data['topics'] ?? [];
                 $selectedClassSubject = $result->data['class_subject'] ?? null;
             } catch (\Throwable $e) {
-                // Return empty
+                // Fallback
             }
         }
 
-        return $this->view('student/content/index', [
+        return Response::html($this->render('student/content/index', [
+            'title' => 'Learning Materials & Notes — Student Portal',
+            'headerTitle' => 'Course Materials & Notes',
+            'user' => $userContext,
+            'student' => $student,
+            'activeSession' => $activeSession,
+            'activeTerm' => $activeTerm,
             'subjectEnrollments' => $subjectEnrollments,
             'selectedClassSubjectId' => $selectedClassSubjectId,
             'selectedClassSubject' => $selectedClassSubject,
             'items' => $items,
             'topics' => $topics,
-            'activeSession' => $activeSession,
-            'user' => $userContext,
-            'student' => $student,
-        ]);
+        ], 'layouts/student'));
     }
 
     /**
      * View a single lesson/content item.
      * Route: GET /student/content/{id}
      */
-    public function show(Request $request, array $params): Response
+    public function show(Request $request, array|string|int $id): Response
     {
-        $userContext = $this->authenticator->getUserContext();
-        $id = (int)($params['id'] ?? 0);
+        $userContext = $this->requireAuthContext($request);
+        $cId = is_array($id) ? (int)($id['id'] ?? 0) : (int)$id;
 
         try {
-            $result = $this->contentService->getContentItem($id, $userContext);
+            $result = $this->contentService->getContentItem($cId, $userContext);
             $item = $result->data['content_item'];
 
-            return $this->view('student/content/show', [
-                'item' => $item,
+            return Response::html($this->render('student/content/show', [
+                'title' => "{$item->title} — Study Material",
+                'headerTitle' => 'Lesson Material',
                 'user' => $userContext,
-            ]);
+                'item' => $item,
+            ], 'layouts/student'));
         } catch (ResourceNotFoundException | AuthorizationException $e) {
-            return $this->view('errors/404', ['message' => 'Lesson material not found or access restricted.'], 404);
+            return Response::notFound('Lesson material not found or access restricted.');
         }
     }
 }

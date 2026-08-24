@@ -342,9 +342,7 @@ try {
 
     $router->get('/teacher/dashboard', [\App\Controllers\Teacher\DashboardController::class, 'index'], $teacherAuth);
 
-    $router->get('/student/dashboard', function (Request $req): Response {
-        return Response::html('<h1>Student Dashboard</h1><p>Welcome to the Student learning portal.</p>');
-    }, [AuthMiddleware::class, RoleMiddleware::allow(['student'])]);
+    $router->get('/student/dashboard', [\App\Controllers\Student\DashboardController::class, 'index'], $studentAuth);
 
     $router->get('/dashboard', function (Request $req): Response {
         $authenticator = new WebAuthenticator();

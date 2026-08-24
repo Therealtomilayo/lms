@@ -33,12 +33,12 @@ class SubmissionController extends Controller
      * Submit assignment response (text and/or file).
      * Route: POST /student/assignments/{id}/submit
      */
-    public function store(Request $request, array $params): Response
+    public function store(Request $request, array|string|int $id): Response
     {
-        $userContext = $this->authenticator->getUserContext();
-        $assignmentId = (int)($params['id'] ?? 0);
-        $postData = $request->post();
-        $files = $request->files();
+        $userContext = $this->requireAuthContext($request);
+        $assignmentId = is_array($id) ? (int)($id['id'] ?? 0) : (int)$id;
+        $postData = $request->all();
+        $files = $_FILES ?? [];
         $uploadedFile = $files['attachment'] ?? null;
 
         try {
@@ -54,13 +54,13 @@ class SubmissionController extends Controller
                 'Your assignment has been submitted successfully.'
             );
         } catch (ValidationException $e) {
-            return $this->redirectWithErrors("/student/assignments/{$assignmentId}", $e->getErrors(), $postData);
+            return $this->redirectWithError("/student/assignments/{$assignmentId}", implode(' ', $e->getErrors()));
         } catch (DomainRuleException $e) {
             return $this->redirectWithError("/student/assignments/{$assignmentId}", $e->getMessage());
         } catch (ResourceNotFoundException $e) {
-            return $this->view('errors/404', ['message' => $e->getMessage()], 404);
+            return Response::notFound($e->getMessage());
         } catch (AuthorizationException $e) {
-            return $this->view('errors/403', ['message' => $e->getMessage()], 403);
+            return Response::forbidden($e->getMessage());
         } catch (\Throwable $e) {
             return $this->redirectWithError("/student/assignments/{$assignmentId}", $e->getMessage());
         }

@@ -18,6 +18,23 @@ $linkedChildren = $children ?? [];
 $activeChild = $selectedChild ?? (!empty($linkedChildren) ? $linkedChildren[0] : null);
 $activeChildId = $activeChild ? (int)$activeChild->id : 0;
 
+// Resolve unread announcements count for current user
+$unreadAnnouncementsCount = 0;
+try {
+    $userId = $_SESSION['user_id'] ?? null;
+    if ($userId) {
+        $userRepo = new \App\Repositories\UserRepository();
+        $user = $userRepo->findById((int)$userId);
+        if ($user) {
+            $userCtx = \App\Core\UserContext::fromUser($user);
+            $annRepo = new \App\Repositories\AnnouncementRepository();
+            $unreadAnnouncementsCount = $annRepo->getUnreadCount($userCtx, $role === 'parent' ? ($activeChildId ?: null) : null);
+        }
+    }
+} catch (\Throwable $e) {
+    $unreadAnnouncementsCount = 0;
+}
+
 // Helper to check active state
 if (!function_exists('is_sidebar_item_active')) {
     function is_sidebar_item_active(string $route, string $currentUri): bool {
@@ -240,12 +257,20 @@ if ($role === 'parent' && $activeChildId > 0) {
                 <?php 
                 $isActive = is_sidebar_item_active($item['route'], $currentUri);
                 $linkClasses = $isActive 
-                    ? 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-white bg-slate-800 border-l-4 border-brand-600 transition' 
-                    : 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition';
+                    ? 'flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold text-white bg-slate-800 border-l-4 border-brand-600 transition' 
+                    : 'flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition';
+                $isAnnouncementItem = ($item['icon'] === 'announcement' || str_contains($item['route'], 'announcements'));
                 ?>
                 <a href="<?= e($item['route']) ?>" class="<?= $linkClasses ?>">
-                    <?= get_sidebar_icon($item['icon'], $isActive) ?>
-                    <span><?= e($item['label']) ?></span>
+                    <div class="flex items-center gap-3 min-w-0 truncate">
+                        <?= get_sidebar_icon($item['icon'], $isActive) ?>
+                        <span class="truncate"><?= e($item['label']) ?></span>
+                    </div>
+                    <?php if ($isAnnouncementItem && $unreadAnnouncementsCount > 0): ?>
+                        <span class="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-rose-500 text-white shadow-xs">
+                            <?= $unreadAnnouncementsCount > 99 ? '99+' : $unreadAnnouncementsCount ?>
+                        </span>
+                    <?php endif; ?>
                 </a>
             <?php endif; ?>
         <?php endforeach; ?>

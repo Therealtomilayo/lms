@@ -11,32 +11,44 @@ use App\Core\Exceptions\ResourceNotFoundException;
 use App\Core\Request;
 use App\Core\Response;
 use App\Repositories\AcademicRepository;
+use App\Repositories\AssignmentRepository;
 use App\Repositories\EnrollmentRepository;
+use App\Repositories\GradebookRepository;
+use App\Repositories\QuizRepository;
 use App\Repositories\StudentRepository;
 use App\Services\ContentService;
 
 /**
- * Controller for Student Enrolled Subjects Overview
+ * Controller for Student Enrolled Subjects & Unified Subject Workspace
  */
 class SubjectController extends Controller
 {
     private ContentService $contentService;
-    private AcademicRepository $academicRepository;
-    private StudentRepository $studentRepository;
-    private EnrollmentRepository $enrollmentRepository;
+    private AcademicRepository $academicRepo;
+    private StudentRepository $studentRepo;
+    private EnrollmentRepository $enrollmentRepo;
+    private AssignmentRepository $assignmentRepo;
+    private QuizRepository $quizRepo;
+    private GradebookRepository $gradebookRepo;
 
     public function __construct(
         ?AuthenticatorInterface $authenticator = null,
         ?ContentService $contentService = null,
-        ?AcademicRepository $academicRepository = null,
-        ?StudentRepository $studentRepository = null,
-        ?EnrollmentRepository $enrollmentRepository = null
+        ?AcademicRepository $academicRepo = null,
+        ?StudentRepository $studentRepo = null,
+        ?EnrollmentRepository $enrollmentRepo = null,
+        ?AssignmentRepository $assignmentRepo = null,
+        ?QuizRepository $quizRepo = null,
+        ?GradebookRepository $gradebookRepo = null
     ) {
         parent::__construct($authenticator);
         $this->contentService = $contentService ?? new ContentService();
-        $this->academicRepository = $academicRepository ?? new AcademicRepository();
-        $this->studentRepository = $studentRepository ?? new StudentRepository();
-        $this->enrollmentRepository = $enrollmentRepository ?? new EnrollmentRepository();
+        $this->academicRepo = $academicRepo ?? new AcademicRepository();
+        $this->studentRepo = $studentRepo ?? new StudentRepository();
+        $this->enrollmentRepo = $enrollmentRepo ?? new EnrollmentRepository();
+        $this->assignmentRepo = $assignmentRepo ?? new AssignmentRepository();
+        $this->quizRepo = $quizRepo ?? new QuizRepository();
+        $this->gradebookRepo = $gradebookRepo ?? new GradebookRepository();
     }
 
     /**
@@ -45,50 +57,86 @@ class SubjectController extends Controller
      */
     public function index(Request $request): Response
     {
-        $userContext = $this->authenticator->getUserContext();
-        $student = $this->studentRepository->findByUserId($userContext->userId);
+        $userContext = $this->requireAuthContext($request);
+        $student = $this->studentRepo->findByUserId($userContext->id);
 
-        if (!$student) {
-            return $this->view('errors/403', ['message' => 'Student profile not found.'], 403);
+        if (!$student && !$userContext->isAdmin()) {
+            return Response::forbidden('Student profile not found.');
         }
 
-        $activeSession = $this->academicRepository->getActiveSession();
+        $activeSession = $this->academicRepo->findCurrentSession();
+        $activeTerm = $this->academicRepo->findCurrentTerm();
         $sessionId = $activeSession ? $activeSession->id : 0;
-        $subjectEnrollments = $sessionId > 0
-            ? $this->enrollmentRepository->getStudentSubjectEnrollments($student->id, $sessionId)
+        
+        $subjectEnrollments = ($student && $sessionId > 0)
+            ? $this->enrollmentRepo->getStudentSubjectEnrollments($student->id, $sessionId)
             : [];
 
-        return $this->view('student/subjects/index', [
-            'subjectEnrollments' => $subjectEnrollments,
-            'activeSession' => $activeSession,
+        return Response::html($this->render('student/subjects/index', [
+            'title' => 'My Enrolled Subjects — Student Learning Portal',
+            'headerTitle' => 'Enrolled Academic Courses',
             'user' => $userContext,
             'student' => $student,
-        ]);
+            'subjectEnrollments' => $subjectEnrollments,
+            'activeSession' => $activeSession,
+            'activeTerm' => $activeTerm,
+        ], 'layouts/student'));
     }
 
     /**
-     * Show specific subject overview, teacher information, and syllabus / published materials.
+     * Show comprehensive subject workspace (Lessons, Coursework, CBTs & Grades).
      * Route: GET /student/subjects/{classSubjectId}
      */
-    public function show(Request $request, array $params): Response
+    public function show(Request $request, array|string|int $classSubjectId): Response
     {
-        $userContext = $this->authenticator->getUserContext();
-        $classSubjectId = (int)($params['classSubjectId'] ?? 0);
+        $userContext = $this->requireAuthContext($request);
+        $csId = is_array($classSubjectId) ? (int)($classSubjectId['classSubjectId'] ?? $classSubjectId['id'] ?? 0) : (int)$classSubjectId;
+
+        $student = $this->studentRepo->findByUserId($userContext->id);
+        $activeTerm = $this->academicRepo->findCurrentTerm();
+        $termId = $activeTerm ? $activeTerm->id : 0;
 
         try {
-            $result = $this->contentService->getContentForStudent($classSubjectId, $userContext);
+            $result = $this->contentService->getContentForStudent($csId, $userContext);
             $classSubject = $result->data['class_subject'];
-            $items = $result->data['items'];
-            $topics = $result->data['topics'];
+            $items = $result->data['items'] ?? [];
+            $topics = $result->data['topics'] ?? [];
 
-            return $this->view('student/subjects/show', [
+            // Fetch assignments for this subject
+            $assignments = $termId > 0
+                ? $this->assignmentRepo->findByClassSubjectAndTerm($csId, $termId)
+                : [];
+
+            // Fetch published quizzes for this subject
+            $quizzes = [];
+            if ($classSubject->teacherId > 0) {
+                $teacherQuizzes = $this->quizRepo->findByTeacher($classSubject->teacherId, $csId, $termId > 0 ? $termId : null);
+                $quizzes = array_filter($teacherQuizzes, fn($q) => $q->isPublished);
+            }
+
+            // Student subject score in gradebook
+            $termResult = ($student && $termId > 0)
+                ? $this->gradebookRepo->getTermResult($student->id, $csId, $termId)
+                : null;
+
+            $sName = $classSubject->subject?->name ?? 'Subject';
+            $cName = $classSubject->schoolClass?->name ?? 'Class';
+
+            return Response::html($this->render('student/subjects/show', [
+                'title' => "{$sName} ({$cName}) — Course Workspace",
+                'headerTitle' => 'Subject Learning Hub',
+                'user' => $userContext,
+                'student' => $student,
                 'classSubject' => $classSubject,
                 'items' => $items,
                 'topics' => $topics,
-                'user' => $userContext,
-            ]);
+                'assignments' => $assignments,
+                'quizzes' => array_values($quizzes),
+                'termResult' => $termResult,
+                'activeTerm' => $activeTerm,
+            ], 'layouts/student'));
         } catch (AuthorizationException | ResourceNotFoundException $e) {
-            return $this->view('errors/404', ['message' => 'Subject not found or you are not enrolled.'], 404);
+            return Response::notFound('Subject course not found or you are not enrolled.');
         }
     }
 }

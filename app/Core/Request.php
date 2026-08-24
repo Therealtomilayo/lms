@@ -107,6 +107,16 @@ class Request
         return $this->postParams;
     }
 
+    public function getBody(): array
+    {
+        return $this->all();
+    }
+
+    public function getParsedBody(): array
+    {
+        return $this->all();
+    }
+
     public function getQueryParams(): array
     {
         return $this->queryParams;

@@ -1,51 +1,163 @@
 <div class="space-y-6">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-            <h2 class="text-2xl font-bold text-slate-900 tracking-tight">My Enrolled Subjects</h2>
-            <p class="text-sm text-slate-500 mt-1">Subjects enrolled for the active academic term (<?= e($activeSession?->name ?? 'Current Session') ?>).</p>
+    <!-- Header Card -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <!-- Breadcrumbs -->
+                <nav class="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                    <a href="/student/dashboard" class="hover:text-sky-600 transition">Student Portal</a>
+                    <span class="text-slate-300">/</span>
+                    <span class="text-slate-700">Enrolled Subjects</span>
+                </nav>
+                <div class="flex flex-wrap items-center gap-3">
+                    <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight leading-tight">
+                        My Academic Courses
+                    </h1>
+                    <?php if ($student && $student->schoolClass): ?>
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-sky-50 text-sky-800 border border-sky-200">
+                            <?= htmlspecialchars($student->schoolClass->name) ?><?= !empty($student->schoolClass->sectionArm) ? ' (' . htmlspecialchars($student->schoolClass->sectionArm) . ')' : '' ?>
+                        </span>
+                    <?php endif; ?>
+                </div>
+                <p class="text-xs text-slate-500 mt-1">
+                    Access learning materials, syllabi, coursework tasks, and CBT exams for your enrolled subjects.
+                </p>
+            </div>
+
+            <div class="flex items-center gap-2.5 flex-wrap">
+                <a href="/student/content" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition">
+                    <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                    </svg>
+                    <span>All Learning Materials</span>
+                </a>
+            </div>
         </div>
     </div>
 
-    <?php if (empty($subjectEnrollments)): ?>
-        <div class="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm">
-            <div class="w-16 h-16 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-4">
-                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+    <!-- 4-Card KPI Summary Metrics Strip -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Enrolled Subjects -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+            <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Enrolled Courses</p>
+            <div class="flex items-baseline gap-2 mt-1">
+                <h3 class="text-2xl font-extrabold text-slate-900"><?= number_format(count($subjectEnrollments)) ?></h3>
+                <span class="text-xs font-semibold text-slate-500">subjects</span>
             </div>
-            <h3 class="text-base font-semibold text-slate-800">No Enrolled Subjects</h3>
-            <p class="text-sm text-slate-500 mt-1">You are not currently enrolled in any academic subjects. Please contact the administrator or registrar.</p>
+            <span class="text-[11px] font-medium text-sky-600 mt-1 block">
+                Active term courses
+            </span>
+        </div>
+
+        <!-- Class Cohort -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+            <p class="text-xs font-bold uppercase tracking-wider text-sky-600">Class Cohort</p>
+            <div class="flex items-baseline gap-2 mt-1">
+                <h3 class="text-lg font-extrabold text-slate-900 truncate"><?= htmlspecialchars($student->schoolClass?->name ?? 'Class') ?></h3>
+            </div>
+            <span class="text-[11px] font-medium text-sky-600 mt-1 block">
+                <?= htmlspecialchars($student->schoolClass?->sectionArm ?? 'General') ?>
+            </span>
+        </div>
+
+        <!-- Academic Session -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+            <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Academic Session</p>
+            <div class="flex items-baseline gap-2 mt-1">
+                <h3 class="text-lg font-extrabold text-slate-900 truncate"><?= htmlspecialchars($activeSession?->name ?? '2026/2027') ?></h3>
+            </div>
+            <span class="text-[11px] font-medium text-slate-500 mt-1 block">
+                Official calendar year
+            </span>
+        </div>
+
+        <!-- Current Term -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+            <p class="text-xs font-bold uppercase tracking-wider text-emerald-600">Current Term</p>
+            <div class="flex items-baseline gap-2 mt-1">
+                <h3 class="text-lg font-extrabold text-emerald-600 truncate"><?= htmlspecialchars($activeTerm?->name ?? 'Active Term') ?></h3>
+            </div>
+            <span class="text-[11px] font-medium text-emerald-600 mt-1 block">
+                Instructional period
+            </span>
+        </div>
+    </div>
+
+    <!-- Search/Filter Bar -->
+    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+        <div class="relative">
+            <input type="text" id="subject-search" placeholder="Search enrolled subject name or code..." 
+                   oninput="filterSubjects(this.value)"
+                   class="w-full text-xs font-semibold rounded-xl border border-slate-300 bg-slate-50 focus:bg-white focus:border-sky-500 focus:ring-sky-500 py-2.5 pl-10 pr-4 transition">
+            <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+        </div>
+    </div>
+
+    <!-- Subjects Grid -->
+    <?php if (empty($subjectEnrollments)): ?>
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-12 text-center">
+            <div class="w-16 h-16 rounded-2xl bg-sky-50 text-sky-600 mx-auto flex items-center justify-center mb-4">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                </svg>
+            </div>
+            <h3 class="text-base font-bold text-slate-900">No Enrolled Subjects</h3>
+            <p class="text-xs text-slate-500 mt-1.5 max-w-sm mx-auto">
+                You are not currently registered for any academic subjects in this term. Please contact the registrar or faculty head.
+            </p>
         </div>
     <?php else: ?>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="subjects-grid">
             <?php foreach ($subjectEnrollments as $se): ?>
-                <?php $cs = $se->classSubject; ?>
-                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col hover:border-slate-300 transition overflow-hidden">
-                    <div class="p-5 pb-3 border-b border-slate-100 flex items-center justify-between">
-                        <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wider uppercase bg-cyan-50 text-cyan-700 border border-cyan-200">
-                            <?= e($cs?->subject?->code ?? 'SUBJ') ?>
-                        </span>
-                        <span class="text-xs font-semibold text-slate-500"><?= e($cs?->schoolClass?->name ?? 'Class') ?></span>
-                    </div>
+                <?php 
+                    $cs = $se->classSubject;
+                    $sName = $cs?->subject?->name ?? 'Subject';
+                    $sCode = $cs?->subject?->code ?? '';
+                    $cName = $cs?->schoolClass?->name ?? 'Class';
+                    $tName = $cs?->teacher?->user?->name ?? 'Faculty Staff';
+                ?>
+                <div class="subject-card bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between hover:border-slate-300 transition overflow-hidden p-6 space-y-4"
+                     data-search="<?= strtolower(htmlspecialchars($sName . ' ' . $sCode . ' ' . $cName . ' ' . $tName)) ?>">
+                    <div>
+                        <div class="flex items-center justify-between gap-2 mb-3">
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-sky-50 text-sky-800 border border-sky-200">
+                                <?= htmlspecialchars($sCode ?: 'SUBJ') ?>
+                            </span>
+                            <span class="text-[11px] font-semibold text-slate-400">
+                                <?= htmlspecialchars($cName) ?>
+                            </span>
+                        </div>
 
-                    <div class="p-5 flex-1 space-y-3">
-                        <h3 class="text-lg font-bold text-slate-900 leading-snug">
-                            <a href="/student/subjects/<?= $cs?->id ?>" class="hover:text-cyan-600 transition">
-                                <?= e($cs?->subject?->name ?? 'Subject') ?>
+                        <h3 class="text-base font-bold text-slate-900 leading-snug">
+                            <a href="/student/subjects/<?= (int)($cs?->id ?? 0) ?>" class="hover:text-sky-600 transition">
+                                <?= htmlspecialchars($sName) ?>
                             </a>
                         </h3>
-                        <p class="text-xs text-slate-500 flex items-center gap-1.5">
-                            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                            Teacher: <?= e($cs?->teacher?->name ?? 'Faculty Staff') ?>
-                        </p>
+
+                        <div class="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100">
+                            <div class="w-6 h-6 rounded-full bg-slate-100 text-slate-700 font-bold text-[10px] flex items-center justify-center flex-shrink-0">
+                                <?= strtoupper(substr($tName, 0, 1)) ?>
+                            </div>
+                            <span class="text-xs text-slate-600 truncate font-medium">
+                                <?= htmlspecialchars($tName) ?>
+                            </span>
+                        </div>
                     </div>
 
-                    <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
-                        <a href="/student/subjects/<?= $cs?->id ?>" class="text-xs font-semibold text-cyan-600 hover:text-cyan-700">
-                            Subject Overview &rarr;
+                    <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                        <a href="/student/content?class_subject_id=<?= (int)($cs?->id ?? 0) ?>" 
+                           class="text-xs font-bold text-slate-500 hover:text-slate-800 transition">
+                            Notes & Files
                         </a>
-                        <a href="/student/content?class_subject_id=<?= $cs?->id ?>" 
-                           class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-semibold shadow-sm transition">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
-                            Materials
+
+                        <a href="/student/subjects/<?= (int)($cs?->id ?? 0) ?>" 
+                           class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl shadow-xs transition">
+                            <span>Open Hub</span>
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                            </svg>
                         </a>
                     </div>
                 </div>
@@ -53,3 +165,18 @@
         </div>
     <?php endif; ?>
 </div>
+
+<script>
+function filterSubjects(query) {
+    const q = query.trim().toLowerCase();
+    const cards = document.querySelectorAll('.subject-card');
+    cards.forEach(card => {
+        const text = card.getAttribute('data-search') || '';
+        if (!q || text.includes(q)) {
+            card.style.display = 'flex';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+</script>

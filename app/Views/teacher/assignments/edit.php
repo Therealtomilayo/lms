@@ -69,10 +69,14 @@
                         Academic Term <span class="text-rose-500">*</span>
                     </label>
                     <select name="term_id" id="term_id" required
-                            class="w-full rounded-xl border border-slate-300 text-xs focus:border-emerald-500 focus:ring-emerald-500 bg-slate-50 py-2.5 px-3 font-semibold text-slate-900 transition">
+                            class="w-full rounded-xl border border-slate-300 text-xs focus:border-emerald-500 focus:ring-emerald-500 bg-slate-50 py-2.5 px-3 font-bold text-slate-900 transition">
                         <?php foreach ($terms as $term): ?>
-                            <option value="<?= (int)$term->id ?>" <?= (int)$term->id === (int)old('term_id', $assignment->termId) ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($term->name) ?> <?= $term->isCurrent ? '(Current Term)' : '' ?>
+                            <?php 
+                                $isSelected = (int)$term->id === (int)old('term_id', $assignment->termId);
+                                $isCurrent = !empty($term->isCurrent);
+                            ?>
+                            <option value="<?= (int)$term->id ?>" <?= $isSelected ? 'selected' : ($isCurrent ? '' : 'disabled') ?> class="<?= ($isSelected || $isCurrent) ? 'font-bold text-slate-900 bg-white' : 'text-slate-400 bg-slate-100' ?>">
+                                <?= htmlspecialchars($term->name) ?> <?= $isCurrent ? '✓ (Current Term)' : ($isSelected ? '(Assigned)' : '(Locked — Inactive Term)') ?>
                             </option>
                         <?php endforeach; ?>
                     </select>

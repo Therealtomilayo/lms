@@ -75,13 +75,17 @@
                         Academic Term <span class="text-rose-500">*</span>
                     </label>
                     <select name="term_id" id="term_id" required
-                            class="w-full rounded-xl border border-slate-300 text-xs focus:border-emerald-500 focus:ring-emerald-500 bg-slate-50 py-2.5 px-3 font-semibold text-slate-900 transition">
+                            class="w-full rounded-xl border border-slate-300 text-xs focus:border-emerald-500 focus:ring-emerald-500 bg-slate-50 py-2.5 px-3 font-bold text-slate-900 transition">
                         <?php foreach ($terms as $t): ?>
-                            <option value="<?= (int)$t->id ?>" <?= (int)old('term_id', $currentTerm?->id ?? 0) === (int)$t->id ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($t->name) ?> <?= $t->isCurrent ? '(Current Term)' : '' ?>
+                            <?php $isCurrent = !empty($t->isCurrent) || (!empty($currentTerm) && (int)$t->id === (int)$currentTerm->id); ?>
+                            <option value="<?= (int)$t->id ?>" <?= $isCurrent ? 'selected' : 'disabled' ?> class="<?= $isCurrent ? 'font-bold text-slate-900 bg-white' : 'text-slate-400 bg-slate-100' ?>">
+                                <?= htmlspecialchars($t->name) ?> <?= $isCurrent ? '✓ (Current Active Term)' : '(Locked — Inactive Term)' ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
+                    <p class="text-[11px] text-emerald-700 font-semibold mt-1">
+                        CBT assessments are automatically assigned to the current active term.
+                    </p>
                 </div>
             </div>
 

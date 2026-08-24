@@ -23,25 +23,25 @@ use App\Services\AssignmentService;
 class AssignmentController extends Controller
 {
     private AssignmentService $assignmentService;
-    private AssignmentRepository $assignmentRepository;
-    private AcademicRepository $academicRepository;
-    private StudentRepository $studentRepository;
-    private EnrollmentRepository $enrollmentRepository;
+    private AssignmentRepository $assignmentRepo;
+    private AcademicRepository $academicRepo;
+    private StudentRepository $studentRepo;
+    private EnrollmentRepository $enrollmentRepo;
 
     public function __construct(
         ?AuthenticatorInterface $authenticator = null,
         ?AssignmentService $assignmentService = null,
-        ?AssignmentRepository $assignmentRepository = null,
-        ?AcademicRepository $academicRepository = null,
-        ?StudentRepository $studentRepository = null,
-        ?EnrollmentRepository $enrollmentRepository = null
+        ?AssignmentRepository $assignmentRepo = null,
+        ?AcademicRepository $academicRepo = null,
+        ?StudentRepository $studentRepo = null,
+        ?EnrollmentRepository $enrollmentRepo = null
     ) {
         parent::__construct($authenticator);
         $this->assignmentService = $assignmentService ?? new AssignmentService();
-        $this->assignmentRepository = $assignmentRepository ?? new AssignmentRepository();
-        $this->academicRepository = $academicRepository ?? new AcademicRepository();
-        $this->studentRepository = $studentRepository ?? new StudentRepository();
-        $this->enrollmentRepository = $enrollmentRepository ?? new EnrollmentRepository();
+        $this->assignmentRepo = $assignmentRepo ?? new AssignmentRepository();
+        $this->academicRepo = $academicRepo ?? new AcademicRepository();
+        $this->studentRepo = $studentRepo ?? new StudentRepository();
+        $this->enrollmentRepo = $enrollmentRepo ?? new EnrollmentRepository();
     }
 
     /**
@@ -50,61 +50,67 @@ class AssignmentController extends Controller
      */
     public function index(Request $request): Response
     {
-        $userContext = $this->authenticator->getUserContext();
-        $student = $this->studentRepository->findByUserId($userContext->id);
+        $userContext = $this->requireAuthContext($request);
+        $student = $this->studentRepo->findByUserId($userContext->id);
 
-        if (!$student) {
-            return $this->view('errors/403', ['message' => 'Student profile not found.'], 403);
+        if (!$student && !$userContext->isAdmin()) {
+            return Response::forbidden('Student profile not found.');
         }
 
-        $activeSession = $this->academicRepository->getActiveSession();
-        $termId = $request->query('term_id') !== null ? (int)$request->query('term_id') : null;
+        $activeSession = $this->academicRepo->findCurrentSession();
+        $activeTerm = $this->academicRepo->findCurrentTerm();
+        $termId = $request->get('term_id') !== null ? (int)$request->get('term_id') : ($activeTerm?->id ?? null);
 
         $data = $this->assignmentService->getStudentAssignments($userContext, $termId);
 
-        return $this->view('student/assignments/index', [
+        return Response::html($this->render('student/assignments/index', [
+            'title' => 'Coursework & Assignments — Student Portal',
+            'headerTitle' => 'Coursework & Assignments Tracker',
+            'user' => $userContext,
+            'student' => $student,
+            'activeSession' => $activeSession,
+            'activeTerm' => $activeTerm,
             'activeAssignments' => $data['active'] ?? [],
             'pastDueAssignments' => $data['past_due'] ?? [],
             'submissions' => $data['submissions'] ?? [],
-            'activeSession' => $activeSession,
-            'student' => $student,
-            'user' => $userContext,
-        ]);
+        ], 'layouts/student'));
     }
 
     /**
      * Show assignment details and student's submission status.
      * Route: GET /student/assignments/{id}
      */
-    public function show(Request $request, array $params): Response
+    public function show(Request $request, array|string|int $id): Response
     {
-        $userContext = $this->authenticator->getUserContext();
-        $id = (int)($params['id'] ?? 0);
+        $userContext = $this->requireAuthContext($request);
+        $assignmentId = is_array($id) ? (int)($id['id'] ?? 0) : (int)$id;
 
-        $assignment = $this->assignmentRepository->findById($id);
+        $assignment = $this->assignmentRepo->findById($assignmentId);
         if (!$assignment) {
-            return $this->view('errors/404', ['message' => 'Assignment not found.'], 404);
+            return Response::notFound('Assignment coursework not found.');
         }
 
         if (!AssignmentPolicy::canViewAssignment(
             $userContext,
             $assignment,
-            $this->academicRepository,
+            $this->academicRepo,
             null,
-            $this->studentRepository,
-            $this->enrollmentRepository
+            $this->studentRepo,
+            $this->enrollmentRepo
         )) {
-            return $this->view('errors/403', ['message' => 'You are not authorized to view this assignment.'], 403);
+            return Response::forbidden('You are not authorized to view this assignment.');
         }
 
-        $student = $this->studentRepository->findByUserId($userContext->id);
-        $submission = $student ? $this->assignmentRepository->findSubmissionByAssignmentAndStudent($id, $student->id) : null;
+        $student = $this->studentRepo->findByUserId($userContext->id);
+        $submission = $student ? $this->assignmentRepo->findSubmissionByAssignmentAndStudent($assignmentId, $student->id) : null;
 
-        return $this->view('student/assignments/show', [
+        return Response::html($this->render('student/assignments/show', [
+            'title' => "{$assignment->title} — Coursework Task",
+            'headerTitle' => 'Coursework Task',
+            'user' => $userContext,
+            'student' => $student,
             'assignment' => $assignment,
             'submission' => $submission,
-            'student' => $student,
-            'user' => $userContext,
-        ]);
+        ], 'layouts/student'));
     }
 }
