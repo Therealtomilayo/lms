@@ -271,6 +271,7 @@ try {
     $router->get('/teacher/attendance/{classId}', [\App\Controllers\Teacher\AttendanceController::class, 'form'], $teacherAuth);
     $router->post('/teacher/attendance/{classId}', [\App\Controllers\Teacher\AttendanceController::class, 'store'], $teacherFormAuth);
     $router->get('/teacher/attendance/{classId}/{date}', [\App\Controllers\Teacher\AttendanceController::class, 'form'], $teacherAuth);
+    $router->post('/teacher/attendance/{classId}/{date}', [\App\Controllers\Teacher\AttendanceController::class, 'store'], $teacherFormAuth);
     $router->get('/teacher/announcements', [\App\Controllers\Teacher\AnnouncementController::class, 'index'], $teacherAuth);
     $router->get('/teacher/announcements/create', [\App\Controllers\Teacher\AnnouncementController::class, 'create'], $teacherAuth);
     $router->post('/teacher/announcements/create', [\App\Controllers\Teacher\AnnouncementController::class, 'store'], $teacherFormAuth);
