@@ -95,6 +95,12 @@ final class Quiz
         if ($name === 'totalMarks' || $name === 'total_marks' || $name === 'total_max_score') {
             return $this->getTotalMaxScore();
         }
+        if ($name === 'teacherName') {
+            return $this->teacher?->user?->name ?? ($this->teacher?->name ?? ($this->classSubject?->teacherName ?? 'Instructor'));
+        }
+        if ($name === 'subjectName') {
+            return $this->classSubject?->subjectName ?? ($this->classSubject?->subject?->name ?? '');
+        }
         return null;
     }
 

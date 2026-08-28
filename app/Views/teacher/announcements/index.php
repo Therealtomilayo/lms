@@ -54,12 +54,20 @@
             <?php else: ?>
                 <div class="space-y-4">
                     <?php foreach ($feed as $item): ?>
-                        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3 hover:border-slate-300 transition">
+                        <div class="p-6 rounded-2xl border transition space-y-3 <?= $item->isRead ? 'bg-white border-slate-200 shadow-xs' : 'bg-emerald-50/40 border-emerald-200 shadow-xs ring-1 ring-emerald-200' ?>" id="announcement-card-<?= (int)$item->id ?>">
                             <div class="flex items-center justify-between gap-2 flex-wrap">
-                                <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                                    <?= htmlspecialchars($item->targetName ?? 'School-wide') ?>
-                                </span>
-                                <span class="text-[11px] font-semibold text-slate-400">
+                                <div class="flex items-center gap-2">
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold <?= $item->isRead ? 'bg-slate-100 text-slate-700' : 'bg-emerald-600 text-white' ?>">
+                                        <?= htmlspecialchars($item->targetName ?? 'School-wide') ?>
+                                    </span>
+                                    <?php if (!$item->isRead): ?>
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>
+                                            <span>New Notice</span>
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
+                                <span class="text-[11px] font-semibold text-slate-400 font-mono">
                                     <?= date('M d, Y · g:i A', strtotime($item->publishedAt ?? $item->createdAt)) ?>
                                 </span>
                             </div>
@@ -72,11 +80,27 @@
                                 <?= htmlspecialchars($item->body) ?>
                             </p>
 
-                            <div class="text-[11px] text-slate-400 pt-3 border-t border-slate-100 flex items-center justify-between">
-                                <span>Author: <strong class="text-slate-600 font-semibold"><?= htmlspecialchars($item->authorName ?? 'Faculty Member') ?></strong></span>
-                                <?php if (!empty($item->expiresAt)): ?>
-                                    <span>Expires: <?= date('M d, Y', strtotime($item->expiresAt)) ?></span>
-                                <?php endif; ?>
+                            <div class="text-[11px] text-slate-500 pt-3 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2">
+                                <span>Author: <strong class="text-slate-700 font-semibold"><?= htmlspecialchars($item->authorName ?? 'Faculty Member') ?></strong></span>
+                                <div class="flex items-center gap-3">
+                                    <?php if (!empty($item->expiresAt)): ?>
+                                        <span class="text-slate-400">Expires: <?= date('M d, Y', strtotime($item->expiresAt)) ?></span>
+                                    <?php endif; ?>
+                                    <?php if (!$item->isRead): ?>
+                                        <form method="POST" action="/teacher/announcements/<?= (int)$item->id ?>/read">
+                                            <?= csrf_field() ?>
+                                            <button type="submit" class="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition">
+                                                <span>Mark as Read</span>
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                            </button>
+                                        </form>
+                                    <?php else: ?>
+                                        <span class="text-emerald-700 font-bold flex items-center gap-1 text-[11px]">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                            <span>Acknowledged</span>
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </div>
                     <?php endforeach; ?>

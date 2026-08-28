@@ -236,31 +236,84 @@
                 <?php else: ?>
                     <div class="divide-y divide-slate-100">
                         <?php foreach ($quizzes as $quiz): ?>
-                            <div class="py-4 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                <div class="space-y-1">
-                                    <div class="flex items-center gap-2">
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                                            Active CBT
-                                        </span>
+                            <?php
+                                $attempts = $studentAttempts[$quiz->id] ?? [];
+                                $attemptsCount = count($attempts);
+                                $maxAttempts = (int)$quiz->maxAttempts;
+                                $remainingAttempts = max(0, $maxAttempts - $attemptsCount);
+                                $latestAttempt = !empty($attempts) ? $attempts[0] : null;
+                                $inProgressAttempt = null;
+                                foreach ($attempts as $att) {
+                                    if ($att->isInProgress()) {
+                                        $inProgressAttempt = $att;
+                                        break;
+                                    }
+                                }
+                            ?>
+                            <div class="p-5 bg-white rounded-xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-slate-300 transition">
+                                <div class="space-y-1.5">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <?php if ($inProgressAttempt): ?>
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 animate-pulse">
+                                                In Progress
+                                            </span>
+                                        <?php elseif ($remainingAttempts <= 0 && $latestAttempt): ?>
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                                Completed &bull; Best Score: <?= number_format((float)$latestAttempt->totalScore, 1) ?> PTS
+                                            </span>
+                                        <?php elseif ($attemptsCount > 0): ?>
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-sky-800 border border-sky-200">
+                                                Attempted (<?= $attemptsCount ?>/<?= $maxAttempts ?>) &bull; <?= $remainingAttempts ?> Left
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                                <?= $maxAttempts ?> <?= $maxAttempts === 1 ? 'Attempt Allowed' : 'Attempts Allowed' ?>
+                                            </span>
+                                        <?php endif; ?>
+
                                         <span class="text-[11px] font-semibold text-slate-500">
                                             Duration: <?= $quiz->hasTimeLimit() ? "{$quiz->timeLimitMinutes} Mins" : 'Untimed' ?>
                                         </span>
                                     </div>
-                                    <h3 class="text-sm font-bold text-slate-900">
+
+                                    <h3 class="text-sm font-extrabold text-slate-900 leading-snug">
                                         <?= htmlspecialchars($quiz->title) ?>
                                     </h3>
-                                    <p class="text-[11px] text-slate-500">
-                                        Max Attempts: <strong><?= (int)$quiz->maxAttempts ?></strong>
+
+                                    <p class="text-[11px] text-slate-500 flex items-center gap-2">
+                                        <span>Teacher: <strong class="text-slate-700"><?= htmlspecialchars($quiz->teacherName) ?></strong></span>
+                                        <span>&bull;</span>
+                                        <span>Total Points: <strong><?= number_format($quiz->getTotalMaxScore(), 0) ?> PTS</strong></span>
                                     </p>
                                 </div>
 
-                                <a href="/student/quizzes/<?= (int)$quiz->id ?>" 
-                                   class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition inline-flex items-center gap-1.5 flex-shrink-0">
-                                    <span>Take Quiz Exam</span>
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
-                                    </svg>
-                                </a>
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    <?php if ($inProgressAttempt): ?>
+                                        <a href="/student/quiz-attempts/<?= (int)$inProgressAttempt->id ?>/take" 
+                                           class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-xs transition inline-flex items-center gap-1.5">
+                                            <span>Resume CBT</span>
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                                        </a>
+                                    <?php elseif ($remainingAttempts <= 0 && $latestAttempt): ?>
+                                        <a href="/student/quiz-attempts/<?= (int)$latestAttempt->id ?>/result" 
+                                           class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl shadow-xs transition inline-flex items-center gap-1.5">
+                                            <span>View CBT Result</span>
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                                        </a>
+                                    <?php elseif ($attemptsCount > 0): ?>
+                                        <a href="/student/quizzes/<?= (int)$quiz->id ?>" 
+                                           class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition inline-flex items-center gap-1.5">
+                                            <span>Retake CBT (<?= $remainingAttempts ?> left)</span>
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                                        </a>
+                                    <?php else: ?>
+                                        <a href="/student/quizzes/<?= (int)$quiz->id ?>" 
+                                           class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition inline-flex items-center gap-1.5">
+                                            <span>Take CBT Quiz</span>
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         <?php endforeach; ?>
                     </div>

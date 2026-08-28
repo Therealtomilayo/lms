@@ -141,4 +141,21 @@ final class TimetableSlot
 
         return (int)(($endSeconds - $startSeconds) / 60);
     }
+
+    public function __get(string $name): mixed
+    {
+        return match ($name) {
+            'subjectName' => $this->classSubject?->subjectName ?? ($this->classSubject?->subject?->name ?? 'Subject'),
+            'subjectCode' => $this->classSubject?->subjectCode ?? ($this->classSubject?->subject?->code ?? ''),
+            'className' => $this->classSubject?->className ?? ($this->classSubject?->schoolClass?->name ?? ''),
+            'teacherName' => $this->classSubject?->teacherName ?? ($this->classSubject?->teacher?->user?->name ?? ($this->classSubject?->teacher?->name ?? 'Instructor')),
+            'periodNumber' => null,
+            default => null,
+        };
+    }
+
+    public function __isset(string $name): bool
+    {
+        return in_array($name, ['subjectName', 'subjectCode', 'className', 'teacherName', 'periodNumber'], true);
+    }
 }

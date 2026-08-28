@@ -155,12 +155,17 @@
                                 <p class="text-xs text-slate-400 italic py-1">No lessons scheduled for <?= $dayLabel ?>.</p>
                             <?php else: ?>
                                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    <?php foreach ($daySlots as $slot): ?>
+                                    <?php foreach ($daySlots as $idx => $slot): ?>
+                                        <?php
+                                            $periodNum = !empty($slot->periodNumber) ? $slot->periodNumber : ($idx + 1);
+                                            $teacherName = $slot->teacherName ?: ($slot->classSubject?->teacherName ?: 'Instructor');
+                                            $subjectName = $slot->subjectName ?: ($slot->classSubject?->subjectName ?: 'Subject');
+                                        ?>
                                         <div class="p-4 bg-white rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between hover:border-slate-300 transition space-y-3">
                                             <div>
                                                 <div class="flex items-center justify-between gap-2 mb-2">
                                                     <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-50 text-sky-800 border border-sky-200">
-                                                        Period <?= (int)$slot->periodNumber ?>
+                                                        Period <?= (int)$periodNum ?>
                                                     </span>
                                                     <span class="text-[11px] font-mono font-bold text-slate-500">
                                                         <?= date('g:i A', strtotime($slot->startTime)) ?> &ndash; <?= date('g:i A', strtotime($slot->endTime)) ?>
@@ -168,7 +173,7 @@
                                                 </div>
 
                                                 <h4 class="font-extrabold text-sm text-slate-900">
-                                                    <?= htmlspecialchars($slot->subjectName ?? 'Subject') ?>
+                                                    <?= htmlspecialchars($subjectName) ?>
                                                 </h4>
 
                                                 <?php if (!empty($slot->subjectCode)): ?>
@@ -179,7 +184,7 @@
                                             </div>
 
                                             <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                                                <span>Teacher: <strong class="text-slate-800"><?= htmlspecialchars($slot->teacherName ?? 'Staff') ?></strong></span>
+                                                <span>Teacher: <strong class="text-slate-800"><?= htmlspecialchars($teacherName) ?></strong></span>
                                                 <?php if (!empty($slot->room)): ?>
                                                     <span class="font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px]"><?= htmlspecialchars($slot->room) ?></span>
                                                 <?php endif; ?>

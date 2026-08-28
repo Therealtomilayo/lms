@@ -770,6 +770,14 @@ class AcademicRepository
     /**
      * @return ClassSubject[]
      */
+    public function getClassSubjectsByClass(int $classId, ?int $sessionId = null): array
+    {
+        return $this->getClassSubjectsBySession($sessionId, $classId);
+    }
+
+    /**
+     * @return ClassSubject[]
+     */
     public function getClassSubjectsByClassAndSession(int $classId, int $sessionId): array
     {
         return $this->getClassSubjectsBySession($sessionId, $classId);

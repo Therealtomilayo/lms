@@ -128,4 +128,24 @@ class AnnouncementController extends Controller
             return Response::forbidden($e->getMessage());
         }
     }
+
+    /**
+     * Mark an announcement as read / acknowledged.
+     * Route: POST /teacher/announcements/{id}/read
+     */
+    public function read(Request $request, array|string|int $id): Response
+    {
+        $userContext = $this->requireAuthContext($request);
+        $announcementId = is_array($id) ? (int)($id['id'] ?? 0) : (int)$id;
+
+        try {
+            $this->announcementService->markAsRead($announcementId, $userContext);
+            if ($request->isAjax()) {
+                return Response::json(['success' => true]);
+            }
+            return $this->redirectWithSuccess('/teacher/announcements', 'Notice marked as read.');
+        } catch (AuthorizationException $e) {
+            return Response::forbidden($e->getMessage());
+        }
+    }
 }

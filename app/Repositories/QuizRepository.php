@@ -163,9 +163,16 @@ class QuizRepository
         $stmt = $this->pdo->prepare(
             'SELECT q.*, 
                     cs.id AS cs_id, cs.session_id AS cs_session_id, cs.class_id AS cs_class_id, cs.subject_id AS cs_subject_id, cs.teacher_id AS cs_teacher_id,
+                    sub.name AS subject_name, sub.code AS subject_code,
+                    c.name AS class_name, c.section_arm,
+                    tu.name AS teacher_name, tu.email AS teacher_email, tchr.staff_id AS teacher_staff_id, tchr.user_id AS teacher_user_id,
                     t.name AS term_name, t.session_id AS term_session_id
              FROM `quizzes` q
              LEFT JOIN `class_subjects` cs ON q.class_subject_id = cs.id
+             LEFT JOIN `subjects` sub ON cs.subject_id = sub.id
+             LEFT JOIN `classes` c ON cs.class_id = c.id
+             LEFT JOIN `teachers` tchr ON (q.teacher_id = tchr.id OR cs.teacher_id = tchr.id)
+             LEFT JOIN `users` tu ON tchr.user_id = tu.id
              LEFT JOIN `terms` t ON q.term_id = t.id
              WHERE q.id = :id'
         );
@@ -176,6 +183,16 @@ class QuizRepository
             return null;
         }
 
+        $teacher = null;
+        if (!empty($row['teacher_name']) || !empty($row['teacher_id'])) {
+            $teacher = Teacher::fromArray([
+                'id' => (int)($row['teacher_id'] ?: ($row['cs_teacher_id'] ?? 0)),
+                'user_id' => (int)($row['teacher_user_id'] ?? 0),
+                'staff_id' => (string)($row['teacher_staff_id'] ?? ''),
+                'user_name' => (string)($row['teacher_name'] ?? ''),
+            ]);
+        }
+
         $classSubject = null;
         if (!empty($row['cs_id'])) {
             $classSubject = ClassSubject::fromArray([
@@ -184,7 +201,13 @@ class QuizRepository
                 'class_id' => $row['cs_class_id'],
                 'subject_id' => $row['cs_subject_id'],
                 'teacher_id' => $row['cs_teacher_id'],
-            ]);
+                'subject_name' => $row['subject_name'] ?? '',
+                'subject_code' => $row['subject_code'] ?? '',
+                'class_name' => $row['class_name'] ?? '',
+                'section_arm' => $row['section_arm'] ?? null,
+                'teacher_name' => $row['teacher_name'] ?? null,
+                'teacher_staff_id' => $row['teacher_staff_id'] ?? null,
+            ], null, null, null, $teacher);
         }
 
         $term = null;
@@ -198,7 +221,7 @@ class QuizRepository
 
         $quizQuestions = $includeQuestions ? $this->getQuestionsForQuiz($id) : [];
 
-        return Quiz::fromArray($row, $classSubject, $term, null, $quizQuestions);
+        return Quiz::fromArray($row, $classSubject, $term, $teacher, $quizQuestions);
     }
 
     /**
@@ -507,6 +530,16 @@ class QuizRepository
         $id = $stmt->fetchColumn();
 
         return $id ? $this->findAttemptById((int)$id) : null;
+    }
+
+    /**
+     * Get all attempts by a student for a quiz.
+     *
+     * @return array<int, QuizAttempt>
+     */
+    public function getAttemptsForStudent(int $quizId, int $studentId): array
+    {
+        return $this->getStudentAttempts($quizId, $studentId);
     }
 
     /**

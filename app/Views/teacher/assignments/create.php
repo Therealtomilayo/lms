@@ -1,4 +1,4 @@
-<div class="max-w-4xl mx-auto space-y-6">
+<div class="space-y-6">
     <!-- Header Card -->
     <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

@@ -349,6 +349,7 @@ class EnrollmentRepository
                 JOIN `class_subjects` cs ON cs.id = sse.class_subject_id
                 JOIN `students` s ON s.id = sse.student_id
                 JOIN `users` u ON u.id = s.user_id
+                JOIN `class_enrollments` ce ON ce.student_id = s.id AND ce.class_id = cs.class_id AND ce.session_id = cs.session_id AND ce.status = 'active'
                 WHERE cs.class_id = :class_id 
                   AND cs.subject_id = :subject_id 
                   AND cs.session_id = :session_id

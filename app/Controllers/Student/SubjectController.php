@@ -119,6 +119,14 @@ class SubjectController extends Controller
                 ? $this->gradebookRepo->getTermResult($student->id, $csId, $termId)
                 : null;
 
+            // Fetch student attempts for all quizzes
+            $studentAttempts = [];
+            if ($student) {
+                foreach ($quizzes as $quiz) {
+                    $studentAttempts[$quiz->id] = $this->quizRepo->getStudentAttempts($quiz->id, $student->id);
+                }
+            }
+
             $sName = $classSubject->subject?->name ?? 'Subject';
             $cName = $classSubject->schoolClass?->name ?? 'Class';
 
@@ -132,6 +140,7 @@ class SubjectController extends Controller
                 'topics' => $topics,
                 'assignments' => $assignments,
                 'quizzes' => array_values($quizzes),
+                'studentAttempts' => $studentAttempts,
                 'termResult' => $termResult,
                 'activeTerm' => $activeTerm,
             ], 'layouts/student'));

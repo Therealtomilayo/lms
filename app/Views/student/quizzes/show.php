@@ -20,7 +20,7 @@
                     </span>
                 </div>
                 <p class="text-xs text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
-                    <span>Teacher: <strong class="text-slate-800 font-semibold"><?= htmlspecialchars($quiz->teacher?->name ?? 'Faculty Staff') ?></strong></span>
+                    <span>Teacher: <strong class="text-slate-800 font-semibold"><?= htmlspecialchars($quiz->teacherName) ?></strong></span>
                     <span>&bull;</span>
                     <span>Term: <strong><?= htmlspecialchars($activeTerm?->name ?? 'Current Term') ?></strong></span>
                 </p>
