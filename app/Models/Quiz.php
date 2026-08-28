@@ -30,7 +30,8 @@ final class Quiz
         public readonly ?Teacher $teacher = null,
         public readonly array $quizQuestions = [],
         public readonly ?string $createdAt = null,
-        public readonly ?string $updatedAt = null
+        public readonly ?string $updatedAt = null,
+        public readonly ?float $precomputedMaxScore = null
     ) {
     }
 
@@ -47,6 +48,10 @@ final class Quiz
         ?Teacher $teacher = null,
         array $quizQuestions = []
     ): self {
+        $precomputed = isset($data['total_max_score'])
+            ? (float)$data['total_max_score']
+            : (isset($data['calculated_max_score']) ? (float)$data['calculated_max_score'] : (isset($data['max_score']) ? (float)$data['max_score'] : null));
+
         return new self(
             id: isset($data['id']) ? (int)$data['id'] : null,
             classSubjectId: (int)($data['class_subject_id'] ?? 0),
@@ -64,7 +69,8 @@ final class Quiz
             teacher: $teacher,
             quizQuestions: $quizQuestions,
             createdAt: isset($data['created_at']) ? (string)$data['created_at'] : null,
-            updatedAt: isset($data['updated_at']) ? (string)$data['updated_at'] : null
+            updatedAt: isset($data['updated_at']) ? (string)$data['updated_at'] : null,
+            precomputedMaxScore: $precomputed
         );
     }
 
@@ -83,11 +89,19 @@ final class Quiz
      */
     public function getTotalMaxScore(): float
     {
-        $total = 0.0;
-        foreach ($this->quizQuestions as $qq) {
-            $total += (float)$qq->points;
+        if (!empty($this->quizQuestions)) {
+            $total = 0.0;
+            foreach ($this->quizQuestions as $qq) {
+                $total += (float)$qq->points;
+            }
+            return $total;
         }
-        return $total;
+
+        if ($this->precomputedMaxScore !== null) {
+            return (float)$this->precomputedMaxScore;
+        }
+
+        return 0.0;
     }
 
     public function __get(string $name): mixed

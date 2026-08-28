@@ -231,9 +231,26 @@ class QuizRepository
      */
     public function findByTeacher(int $teacherId, ?int $classSubjectId = null, ?int $termId = null): array
     {
-        $sql = 'SELECT q.*, t.name AS term_name, t.session_id AS term_session_id
+        $sql = 'SELECT q.*, 
+                       COALESCE(qq.total_max_score, 0) AS total_max_score,
+                       COALESCE(qq.questions_count, 0) AS questions_count,
+                       cs.id AS cs_id, cs.session_id AS cs_session_id, cs.class_id AS cs_class_id, cs.subject_id AS cs_subject_id, cs.teacher_id AS cs_teacher_id,
+                       sub.name AS subject_name, sub.code AS subject_code,
+                       c.name AS class_name, c.section_arm,
+                       tu.name AS teacher_name, tu.email AS teacher_email, tchr.staff_id AS teacher_staff_id, tchr.user_id AS teacher_user_id,
+                       t.name AS term_name, t.session_id AS term_session_id
                 FROM `quizzes` q
+                LEFT JOIN `class_subjects` cs ON q.class_subject_id = cs.id
+                LEFT JOIN `subjects` sub ON cs.subject_id = sub.id
+                LEFT JOIN `classes` c ON cs.class_id = c.id
+                LEFT JOIN `teachers` tchr ON (q.teacher_id = tchr.id OR cs.teacher_id = tchr.id)
+                LEFT JOIN `users` tu ON tchr.user_id = tu.id
                 LEFT JOIN `terms` t ON q.term_id = t.id
+                LEFT JOIN (
+                    SELECT quiz_id, SUM(points) AS total_max_score, COUNT(id) AS questions_count 
+                    FROM quiz_questions 
+                    GROUP BY quiz_id
+                ) qq ON qq.quiz_id = q.id
                 WHERE q.teacher_id = :teacher_id';
         $params = [':teacher_id' => $teacherId];
 
@@ -255,13 +272,40 @@ class QuizRepository
 
         $quizzes = [];
         foreach ($rows as $row) {
+            $teacher = null;
+            if (!empty($row['teacher_name']) || !empty($row['teacher_id'])) {
+                $teacher = Teacher::fromArray([
+                    'id' => (int)($row['teacher_id'] ?: ($row['cs_teacher_id'] ?? 0)),
+                    'user_id' => (int)($row['teacher_user_id'] ?? 0),
+                    'staff_id' => (string)($row['teacher_staff_id'] ?? ''),
+                    'user_name' => (string)($row['teacher_name'] ?? ''),
+                ]);
+            }
+
+            $classSubject = null;
+            if (!empty($row['cs_id'])) {
+                $classSubject = ClassSubject::fromArray([
+                    'id' => $row['cs_id'],
+                    'session_id' => $row['cs_session_id'] ?? 0,
+                    'class_id' => $row['cs_class_id'],
+                    'subject_id' => $row['cs_subject_id'],
+                    'teacher_id' => $row['cs_teacher_id'],
+                    'subject_name' => $row['subject_name'] ?? '',
+                    'subject_code' => $row['subject_code'] ?? '',
+                    'class_name' => $row['class_name'] ?? '',
+                    'section_arm' => $row['section_arm'] ?? null,
+                    'teacher_name' => $row['teacher_name'] ?? null,
+                    'teacher_staff_id' => $row['teacher_staff_id'] ?? null,
+                ], null, null, null, $teacher);
+            }
+
             $term = !empty($row['term_id']) ? Term::fromArray([
                 'id' => $row['term_id'],
                 'session_id' => $row['term_session_id'] ?? 0,
                 'name' => $row['term_name'] ?? '',
             ]) : null;
 
-            $quizzes[] = Quiz::fromArray($row, null, $term, null, []);
+            $quizzes[] = Quiz::fromArray($row, $classSubject, $term, $teacher, []);
         }
 
         return $quizzes;
@@ -274,9 +318,26 @@ class QuizRepository
      */
     public function findByClassSubject(int $classSubjectId, ?int $termId = null, bool $publishedOnly = false): array
     {
-        $sql = 'SELECT q.*, t.name AS term_name, t.session_id AS term_session_id
+        $sql = 'SELECT q.*, 
+                       COALESCE(qq.total_max_score, 0) AS total_max_score,
+                       COALESCE(qq.questions_count, 0) AS questions_count,
+                       cs.id AS cs_id, cs.session_id AS cs_session_id, cs.class_id AS cs_class_id, cs.subject_id AS cs_subject_id, cs.teacher_id AS cs_teacher_id,
+                       sub.name AS subject_name, sub.code AS subject_code,
+                       c.name AS class_name, c.section_arm,
+                       tu.name AS teacher_name, tu.email AS teacher_email, tchr.staff_id AS teacher_staff_id, tchr.user_id AS teacher_user_id,
+                       t.name AS term_name, t.session_id AS term_session_id
                 FROM `quizzes` q
+                LEFT JOIN `class_subjects` cs ON q.class_subject_id = cs.id
+                LEFT JOIN `subjects` sub ON cs.subject_id = sub.id
+                LEFT JOIN `classes` c ON cs.class_id = c.id
+                LEFT JOIN `teachers` tchr ON (q.teacher_id = tchr.id OR cs.teacher_id = tchr.id)
+                LEFT JOIN `users` tu ON tchr.user_id = tu.id
                 LEFT JOIN `terms` t ON q.term_id = t.id
+                LEFT JOIN (
+                    SELECT quiz_id, SUM(points) AS total_max_score, COUNT(id) AS questions_count 
+                    FROM quiz_questions 
+                    GROUP BY quiz_id
+                ) qq ON qq.quiz_id = q.id
                 WHERE q.class_subject_id = :class_subject_id';
         $params = [':class_subject_id' => $classSubjectId];
 
@@ -295,7 +356,45 @@ class QuizRepository
         $stmt->execute($params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        return array_map(fn($r) => Quiz::fromArray($r), $rows);
+        $quizzes = [];
+        foreach ($rows as $row) {
+            $teacher = null;
+            if (!empty($row['teacher_name']) || !empty($row['teacher_id'])) {
+                $teacher = Teacher::fromArray([
+                    'id' => (int)($row['teacher_id'] ?: ($row['cs_teacher_id'] ?? 0)),
+                    'user_id' => (int)($row['teacher_user_id'] ?? 0),
+                    'staff_id' => (string)($row['teacher_staff_id'] ?? ''),
+                    'user_name' => (string)($row['teacher_name'] ?? ''),
+                ]);
+            }
+
+            $classSubject = null;
+            if (!empty($row['cs_id'])) {
+                $classSubject = ClassSubject::fromArray([
+                    'id' => $row['cs_id'],
+                    'session_id' => $row['cs_session_id'] ?? 0,
+                    'class_id' => $row['cs_class_id'],
+                    'subject_id' => $row['cs_subject_id'],
+                    'teacher_id' => $row['cs_teacher_id'],
+                    'subject_name' => $row['subject_name'] ?? '',
+                    'subject_code' => $row['subject_code'] ?? '',
+                    'class_name' => $row['class_name'] ?? '',
+                    'section_arm' => $row['section_arm'] ?? null,
+                    'teacher_name' => $row['teacher_name'] ?? null,
+                    'teacher_staff_id' => $row['teacher_staff_id'] ?? null,
+                ], null, null, null, $teacher);
+            }
+
+            $term = !empty($row['term_id']) ? Term::fromArray([
+                'id' => $row['term_id'],
+                'session_id' => $row['term_session_id'] ?? 0,
+                'name' => $row['term_name'] ?? '',
+            ]) : null;
+
+            $quizzes[] = Quiz::fromArray($row, $classSubject, $term, $teacher, []);
+        }
+
+        return $quizzes;
     }
 
     /**
@@ -305,12 +404,27 @@ class QuizRepository
      */
     public function findByStudentEnrolled(int $studentId, int $sessionId, ?int $termId = null): array
     {
-        $sql = 'SELECT q.*, t.name AS term_name, s.name AS subject_name, s.code AS subject_code
+        $sql = 'SELECT q.*, 
+                       COALESCE(qq.total_max_score, 0) AS total_max_score,
+                       COALESCE(qq.questions_count, 0) AS questions_count,
+                       cs.id AS cs_id, cs.session_id AS cs_session_id, cs.class_id AS cs_class_id, cs.subject_id AS cs_subject_id, cs.teacher_id AS cs_teacher_id,
+                       sub.name AS subject_name, sub.code AS subject_code,
+                       c.name AS class_name, c.section_arm,
+                       tu.name AS teacher_name, tu.email AS teacher_email, tchr.staff_id AS teacher_staff_id, tchr.user_id AS teacher_user_id,
+                       t.name AS term_name, t.session_id AS term_session_id
                 FROM `quizzes` q
                 JOIN `student_subject_enrollments` sse ON q.class_subject_id = sse.class_subject_id
                 JOIN `class_subjects` cs ON q.class_subject_id = cs.id
-                JOIN `subjects` s ON cs.subject_id = s.id
+                JOIN `subjects` sub ON cs.subject_id = sub.id
+                JOIN `classes` c ON cs.class_id = c.id
+                LEFT JOIN `teachers` tchr ON (q.teacher_id = tchr.id OR cs.teacher_id = tchr.id)
+                LEFT JOIN `users` tu ON tchr.user_id = tu.id
                 LEFT JOIN `terms` t ON q.term_id = t.id
+                LEFT JOIN (
+                    SELECT quiz_id, SUM(points) AS total_max_score, COUNT(id) AS questions_count 
+                    FROM quiz_questions 
+                    GROUP BY quiz_id
+                ) qq ON qq.quiz_id = q.id
                 WHERE sse.student_id = :student_id 
                   AND sse.session_id = :session_id
                   AND sse.status = "active"
@@ -331,7 +445,45 @@ class QuizRepository
         $stmt->execute($params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        return array_map(fn($r) => Quiz::fromArray($r), $rows);
+        $quizzes = [];
+        foreach ($rows as $row) {
+            $teacher = null;
+            if (!empty($row['teacher_name']) || !empty($row['teacher_id'])) {
+                $teacher = Teacher::fromArray([
+                    'id' => (int)($row['teacher_id'] ?: ($row['cs_teacher_id'] ?? 0)),
+                    'user_id' => (int)($row['teacher_user_id'] ?? 0),
+                    'staff_id' => (string)($row['teacher_staff_id'] ?? ''),
+                    'user_name' => (string)($row['teacher_name'] ?? ''),
+                ]);
+            }
+
+            $classSubject = null;
+            if (!empty($row['cs_id'])) {
+                $classSubject = ClassSubject::fromArray([
+                    'id' => $row['cs_id'],
+                    'session_id' => $row['cs_session_id'] ?? 0,
+                    'class_id' => $row['cs_class_id'],
+                    'subject_id' => $row['cs_subject_id'],
+                    'teacher_id' => $row['cs_teacher_id'],
+                    'subject_name' => $row['subject_name'] ?? '',
+                    'subject_code' => $row['subject_code'] ?? '',
+                    'class_name' => $row['class_name'] ?? '',
+                    'section_arm' => $row['section_arm'] ?? null,
+                    'teacher_name' => $row['teacher_name'] ?? null,
+                    'teacher_staff_id' => $row['teacher_staff_id'] ?? null,
+                ], null, null, null, $teacher);
+            }
+
+            $term = !empty($row['term_id']) ? Term::fromArray([
+                'id' => $row['term_id'],
+                'session_id' => $row['term_session_id'] ?? 0,
+                'name' => $row['term_name'] ?? '',
+            ]) : null;
+
+            $quizzes[] = Quiz::fromArray($row, $classSubject, $term, $teacher, []);
+        }
+
+        return $quizzes;
     }
 
     // ==========================================
