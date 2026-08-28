@@ -168,4 +168,12 @@ final class QuizAttempt
             'updated_at' => $this->updatedAt,
         ];
     }
+
+    public function __get(string $name): mixed
+    {
+        return match ($name) {
+            'totalScore', 'total_score' => $this->score ?? 0.0,
+            default => null,
+        };
+    }
 }

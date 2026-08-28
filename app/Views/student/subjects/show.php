@@ -259,7 +259,7 @@
                                             </span>
                                         <?php elseif ($remainingAttempts <= 0 && $latestAttempt): ?>
                                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                                                Completed &bull; Best Score: <?= number_format((float)$latestAttempt->totalScore, 1) ?> PTS
+                                                Completed &bull; Best Score: <?= $latestAttempt->score !== null ? number_format((float)$latestAttempt->score, 1) : '0.0' ?> PTS
                                             </span>
                                         <?php elseif ($attemptsCount > 0): ?>
                                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-sky-800 border border-sky-200">
