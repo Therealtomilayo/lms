@@ -65,18 +65,23 @@ class ReportCardController extends Controller
             throw new AuthorizationException('Student not found.');
         }
 
+        if (!ParentPolicy::canViewStudent($userContext, $sId, $this->parentRepo)) {
+            throw new AuthorizationException('You are not authorized to view information for this student.');
+        }
+
         $activeTerm = $this->academicRepo->getCurrentTerm();
         $termId = (int)($request->query('term_id', 0) ?: ($activeTerm ? $activeTerm->id : 0));
 
         $terms = $this->academicRepo->getAllTerms();
         $isPublished = $termId > 0 && $this->publicationRepo->isPublished($termId);
 
-        if (!ParentPolicy::canViewReportCard($userContext, $sId, $termId, $this->parentRepo, $this->publicationRepo)) {
-            throw new AuthorizationException('You are not authorized to view these results or they are not yet published.');
-        }
+        $subjectResults = [];
+        $summary = null;
 
-        $subjectResults = $this->gradebookRepo->getTermResultsByStudent($sId, $termId);
-        $summary = $this->gradebookRepo->findStudentTermSummary($sId, $termId);
+        if ($isPublished) {
+            $subjectResults = $this->gradebookRepo->getTermResultsByStudent($sId, $termId);
+            $summary = $this->gradebookRepo->findStudentTermSummary($sId, $termId);
+        }
 
         $parent = $this->parentRepo->findByUserId($userContext->getUserId());
         $children = $parent ? $this->parentRepo->getLinkedStudents($parent->id) : [];
@@ -119,8 +124,9 @@ class ReportCardController extends Controller
 
         $reportData = $this->reportCardService->getReportCardData($sId, $tId);
         $reportData['user'] = $userContext;
+        $reportData['isParentPortal'] = true;
 
-        return Response::html($this->render('parent/grades/report_card', $reportData, 'layouts/parent'));
+        return Response::html($this->render('parent/grades/report_card', $reportData));
     }
 
     public function pdf(Request $request, array|string|int $studentId = 0, int|string|null $termId = null): Response

@@ -41,3 +41,6 @@ node_modules/
 *.exe
 *.dll
 
+# Scratch & Debug Files
+/scratch/
+

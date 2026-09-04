@@ -148,7 +148,7 @@ final class TimetableSlot
             'subjectName' => $this->classSubject?->subjectName ?? ($this->classSubject?->subject?->name ?? 'Subject'),
             'subjectCode' => $this->classSubject?->subjectCode ?? ($this->classSubject?->subject?->code ?? ''),
             'className' => $this->classSubject?->className ?? ($this->classSubject?->schoolClass?->name ?? ''),
-            'teacherName' => $this->classSubject?->teacherName ?? ($this->classSubject?->teacher?->user?->name ?? ($this->classSubject?->teacher?->name ?? 'Instructor')),
+            'teacherName' => $this->classSubject?->teacherName ?? ($this->classSubject?->teacher?->user?->name ?? ($this->classSubject?->teacher?->name ?? 'Subject Teacher')),
             'periodNumber' => null,
             default => null,
         };

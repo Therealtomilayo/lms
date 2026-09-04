@@ -264,6 +264,26 @@ class AttendanceRepository
     }
 
     /**
+     * Alias for getStudentAttendanceSummary.
+     *
+     * @return array{total_days: int, present_days: int, absent_days: int, late_days: int, excused_days: int, attendance_rate: float}
+     */
+    public function getStudentTermSummary(int $studentId, int $termId, ?int $classSubjectId = null): array
+    {
+        return $this->getStudentAttendanceSummary($studentId, $termId, $classSubjectId);
+    }
+
+    /**
+     * Alias for getStudentAttendanceHistory by term.
+     *
+     * @return array<int, AttendanceRecord>
+     */
+    public function getStudentAttendanceForTerm(int $studentId, int $termId): array
+    {
+        return $this->getStudentAttendanceHistory($studentId, $termId);
+    }
+
+    /**
      * Get detailed attendance log for a student in a term.
      *
      * @return array<int, AttendanceRecord>

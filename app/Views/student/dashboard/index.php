@@ -130,7 +130,7 @@
                                 $cs = $enrollment->classSubject;
                                 $sName = $cs?->subject?->name ?? 'Subject';
                                 $sCode = $cs?->subject?->code ?? '';
-                                $tName = $cs?->teacher?->user?->name ?? 'Faculty Instructor';
+                                $tName = $cs?->teacher?->user?->name ?? ($cs?->teacher?->name ?? 'Subject Teacher');
                             ?>
                             <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white hover:border-slate-300 transition flex flex-col justify-between space-y-3">
                                 <div>

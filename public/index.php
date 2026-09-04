@@ -361,6 +361,32 @@ try {
     // Dispatch request and send response
     $response = $router->dispatch($request);
     $response->send();
+} catch (\App\Core\Exceptions\AuthorizationException $e) {
+    if (isset($request) && ($request->isJson() || $request->isAjax())) {
+        $response = Response::json([
+            'error' => 'Forbidden',
+            'message' => $e->getMessage(),
+        ], 403);
+    } else {
+        $response = Response::html(
+            '<h1>403 Forbidden</h1><p>' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') . '</p>',
+            403
+        );
+    }
+    $response->send();
+} catch (\App\Core\Exceptions\ResourceNotFoundException $e) {
+    if (isset($request) && ($request->isJson() || $request->isAjax())) {
+        $response = Response::json([
+            'error' => 'Not Found',
+            'message' => $e->getMessage(),
+        ], 404);
+    } else {
+        $response = Response::html(
+            '<h1>404 Not Found</h1><p>' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') . '</p>',
+            404
+        );
+    }
+    $response->send();
 } catch (Throwable $e) {
     // Structured JSON log with correlation ID
     $logger = new \App\Services\LoggerService();

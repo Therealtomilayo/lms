@@ -27,7 +27,7 @@
                     <?php endif; ?>
                 </div>
                 <p class="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
-                    <span>Teacher: <strong class="text-slate-800 font-semibold"><?= htmlspecialchars($item->teacher?->user?->name ?? $item->teacher?->name ?? 'Faculty Staff') ?></strong></span>
+                    <span>Teacher: <strong class="text-slate-800 font-semibold"><?= htmlspecialchars($item->teacher?->user?->name ?? ($item->teacher?->name ?? 'Subject Teacher')) ?></strong></span>
                     <span>&bull;</span>
                     <span>Published: <strong><?= date('F j, Y', strtotime($item->publishedAt ?? $item->createdAt)) ?></strong></span>
                 </p>

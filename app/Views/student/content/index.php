@@ -69,7 +69,7 @@
             <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Teacher</p>
             <div class="flex items-baseline gap-2 mt-1">
                 <h3 class="text-base font-extrabold text-slate-900 truncate">
-                    <?= htmlspecialchars($selectedClassSubject?->teacher?->user?->name ?? $selectedClassSubject?->teacher?->name ?? 'Faculty Staff') ?>
+                    <?= htmlspecialchars($selectedClassSubject?->teacher?->user?->name ?? ($selectedClassSubject?->teacher?->name ?? 'Subject Teacher')) ?>
                 </h3>
             </div>
             <span class="text-[11px] font-medium text-slate-500 mt-1 block">

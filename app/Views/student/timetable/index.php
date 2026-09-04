@@ -158,7 +158,7 @@
                                     <?php foreach ($daySlots as $idx => $slot): ?>
                                         <?php
                                             $periodNum = !empty($slot->periodNumber) ? $slot->periodNumber : ($idx + 1);
-                                            $teacherName = $slot->teacherName ?: ($slot->classSubject?->teacherName ?: 'Instructor');
+                                            $teacherName = $slot->teacherName ?: ($slot->classSubject?->teacherName ?: 'Subject Teacher');
                                             $subjectName = $slot->subjectName ?: ($slot->classSubject?->subjectName ?: 'Subject');
                                         ?>
                                         <div class="p-4 bg-white rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between hover:border-slate-300 transition space-y-3">

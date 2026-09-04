@@ -97,10 +97,10 @@ class DatabaseSeeder
     {
         $settings = [
             'school_name' => 'Claret Academy',
-            'school_motto' => 'Excellence, Character, and Knowledge',
+            'school_motto' => 'Discipline, Integrity & Ardour',
             'school_email' => 'info@claret.edu',
-            'school_phone' => '+234 800 123 4567',
-            'school_address' => '12 Claret Way, Victoria Island, Lagos, Nigeria',
+            'school_phone' => '+234 803 788 1737',
+            'school_address' => 'Plot 700, Gitto Street, Mabushi, Mabushi, Abuja, Federal Capital Territory, 900104, Nigeria',
             'academic_year' => '2026/2027',
             'current_term' => 'First Term',
             'timezone' => 'Africa/Lagos',

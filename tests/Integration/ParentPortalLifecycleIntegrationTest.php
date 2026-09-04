@@ -115,6 +115,7 @@ class ParentPortalLifecycleIntegrationTest extends TestCase
             CREATE TABLE student_term_summaries (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 student_id INTEGER NOT NULL,
+                class_id INTEGER NULL,
                 term_id INTEGER NOT NULL,
                 total_score REAL DEFAULT 0,
                 average_score REAL DEFAULT 0,
@@ -129,7 +130,7 @@ class ParentPortalLifecycleIntegrationTest extends TestCase
                 updated_at TEXT
             );
 
-            CREATE TABLE student_term_results (
+            CREATE TABLE term_results (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 student_id INTEGER NOT NULL,
                 term_id INTEGER NOT NULL,
@@ -512,12 +513,12 @@ class ParentPortalLifecycleIntegrationTest extends TestCase
         $req = new Request(
             queryParams: ['term_id' => '1'],
             postParams: [],
-            serverParams: ['REQUEST_METHOD' => 'GET', 'REQUEST_URI' => '/parent/children/1/grades']
+            serverParams: ['REQUEST_METHOD' => 'GET', 'REQUEST_URI' => '/parent/children/1/grades/report-card']
         );
         $req->setAttribute('studentId', (string)$this->student1Id);
         
         $this->expectException(AuthorizationException::class);
-        $controller->index($req);
+        $controller->show($req);
     }
 
     /**
@@ -537,5 +538,55 @@ class ParentPortalLifecycleIntegrationTest extends TestCase
         $this->assertEmpty($dashboardData['children']);
         $this->assertNull($dashboardData['selectedChild']);
         $this->assertEmpty($dashboardData['childrenSummaries']);
+    }
+
+    /**
+     * Test 8: Parent report card renders authentic secondary school result sheet when published
+     */
+    public function testReportCardPublishedRenderForParent(): void
+    {
+        $this->db->exec("
+            INSERT INTO result_publications (term_id, is_published, published_by, status)
+            VALUES (1, 1, 1, 'published')
+        ");
+
+        $parent1 = $this->createActor($this->parentUser1Id, 'parent');
+        $reportCardService = new ReportCardService(
+            $this->gradebookRepo,
+            $this->studentRepo,
+            $this->academicRepo
+        );
+
+        $mockAuth = $this->createMock(AuthenticatorInterface::class);
+        $mockAuth->method('user')->willReturn($parent1);
+
+        $controller = new ReportCardController(
+            $mockAuth,
+            $reportCardService,
+            $this->gradebookRepo,
+            $this->publicationRepo,
+            $this->parentRepo,
+            $this->studentRepo,
+            $this->academicRepo
+        );
+
+        $req = new Request(
+            queryParams: ['term_id' => '1'],
+            postParams: [],
+            serverParams: ['REQUEST_METHOD' => 'GET', 'REQUEST_URI' => '/parent/children/1/grades/report-card']
+        );
+        $req->setAttribute('studentId', (string)$this->student1Id);
+
+        $response = $controller->show($req);
+        $this->assertEquals(200, $response->getStatusCode());
+
+        $body = (string)$response->getContent();
+        $this->assertStringContainsStringIgnoringCase('CLARET', $body);
+        $this->assertStringContainsString('/assets/img/logo.png', $body);
+        $this->assertStringContainsString('Psychomotor Skills', $body);
+        $this->assertStringContainsString('Affective Traits', $body);
+        $this->assertStringContainsString('Cumulative Annual Performance', $body);
+        $this->assertStringContainsString('--brand-700: #7B3046', $body);
+        $this->assertStringContainsString('--brand-600: #0C9DD5', $body);
     }
 }

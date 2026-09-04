@@ -45,6 +45,21 @@ final class ParentProfile
         );
     }
 
+    public function __get(string $name): mixed
+    {
+        return match ($name) {
+            'name', 'user_name', 'userName' => $this->user?->name ?? '',
+            'email', 'user_email', 'userEmail' => $this->user?->email ?? '',
+            'phone', 'user_phone', 'userPhone' => $this->user?->phone,
+            default => null,
+        };
+    }
+
+    public function __isset(string $name): bool
+    {
+        return in_array($name, ['name', 'user_name', 'userName', 'email', 'user_email', 'userEmail', 'phone', 'user_phone', 'userPhone'], true);
+    }
+
     public function toArray(): array
     {
         return [

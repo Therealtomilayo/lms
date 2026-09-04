@@ -81,7 +81,7 @@
                             </p>
 
                             <div class="text-[11px] text-slate-500 pt-3 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2">
-                                <span>Author: <strong class="text-slate-700 font-semibold"><?= htmlspecialchars($item->authorName ?? 'Faculty Member') ?></strong></span>
+                                <span>Author: <strong class="text-slate-700 font-semibold"><?= htmlspecialchars($item->authorName ?? 'Staff / Teacher') ?></strong></span>
                                 <div class="flex items-center gap-3">
                                     <?php if (!empty($item->expiresAt)): ?>
                                         <span class="text-slate-400">Expires: <?= date('M d, Y', strtotime($item->expiresAt)) ?></span>

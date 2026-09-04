@@ -45,6 +45,10 @@ if (!function_exists('is_sidebar_item_active')) {
         if ($route === '/admin/attendance') {
             return $parsedUri === '/admin/attendance' || preg_match('#^/admin/attendance/\d+/#', $parsedUri) === 1;
         }
+        // Child profile route (/parent/children/{id}) must be an exact match so sub-pages (grades, attendance, etc.) don't highlight it
+        if (preg_match('#^/parent/children/\d+$#', $route) === 1) {
+            return $parsedUri === $route || $parsedUri === $route . '/';
+        }
         if ($route !== '/' && !in_array($route, ['/admin/dashboard', '/teacher/dashboard', '/student/dashboard', '/parent/dashboard'], true)) {
             return str_starts_with($parsedUri, $route);
         }

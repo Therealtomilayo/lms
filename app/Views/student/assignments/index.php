@@ -140,7 +140,7 @@
                         $sub = $submissions[$assignment->id] ?? null; 
                         $sName = $assignment->classSubject?->subject?->name ?? 'Subject';
                         $sCode = $assignment->classSubject?->subject?->code ?? '';
-                        $tName = $assignment->teacher?->user?->name ?? 'Faculty Staff';
+                        $tName = $assignment->teacher?->user?->name ?? ($assignment->teacher?->name ?? 'Subject Teacher');
                     ?>
                     <div class="assignment-card bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between hover:border-slate-300 transition overflow-hidden p-6 space-y-4"
                          data-search="<?= strtolower(htmlspecialchars($assignment->title . ' ' . $sName . ' ' . $sCode . ' ' . ($assignment->topic ?? ''))) ?>">

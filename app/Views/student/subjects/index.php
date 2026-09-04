@@ -105,7 +105,7 @@
             </div>
             <h3 class="text-base font-bold text-slate-900">No Enrolled Subjects</h3>
             <p class="text-xs text-slate-500 mt-1.5 max-w-sm mx-auto">
-                You are not currently registered for any academic subjects in this term. Please contact the registrar or faculty head.
+                You are not currently registered for any academic subjects in this term. Please contact the school administration or class teacher.
             </p>
         </div>
     <?php else: ?>
@@ -116,7 +116,7 @@
                     $sName = $cs?->subject?->name ?? 'Subject';
                     $sCode = $cs?->subject?->code ?? '';
                     $cName = $cs?->schoolClass?->name ?? 'Class';
-                    $tName = $cs?->teacher?->user?->name ?? 'Faculty Staff';
+                    $tName = $cs?->teacher?->user?->name ?? ($cs?->teacher?->name ?? 'Subject Teacher');
                 ?>
                 <div class="subject-card bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between hover:border-slate-300 transition overflow-hidden p-6 space-y-4"
                      data-search="<?= strtolower(htmlspecialchars($sName . ' ' . $sCode . ' ' . $cName . ' ' . $tName)) ?>">

@@ -110,7 +110,7 @@ final class Quiz
             return $this->getTotalMaxScore();
         }
         if ($name === 'teacherName') {
-            return $this->teacher?->user?->name ?? ($this->teacher?->name ?? ($this->classSubject?->teacherName ?? 'Instructor'));
+            return $this->teacher?->user?->name ?? ($this->teacher?->name ?? ($this->classSubject?->teacherName ?? 'Subject Teacher'));
         }
         if ($name === 'subjectName') {
             return $this->classSubject?->subjectName ?? ($this->classSubject?->subject?->name ?? '');

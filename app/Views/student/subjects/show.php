@@ -15,7 +15,7 @@
                     $sName = $classSubject->subject?->name ?? 'Subject';
                     $sCode = $classSubject->subject?->code ?? '';
                     $cName = $classSubject->schoolClass?->name ?? 'Class';
-                    $tName = $classSubject->teacher?->user?->name ?? 'Faculty Staff';
+                    $tName = $classSubject->teacher?->user?->name ?? ($classSubject->teacher?->name ?? 'Subject Teacher');
                 ?>
                 <div class="flex flex-wrap items-center gap-3">
                     <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight leading-tight">
@@ -29,7 +29,7 @@
                     </span>
                 </div>
                 <p class="text-xs text-slate-500 mt-1 flex items-center gap-2">
-                    <span>Instructor: <strong class="text-slate-800 font-semibold"><?= htmlspecialchars($tName) ?></strong></span>
+                    <span>Teacher: <strong class="text-slate-800 font-semibold"><?= htmlspecialchars($tName) ?></strong></span>
                     <span>&bull;</span>
                     <span>Term: <strong class="text-emerald-700 font-semibold"><?= htmlspecialchars($activeTerm?->name ?? 'Current Term') ?></strong></span>
                 </p>
