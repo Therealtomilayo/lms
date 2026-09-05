@@ -185,12 +185,12 @@ if ($role === 'parent' && $activeChildId > 0) {
 <!-- Mobile Backdrop Overlay (Click outside to close) -->
 <div id="sidebar-backdrop" 
      onclick="window.LMS ? window.LMS.toggleSidebar(false) : (document.getElementById('sidebar-navigation').classList.add('hidden'), document.getElementById('sidebar-backdrop').classList.add('hidden'))"
-     class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-40 hidden md:hidden transition-opacity duration-200"
+     class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-40 hidden md:hidden transition-opacity duration-200 print:hidden no-print"
      aria-hidden="true"></div>
 
 <!-- Sidebar Container -->
 <aside id="sidebar-navigation" 
-       class="hidden md:flex w-64 bg-slate-900 text-slate-200 flex-col flex-shrink-0 min-h-screen border-r border-slate-800 fixed md:sticky inset-y-0 left-0 z-50 md:z-30 transition-transform duration-200 shadow-2xl md:shadow-none">
+       class="hidden md:flex w-64 bg-slate-900 text-slate-200 flex-col flex-shrink-0 min-h-screen border-r border-slate-800 fixed md:sticky inset-y-0 left-0 z-50 md:z-30 transition-transform duration-200 shadow-2xl md:shadow-none print:hidden no-print">
     
     <!-- Header/Branding -->
     <div class="p-5 border-b border-slate-800 flex items-center justify-between gap-3">

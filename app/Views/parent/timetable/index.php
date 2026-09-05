@@ -54,6 +54,8 @@ $days = [
 
 @media print {
     /* Hide layout chrome & screen controls */
+    #sidebar-navigation,
+    #sidebar-backdrop,
     aside, 
     header, 
     #sidebar, 
@@ -68,6 +70,14 @@ $days = [
     .bell-times-card,
     footer {
         display: none !important;
+        visibility: hidden !important;
+        position: absolute !important;
+        left: -99999px !important;
+        top: -99999px !important;
+        width: 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
+        opacity: 0 !important;
     }
 
     /* Reset body and container constraints for flawless print rendering */
@@ -77,19 +87,28 @@ $days = [
         margin: 0 !important;
         padding: 0 !important;
         overflow: visible !important;
+        height: auto !important;
         min-height: auto !important;
+        width: 100% !important;
         font-size: 11px !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
     }
 
-    .min-h-screen, .h-full, #main-content, main {
+    body > div.flex-1,
+    div.overflow-hidden,
+    .min-h-screen, 
+    .h-full, 
+    #main-content, 
+    main {
         overflow: visible !important;
         padding: 0 !important;
         margin: 0 !important;
         min-height: auto !important;
+        max-height: none !important;
         display: block !important;
         width: 100% !important;
+        background: #ffffff !important;
     }
 
     @page {
@@ -213,7 +232,7 @@ $days = [
                         <span>Attendance</span>
                     </a>
 
-                    <button type="button" onclick="window.print()" 
+                    <button type="button" onclick="printSchedule()" 
                             class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-brand-50 hover:bg-brand-100 text-brand-700 text-xs font-bold rounded-xl border border-brand-200 transition">
                         <svg class="w-4 h-4 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
@@ -645,4 +664,14 @@ $days = [
             }
         });
     }
+
+    function printSchedule() {
+        // Restore all day sections so full weekly schedule is printed cleanly
+        document.querySelectorAll('.day-section').forEach(sec => sec.style.display = '');
+        window.print();
+    }
+
+    window.addEventListener('beforeprint', function() {
+        document.querySelectorAll('.day-section').forEach(sec => sec.style.display = '');
+    });
 </script>

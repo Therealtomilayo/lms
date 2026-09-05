@@ -9,7 +9,7 @@
  * @var object|null $activeChild Currently selected student info (optional; parent portal only)
  */
 ?>
-<header class="bg-white border-b border-slate-200 min-h-[64px] flex items-center justify-between px-6 py-3.5 flex-shrink-0 shadow-xs z-20">
+<header class="bg-white border-b border-slate-200 min-h-[64px] flex items-center justify-between px-6 py-3.5 flex-shrink-0 shadow-xs z-20 print:hidden no-print">
     <!-- Title & Navigation Toggle -->
     <div class="flex items-center gap-4 min-w-0">
         <!-- Mobile Sidebar Hamburger Toggle -->
