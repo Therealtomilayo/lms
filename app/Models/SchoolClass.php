@@ -20,7 +20,10 @@ final class SchoolClass
         public readonly string $status = self::STATUS_ACTIVE,
         public readonly ?string $createdAt = null,
         public readonly ?string $updatedAt = null,
-        public readonly ?AcademicLevel $academicLevel = null
+        public readonly ?AcademicLevel $academicLevel = null,
+        public readonly ?int $formTeacherId = null,
+        public readonly ?string $formTeacherName = null,
+        public readonly ?string $formTeacherStaffId = null
     ) {
     }
 
@@ -34,7 +37,10 @@ final class SchoolClass
             status: (string)($data['status'] ?? self::STATUS_ACTIVE),
             createdAt: isset($data['created_at']) ? (string)$data['created_at'] : null,
             updatedAt: isset($data['updated_at']) ? (string)$data['updated_at'] : null,
-            academicLevel: $academicLevel
+            academicLevel: $academicLevel,
+            formTeacherId: isset($data['form_teacher_id']) && $data['form_teacher_id'] !== '' && $data['form_teacher_id'] !== null ? (int)$data['form_teacher_id'] : null,
+            formTeacherName: !empty($data['form_teacher_name']) ? (string)$data['form_teacher_name'] : null,
+            formTeacherStaffId: !empty($data['form_teacher_staff_id']) ? (string)$data['form_teacher_staff_id'] : null
         );
     }
 
@@ -51,6 +57,9 @@ final class SchoolClass
             'name' => $this->name,
             'section_arm' => $this->sectionArm,
             'status' => $this->status,
+            'form_teacher_id' => $this->formTeacherId,
+            'form_teacher_name' => $this->formTeacherName,
+            'form_teacher_staff_id' => $this->formTeacherStaffId,
             'created_at' => $this->createdAt,
             'updated_at' => $this->updatedAt,
         ];

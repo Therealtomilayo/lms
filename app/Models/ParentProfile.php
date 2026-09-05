@@ -34,7 +34,7 @@ final class ParentProfile
                 'uuid' => $data['uuid'] ?? '',
                 'name' => $data['user_name'] ?? $data['name'] ?? '',
                 'email' => $data['user_email'] ?? $data['email'] ?? '',
-                'phone' => $data['phone'] ?? null,
+                'phone' => $data['user_phone'] ?? $data['phone'] ?? null,
                 'password_hash' => $data['password_hash'] ?? '',
                 'status' => $data['user_status'] ?? $data['status'] ?? 'active',
                 'must_change_password' => $data['must_change_password'] ?? 0,

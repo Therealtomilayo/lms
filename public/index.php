@@ -98,10 +98,15 @@ try {
     // Authenticated Routes
     $router->post('/logout', [AuthController::class, 'logout'], [AuthMiddleware::class, CsrfMiddleware::class]);
 
+    $router->get('/profile', [\App\Controllers\ProfileController::class, 'show'], [AuthMiddleware::class]);
     $router->get('/profile/password', [AuthController::class, 'showChangePassword'], [AuthMiddleware::class]);
     $router->post('/profile/password', [AuthController::class, 'changePassword'], [AuthMiddleware::class, CsrfMiddleware::class]);
     $router->get('/password/change', [AuthController::class, 'showChangePassword'], [AuthMiddleware::class]);
     $router->post('/password/change', [AuthController::class, 'changePassword'], [AuthMiddleware::class, CsrfMiddleware::class]);
+
+    $router->get('/notifications', [\App\Controllers\NotificationController::class, 'index'], [AuthMiddleware::class]);
+    $router->post('/notifications/{id}/read', [\App\Controllers\NotificationController::class, 'markAsRead'], [AuthMiddleware::class, CsrfMiddleware::class]);
+    $router->post('/notifications/read-all', [\App\Controllers\NotificationController::class, 'markAllAsRead'], [AuthMiddleware::class, CsrfMiddleware::class]);
 
     // Academic Setup & Structure Routes (Admin)
     $adminAuth = [AuthMiddleware::class, RoleMiddleware::allow(['admin', 'super_admin'])];
@@ -178,10 +183,27 @@ try {
     $router->post('/admin/assessment-categories', [\App\Controllers\Admin\AssessmentCategoryController::class, 'store'], $adminFormAuth);
     $router->post('/admin/assessment-categories/{id}/delete', [\App\Controllers\Admin\AssessmentCategoryController::class, 'delete'], $adminFormAuth);
     $router->get('/admin/results/review', [\App\Controllers\Admin\ResultReviewController::class, 'index'], $adminAuth);
+    $router->get('/admin/results/broadsheet', [\App\Controllers\Admin\ResultReviewController::class, 'broadsheet'], $adminAuth);
+    $router->get('/admin/results/broadsheet/export', [\App\Controllers\Admin\ResultReviewController::class, 'exportBroadsheet'], $adminAuth);
     $router->post('/admin/results/compute', [\App\Controllers\Admin\ResultReviewController::class, 'compute'], $adminFormAuth);
     $router->post('/admin/results/publish', [\App\Controllers\Admin\ResultPublicationController::class, 'publish'], $adminFormAuth);
     $router->post('/admin/results/unpublish', [\App\Controllers\Admin\ResultPublicationController::class, 'unpublish'], $adminFormAuth);
     $router->get('/admin/reports/student/{studentId}/{termId}.pdf', [\App\Controllers\Admin\ReportController::class, 'pdf'], $adminAuth);
+    $router->get('/admin/gradebook', [\App\Controllers\Admin\GradebookController::class, 'index'], $adminAuth);
+    $router->get('/admin/gradebook/class/{classId}', [\App\Controllers\Admin\GradebookController::class, 'showClass'], $adminAuth);
+    $router->post('/admin/gradebook/{id}/lock', [\App\Controllers\Admin\GradebookController::class, 'lock'], $adminFormAuth);
+    $router->post('/admin/gradebook/{id}/unlock', [\App\Controllers\Admin\GradebookController::class, 'unlock'], $adminFormAuth);
+
+    // Admin Behavioral Skills & Batch Remarks Management Routes (ADMIN-32, ADMIN-33)
+    $router->get('/admin/skills', [\App\Controllers\Admin\SkillController::class, 'index'], $adminAuth);
+    $router->post('/admin/skills', [\App\Controllers\Admin\SkillController::class, 'storeSkill'], $adminFormAuth);
+    $router->post('/admin/skills/presets', [\App\Controllers\Admin\SkillController::class, 'storePreset'], $adminFormAuth);
+    $router->post('/admin/skills/presets/{id}/update', [\App\Controllers\Admin\SkillController::class, 'updatePreset'], $adminFormAuth);
+    $router->post('/admin/skills/presets/{id}/delete', [\App\Controllers\Admin\SkillController::class, 'deletePreset'], $adminFormAuth);
+    $router->post('/admin/skills/{id}/update', [\App\Controllers\Admin\SkillController::class, 'updateSkill'], $adminFormAuth);
+    $router->post('/admin/skills/{id}/delete', [\App\Controllers\Admin\SkillController::class, 'deleteSkill'], $adminFormAuth);
+    $router->get('/admin/results/comments', [\App\Controllers\Admin\BatchRemarkController::class, 'index'], $adminAuth);
+    $router->post('/admin/results/comments', [\App\Controllers\Admin\BatchRemarkController::class, 'save'], $adminFormAuth);
 
     // Admin Attendance Oversight & Reporting Routes
     $router->get('/admin/attendance', [\App\Controllers\Admin\AttendanceController::class, 'index'], $adminAuth);
@@ -217,6 +239,10 @@ try {
     // Teacher Content & Coursework Management Routes
     $teacherAuth = [AuthMiddleware::class, RoleMiddleware::allow(['teacher', 'admin', 'super_admin'])];
     $teacherFormAuth = [AuthMiddleware::class, RoleMiddleware::allow(['teacher', 'admin', 'super_admin']), CsrfMiddleware::class];
+
+    // Teacher Class Workspace & Student Rosters Routes (TEACHER-25)
+    $router->get('/teacher/classes', [\App\Controllers\Teacher\ClassController::class, 'index'], $teacherAuth);
+    $router->get('/teacher/classes/{classSubjectId}', [\App\Controllers\Teacher\ClassController::class, 'show'], $teacherAuth);
 
     $router->get('/teacher/content', [\App\Controllers\Teacher\ContentController::class, 'index'], $teacherAuth);
     $router->get('/teacher/content/create', [\App\Controllers\Teacher\ContentController::class, 'create'], $teacherAuth);
@@ -265,6 +291,8 @@ try {
     $router->get('/teacher/gradebook', [\App\Controllers\Teacher\GradebookController::class, 'index'], $teacherAuth);
     $router->get('/teacher/gradebook/{classSubjectId}', [\App\Controllers\Teacher\GradebookController::class, 'show'], $teacherAuth);
     $router->post('/teacher/gradebook/{classSubjectId}/save', [\App\Controllers\Teacher\GradebookController::class, 'save'], $teacherFormAuth);
+    $router->get('/teacher/results/comments', [\App\Controllers\Teacher\BatchRemarkController::class, 'index'], $teacherAuth);
+    $router->post('/teacher/results/comments', [\App\Controllers\Teacher\BatchRemarkController::class, 'save'], $teacherFormAuth);
 
     // Teacher Attendance & Announcements Routes
     $router->get('/teacher/attendance', [\App\Controllers\Teacher\AttendanceController::class, 'index'], $teacherAuth);

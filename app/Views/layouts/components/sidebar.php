@@ -132,6 +132,9 @@ $navConfig = [
         ['label' => 'Attendance Registers', 'route' => '/admin/attendance', 'icon' => 'check-circle'],
         ['label' => 'Attendance Analytics', 'route' => '/admin/attendance/report', 'icon' => 'chart'],
         ['category' => 'Grading & Results'],
+        ['label' => 'Institutional Gradebook', 'route' => '/admin/gradebook', 'icon' => 'book'],
+        ['label' => 'Batch Remarks & Traits', 'route' => '/admin/results/comments', 'icon' => 'document-text'],
+        ['label' => 'Skills & Traits Catalog', 'route' => '/admin/skills', 'icon' => 'check-circle'],
         ['label' => 'Grading Scales', 'route' => '/admin/grading-scales', 'icon' => 'scale'],
         ['label' => 'Assessment Config', 'route' => '/admin/assessment-categories', 'icon' => 'clipboard'],
         ['label' => 'Results Review', 'route' => '/admin/results/review', 'icon' => 'document-text'],
@@ -144,11 +147,13 @@ $navConfig = [
     ],
     'teacher' => [
         ['label' => 'Dashboard', 'route' => '/teacher/dashboard', 'icon' => 'home'],
+        ['label' => 'My Classes & Rosters', 'route' => '/teacher/classes', 'icon' => 'users'],
         ['label' => 'Learning Materials', 'route' => '/teacher/content', 'icon' => 'book'],
         ['label' => 'Assignments', 'route' => '/teacher/assignments', 'icon' => 'clipboard'],
         ['label' => 'Question Bank', 'route' => '/teacher/question-bank', 'icon' => 'database'],
         ['label' => 'Quiz Management', 'route' => '/teacher/quizzes', 'icon' => 'quiz'],
         ['label' => 'Class Gradebooks', 'route' => '/teacher/gradebook', 'icon' => 'document-text'],
+        ['label' => 'Batch Remarks & Traits', 'route' => '/teacher/results/comments', 'icon' => 'clipboard'],
         ['label' => 'Daily Attendance', 'route' => '/teacher/attendance', 'icon' => 'calendar'],
         ['label' => 'Announcements', 'route' => '/teacher/announcements', 'icon' => 'announcement'],
         ['label' => 'My Timetable', 'route' => '/teacher/timetable', 'icon' => 'timetable'],
@@ -282,15 +287,15 @@ if ($role === 'parent' && $activeChildId > 0) {
 
     <!-- Sidebar Footer / Logout -->
     <div class="p-4 border-t border-slate-800 bg-slate-950 flex items-center justify-between flex-shrink-0">
-        <div class="flex items-center gap-3 min-w-0">
-            <div class="w-8 h-8 rounded-full bg-brand-700 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+        <a href="/profile" class="flex items-center gap-3 min-w-0 hover:opacity-85 transition group" title="View My Profile">
+            <div class="w-8 h-8 rounded-full bg-brand-700 flex items-center justify-center text-white font-bold text-xs flex-shrink-0 shadow-xs group-hover:ring-2 group-hover:ring-brand-500 transition">
                 <?= e(substr($userContextName, 0, 1)) ?>
             </div>
             <div class="truncate">
-                <p class="text-xs font-semibold text-white truncate"><?= e($userContextName) ?></p>
+                <p class="text-xs font-semibold text-white truncate group-hover:text-brand-400 transition"><?= e($userContextName) ?></p>
                 <p class="text-[10px] text-slate-400 truncate"><?= e($userContextEmail) ?></p>
             </div>
-        </div>
+        </a>
         <form action="/logout" method="POST" class="inline">
             <?= csrf_field() ?>
             <button type="submit" title="Sign Out" class="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-800 transition min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer">

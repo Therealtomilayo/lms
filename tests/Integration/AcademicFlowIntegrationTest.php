@@ -21,6 +21,7 @@ use App\Models\AcademicSession;
 use App\Models\Term;
 use App\Models\User;
 use App\Repositories\AcademicRepository;
+use App\Repositories\TeacherRepository;
 use App\Repositories\UserRepository;
 use App\Services\AcademicSessionService;
 use App\Services\AcademicStructureService;
@@ -31,6 +32,7 @@ final class AcademicFlowIntegrationTest extends TestCase
 {
     private PDO $pdo;
     private UserRepository $userRepository;
+    private TeacherRepository $teacherRepository;
     private AcademicRepository $academicRepository;
     private AcademicSessionService $sessionService;
     private AcademicStructureService $structureService;
@@ -101,10 +103,19 @@ final class AcademicFlowIntegrationTest extends TestCase
                 `academic_level_id` INTEGER NOT NULL,
                 `name` VARCHAR(100) NOT NULL,
                 `section_arm` VARCHAR(50) NULL,
+                `form_teacher_id` INTEGER NULL,
                 `status` VARCHAR(20) NOT NULL DEFAULT 'active',
                 `created_at` DATETIME NOT NULL,
                 `updated_at` DATETIME NOT NULL,
                 UNIQUE (`academic_level_id`, `name`, `section_arm`)
+            );
+
+            CREATE TABLE `teachers` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT,
+                `user_id` INTEGER NOT NULL,
+                `staff_id` VARCHAR(50) NOT NULL UNIQUE,
+                `created_at` DATETIME NOT NULL,
+                `updated_at` DATETIME NOT NULL
             );
 
             CREATE TABLE `sessions` (
@@ -142,6 +153,7 @@ final class AcademicFlowIntegrationTest extends TestCase
         ");
 
         $this->userRepository = new UserRepository($this->pdo);
+        $this->teacherRepository = new TeacherRepository($this->pdo);
         $this->academicRepository = new AcademicRepository($this->pdo);
         $this->sessionService = new AcademicSessionService($this->academicRepository);
         $this->structureService = new AcademicStructureService($this->academicRepository);
@@ -165,7 +177,7 @@ final class AcademicFlowIntegrationTest extends TestCase
         $sessionController = new SessionController($this->sessionService, $this->academicRepository);
         $termController = new TermController($this->sessionService, $this->academicRepository);
         $levelController = new AcademicLevelController($this->structureService, $this->academicRepository);
-        $classController = new ClassController($this->structureService, $this->academicRepository);
+        $classController = new ClassController($this->structureService, $this->academicRepository, $this->teacherRepository);
         $subjectController = new SubjectController($this->structureService, $this->academicRepository);
 
         $adminAuth = [AuthMiddleware::class, RoleMiddleware::allow(['admin', 'super_admin'])];
@@ -186,6 +198,7 @@ final class AcademicFlowIntegrationTest extends TestCase
 
         $this->router->get('/admin/classes', [$classController, 'index'], $adminAuth);
         $this->router->post('/admin/classes', [$classController, 'store'], $adminFormAuth);
+        $this->router->post('/admin/classes/{id}', [$classController, 'update'], $adminFormAuth);
 
         $this->router->get('/admin/subjects', [$subjectController, 'index'], $adminAuth);
         $this->router->post('/admin/subjects', [$subjectController, 'store'], $adminFormAuth);
@@ -326,5 +339,83 @@ final class AcademicFlowIntegrationTest extends TestCase
         $subject = $this->academicRepository->findSubjectByCode('CVE101');
         $this->assertNotNull($subject);
         $this->assertSame('Civic Education', $subject->name);
+    }
+
+    public function testFormTeacherAllocationAndResolutionFlow(): void
+    {
+        $csrf = Csrf::generate();
+
+        // 1. Create a teacher user and teacher record
+        $teacherUser = $this->userRepository->create([
+            'uuid' => 'u-teacher-emmanuel',
+            'name' => 'Mr. Emmanuel Okafor',
+            'email' => 'emmanuel.okafor@claret.edu',
+            'password_hash' => password_hash('Pass12345!', PASSWORD_DEFAULT),
+        ], ['teacher']);
+
+        $stmt = $this->pdo->prepare("INSERT INTO `teachers` (`user_id`, `staff_id`, `created_at`, `updated_at`) VALUES (?, ?, ?, ?)");
+        $now = date('Y-m-d H:i:s');
+        $stmt->execute([$teacherUser->id, 'CIS-T-007', $now, $now]);
+        $teacherId = (int)$this->pdo->lastInsertId();
+
+        // 2. Create academic level
+        $reqLevel = $this->createAuthRequest('POST', '/admin/academic-levels', [
+            '_csrf_token' => $csrf,
+            'name' => 'JSS 2',
+            'stage' => 'Junior Secondary',
+            'rank_order' => 8,
+        ]);
+        $this->router->dispatch($reqLevel);
+        $level = $this->academicRepository->findLevelByName('JSS 2');
+        $this->assertNotNull($level);
+
+        // 3. Create Class with Form Teacher assigned
+        $reqClass = $this->createAuthRequest('POST', '/admin/classes', [
+            '_csrf_token' => $csrf,
+            'academic_level_id' => $level->id,
+            'name' => 'JSS 2 Gold',
+            'section_arm' => 'Gold',
+            'form_teacher_id' => $teacherId,
+        ]);
+        $res = $this->router->dispatch($reqClass);
+        $this->assertSame(302, $res->getStatusCode());
+
+        $class = $this->academicRepository->findClassByNameAndLevel('JSS 2 Gold', $level->id, 'Gold');
+        $this->assertNotNull($class);
+
+        // Verify findClassById joins form teacher metadata
+        $fetchedClass = $this->academicRepository->findClassById($class->id);
+        $this->assertNotNull($fetchedClass);
+        $this->assertSame($teacherId, $fetchedClass->formTeacherId);
+        $this->assertSame('Mr. Emmanuel Okafor', $fetchedClass->formTeacherName);
+        $this->assertSame('CIS-T-007', $fetchedClass->formTeacherStaffId);
+
+        // Verify getAllClasses includes form teacher metadata
+        $allClasses = $this->academicRepository->getAllClasses();
+        $matched = null;
+        foreach ($allClasses as $c) {
+            if ($c->id === $class->id) {
+                $matched = $c;
+                break;
+            }
+        }
+        $this->assertNotNull($matched);
+        $this->assertSame('Mr. Emmanuel Okafor', $matched->formTeacherName);
+        $this->assertSame('CIS-T-007', $matched->formTeacherStaffId);
+
+        // 4. Update Class to unassign form teacher
+        $reqUpdate = $this->createAuthRequest('POST', "/admin/classes/{$class->id}", [
+            '_csrf_token' => $csrf,
+            'academic_level_id' => $level->id,
+            'name' => 'JSS 2 Gold',
+            'section_arm' => 'Gold',
+            'form_teacher_id' => '',
+        ]);
+        $resUpdate = $this->router->dispatch($reqUpdate);
+        $this->assertSame(302, $resUpdate->getStatusCode());
+
+        $updatedClass = $this->academicRepository->findClassById($class->id);
+        $this->assertNull($updatedClass->formTeacherId);
+        $this->assertNull($updatedClass->formTeacherName);
     }
 }

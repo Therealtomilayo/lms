@@ -312,20 +312,28 @@ class EnrollmentRepository
     /**
      * @return Student[]
      */
-    public function getStudentsByClassAndSession(int $classId, int $sessionId, string $status = 'active'): array
+    public function getStudentsByClassAndSession(int $classId, int $sessionId, ?string $status = 'active'): array
     {
+        $where = ['ce.class_id = :class_id', 'ce.session_id = :session_id'];
+        $params = [
+            ':class_id' => $classId,
+            ':session_id' => $sessionId,
+        ];
+
+        if ($status !== null) {
+            $where[] = 'ce.status = :status';
+            $params[':status'] = $status;
+        }
+
+        $whereSql = implode(' AND ', $where);
         $sql = "SELECT s.*, u.name as user_name, u.email as user_email, u.phone as user_phone, u.status as user_status
                 FROM `class_enrollments` ce
                 JOIN `students` s ON s.id = ce.student_id
                 JOIN `users` u ON u.id = s.user_id
-                WHERE ce.class_id = :class_id AND ce.session_id = :session_id AND ce.status = :status
+                WHERE {$whereSql}
                 ORDER BY u.name ASC";
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([
-            ':class_id' => $classId,
-            ':session_id' => $sessionId,
-            ':status' => $status,
-        ]);
+        $stmt->execute($params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         return array_map(function ($row) {
             $user = \App\Models\User::fromArray([

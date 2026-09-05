@@ -54,6 +54,10 @@ class ChildController extends Controller
             $redirectUrl = (string)($request->input('redirect_to') ?? "/parent/children/{$student->id}");
             if (!str_starts_with($redirectUrl, '/parent')) {
                 $redirectUrl = "/parent/children/{$student->id}";
+            } else {
+                // If redirecting from another child's scoped subpage (e.g. /parent/children/4/timetable),
+                // dynamically rewrite the student ID segment to the newly selected child
+                $redirectUrl = preg_replace('#^/parent/children/\d+#', "/parent/children/{$student->id}", $redirectUrl);
             }
 
             $this->setFlash($request, 'success', "Switched active student view to {$student->name}.");

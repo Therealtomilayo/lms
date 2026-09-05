@@ -13,6 +13,7 @@ use App\Core\Response;
 use App\Core\UserContext;
 use App\Policies\AcademicPolicy;
 use App\Repositories\AcademicRepository;
+use App\Repositories\TeacherRepository;
 use App\Services\AcademicStructureService;
 
 /**
@@ -22,13 +23,16 @@ class ClassController extends Controller
 {
     private AcademicStructureService $structureService;
     private AcademicRepository $repository;
+    private TeacherRepository $teacherRepository;
 
     public function __construct(
         ?AcademicStructureService $structureService = null,
-        ?AcademicRepository $repository = null
+        ?AcademicRepository $repository = null,
+        ?TeacherRepository $teacherRepository = null
     ) {
         $this->structureService = $structureService ?? new AcademicStructureService();
         $this->repository = $repository ?? new AcademicRepository();
+        $this->teacherRepository = $teacherRepository ?? new TeacherRepository();
     }
 
     public function index(Request $request): Response
@@ -40,12 +44,14 @@ class ClassController extends Controller
 
         $classes = $this->repository->getAllClasses();
         $levels = $this->repository->getAllLevels();
+        $teachers = $this->teacherRepository->getAllTeachers();
 
         return $this->view('admin/classes/index', [
             'title' => 'Classes & Arms — Claret LMS',
             'headerTitle' => 'Classes & Arms',
             'classes' => $classes,
             'levels' => $levels,
+            'teachers' => $teachers,
         ]);
     }
 
@@ -61,6 +67,7 @@ class ClassController extends Controller
                 'academic_level_id' => $request->post('academic_level_id'),
                 'name' => $request->post('name'),
                 'section_arm' => $request->post('section_arm'),
+                'form_teacher_id' => $request->post('form_teacher_id'),
                 'status' => $request->post('status', 'active'),
             ]);
 
@@ -84,6 +91,7 @@ class ClassController extends Controller
                 'academic_level_id' => $request->post('academic_level_id'),
                 'name' => $request->post('name'),
                 'section_arm' => $request->post('section_arm'),
+                'form_teacher_id' => $request->post('form_teacher_id'),
             ]);
 
             return $this->redirectWithSuccess('/admin/classes', 'Class updated successfully.');

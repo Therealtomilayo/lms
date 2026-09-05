@@ -69,6 +69,12 @@ class GradebookController extends Controller
             ? $this->academicRepo->findClassSubjectsByTeacherId($teacherId)
             : $this->academicRepo->findAllClassSubjects();
 
+        $lockedMap = [];
+        if ($activeTerm) {
+            $csIds = array_map(fn($cs) => (int)$cs->id, $classSubjects);
+            $lockedMap = $this->gradebookRepo->getLockedClassSubjectIds($activeTerm->id, $csIds);
+        }
+
         return Response::html($this->render('teacher/gradebook/index', [
             'title' => 'Gradebooks & Continuous Assessment — Claret Faculty Portal',
             'headerTitle' => 'Academic Gradebooks',
@@ -76,6 +82,7 @@ class GradebookController extends Controller
             'classSubjects' => $classSubjects,
             'activeSession' => $activeSession,
             'activeTerm' => $activeTerm,
+            'lockedMap' => $lockedMap,
         ], 'layouts/teacher'));
     }
 

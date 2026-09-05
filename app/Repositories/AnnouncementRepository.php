@@ -278,6 +278,20 @@ class AnnouncementRepository
         ]);
     }
 
+    public function markAllAsReadForUser(UserContext $user, ?int $studentId = null): int
+    {
+        $feed = $this->getFeedForUser($user, $studentId, 200, 0);
+        $count = 0;
+        foreach ($feed as $item) {
+            if (!$item->isRead) {
+                if ($this->markAsRead((int)$item->id, $user->getUserId())) {
+                    $count++;
+                }
+            }
+        }
+        return $count;
+    }
+
     public function listAllForAdmin(int $limit = 50, int $offset = 0): array
     {
         $sql = "

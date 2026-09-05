@@ -114,10 +114,15 @@ class AcademicStructureService
             throw new DomainRuleException("A class named '{$name}'" . ($sectionArm ? " (Arm {$sectionArm})" : "") . " already exists for this level.");
         }
 
+        $formTeacherId = isset($data['form_teacher_id']) && $data['form_teacher_id'] !== '' && $data['form_teacher_id'] !== null
+            ? (int)$data['form_teacher_id']
+            : null;
+
         $class = $this->repository->createClass([
             'academic_level_id' => $levelId,
             'name' => $name,
             'section_arm' => $sectionArm,
+            'form_teacher_id' => $formTeacherId,
             'status' => $data['status'] ?? SchoolClass::STATUS_ACTIVE,
         ]);
 
@@ -147,11 +152,17 @@ class AcademicStructureService
             throw new DomainRuleException("A class named '{$name}'" . ($sectionArm ? " (Arm {$sectionArm})" : "") . " already exists for this level.");
         }
 
-        $this->repository->updateClass($id, [
+        $updatePayload = [
             'academic_level_id' => $levelId,
             'name' => $name,
             'section_arm' => $sectionArm,
-        ]);
+        ];
+
+        if (array_key_exists('form_teacher_id', $data)) {
+            $updatePayload['form_teacher_id'] = !empty($data['form_teacher_id']) ? (int)$data['form_teacher_id'] : null;
+        }
+
+        $this->repository->updateClass($id, $updatePayload);
 
         return ServiceResult::success($this->repository->findClassById($id));
     }

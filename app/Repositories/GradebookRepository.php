@@ -616,4 +616,189 @@ final class GradebookRepository
             ]);
         }
     }
+
+    public function unlockClassSubjectResults(int $classSubjectId, int $termId): void
+    {
+        $stmt = $this->pdo->prepare(
+            'UPDATE `term_results` 
+             SET `is_locked` = 0, `locked_at` = NULL, `locked_by` = NULL 
+             WHERE `class_subject_id` = :class_subject_id AND `term_id` = :term_id'
+        );
+        $stmt->execute([
+            ':class_subject_id' => $classSubjectId,
+            ':term_id' => $termId,
+        ]);
+    }
+
+    public function getScoresCountByClassSubject(int $classSubjectId): int
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT COUNT(DISTINCT student_id) FROM `student_assessment_scores` WHERE `class_subject_id` = :class_subject_id'
+        );
+        $stmt->execute([':class_subject_id' => $classSubjectId]);
+        return (int)$stmt->fetchColumn();
+    }
+
+    /**
+     * @return array{total_students: int, avg_score: float|null, min_score: float|null, max_score: float|null, locked: bool}
+     */
+    public function getTermResultsStatsByClassSubject(int $classSubjectId, int $termId): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT COUNT(*) as total_students, 
+                    AVG(computed_score) as avg_score, 
+                    MIN(computed_score) as min_score, 
+                    MAX(computed_score) as max_score,
+                    SUM(CASE WHEN is_locked = 1 THEN 1 ELSE 0 END) as locked_count
+             FROM `term_results`
+             WHERE `class_subject_id` = :class_subject_id AND `term_id` = :term_id'
+        );
+        $stmt->execute([
+            ':class_subject_id' => $classSubjectId,
+            ':term_id' => $termId,
+        ]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return [
+            'total_students' => (int)($row['total_students'] ?? 0),
+            'avg_score' => $row['avg_score'] !== null ? round((float)$row['avg_score'], 1) : null,
+            'min_score' => $row['min_score'] !== null ? round((float)$row['min_score'], 1) : null,
+            'max_score' => $row['max_score'] !== null ? round((float)$row['max_score'], 1) : null,
+            'locked' => ((int)($row['locked_count'] ?? 0)) > 0,
+        ];
+    }
+
+    /**
+     * @return array<int, bool> [class_subject_id => is_locked]
+     */
+    public function getLockedClassSubjectIds(int $termId, ?array $classSubjectIds = null): array
+    {
+        if ($classSubjectIds !== null && empty($classSubjectIds)) {
+            return [];
+        }
+
+        $sql = 'SELECT class_subject_id, COUNT(*) as locked_count 
+                FROM `term_results` 
+                WHERE `term_id` = :term_id AND `is_locked` = 1';
+        $params = [':term_id' => $termId];
+
+        if ($classSubjectIds !== null) {
+            $inPlaceholders = implode(',', array_map('intval', $classSubjectIds));
+            $sql .= " AND `class_subject_id` IN ({$inPlaceholders})";
+        }
+
+        $sql .= ' GROUP BY class_subject_id';
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $lockedMap = [];
+        foreach ($rows as $row) {
+            $lockedMap[(int)$row['class_subject_id']] = ((int)$row['locked_count']) > 0;
+        }
+
+        return $lockedMap;
+    }
+
+    /**
+     * @return array<int, array<int, array<string, mixed>>> [student_id => [subject_id => row]]
+     */
+    public function getTermResultsMatrixByClass(int $classId, int $termId): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT tr.*, u.name AS student_name, u.email AS student_email, s.admission_number,
+                    sub.id AS subject_id, sub.name AS subject_name, sub.code AS subject_code
+             FROM `term_results` tr
+             JOIN `students` s ON tr.student_id = s.id
+             JOIN `users` u ON s.user_id = u.id
+             JOIN `class_subjects` cs ON tr.class_subject_id = cs.id
+             JOIN `subjects` sub ON cs.subject_id = sub.id
+             WHERE cs.class_id = :class_id AND tr.term_id = :term_id
+             ORDER BY u.name ASC'
+        );
+        $stmt->execute([
+            ':class_id' => $classId,
+            ':term_id' => $termId,
+        ]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $matrix = [];
+        foreach ($rows as $row) {
+            $matrix[(int)$row['student_id']][(int)$row['subject_id']] = $row;
+        }
+
+        return $matrix;
+    }
+
+    /**
+     * Batch update remarks for students in a class & term
+     *
+     * @param int $termId
+     * @param int $classId
+     * @param array<int, array{teacher_remark?: string|null, principal_remark?: string|null}> $remarks
+     */
+    public function batchUpdateRemarks(int $termId, int $classId, array $remarks): void
+    {
+        if (empty($remarks)) {
+            return;
+        }
+
+        foreach ($remarks as $studentId => $data) {
+            $studentId = (int)$studentId;
+            if ($studentId <= 0) {
+                continue;
+            }
+
+            // Check if record exists
+            $checkStmt = $this->pdo->prepare(
+                'SELECT id, class_teacher_remark, principal_remark FROM `student_term_summaries` 
+                 WHERE `student_id` = :student_id AND `term_id` = :term_id'
+            );
+            $checkStmt->execute([
+                ':student_id' => $studentId,
+                ':term_id' => $termId,
+            ]);
+            $existing = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+            $hasTeacher = array_key_exists('teacher_remark', $data);
+            $hasPrincipal = array_key_exists('principal_remark', $data);
+
+            $teacherRemark = $hasTeacher
+                ? ($data['teacher_remark'] !== null ? trim((string)$data['teacher_remark']) : null)
+                : ($existing['class_teacher_remark'] ?? null);
+
+            $principalRemark = $hasPrincipal
+                ? ($data['principal_remark'] !== null ? trim((string)$data['principal_remark']) : null)
+                : ($existing['principal_remark'] ?? null);
+
+            if ($existing) {
+                $updateStmt = $this->pdo->prepare(
+                    'UPDATE `student_term_summaries` 
+                     SET `class_teacher_remark` = :teacher_remark,
+                         `principal_remark` = :principal_remark
+                     WHERE `id` = :id'
+                );
+                $updateStmt->execute([
+                    ':id' => $existing['id'],
+                    ':teacher_remark' => $teacherRemark,
+                    ':principal_remark' => $principalRemark,
+                ]);
+            } else {
+                $insertStmt = $this->pdo->prepare(
+                    'INSERT INTO `student_term_summaries` 
+                     (`student_id`, `term_id`, `class_id`, `class_teacher_remark`, `principal_remark`, `promotion_status`, `is_locked`)
+                     VALUES (:student_id, :term_id, :class_id, :teacher_remark, :principal_remark, \'pending\', 0)'
+                );
+                $insertStmt->execute([
+                    ':student_id' => $studentId,
+                    ':term_id' => $termId,
+                    ':class_id' => $classId,
+                    ':teacher_remark' => $teacherRemark,
+                    ':principal_remark' => $principalRemark,
+                ]);
+            }
+        }
+    }
 }
+

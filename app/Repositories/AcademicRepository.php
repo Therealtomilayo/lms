@@ -442,13 +442,69 @@ class AcademicRepository
     // 4. CLASSES
     // ==========================================
 
+    private ?bool $hasTeachersTable = null;
+    private ?bool $hasFormTeacherColumn = null;
+
+    private function supportsTeachersJoin(): bool
+    {
+        try {
+            $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+            if ($driver === 'sqlite') {
+                $stmt = $this->pdo->query("SELECT name FROM sqlite_master WHERE type='table' AND name='teachers'");
+                return (bool)$stmt->fetchColumn();
+            }
+
+            if ($this->hasTeachersTable !== null) {
+                return $this->hasTeachersTable;
+            }
+            $stmt = $this->pdo->query("SHOW TABLES LIKE 'teachers'");
+            return $this->hasTeachersTable = (bool)$stmt->fetchColumn();
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    private function supportsFormTeacherColumn(): bool
+    {
+        try {
+            $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+            if ($driver === 'sqlite') {
+                $stmt = $this->pdo->query("PRAGMA table_info(classes)");
+                $columns = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($columns as $col) {
+                    if (($col['name'] ?? '') === 'form_teacher_id') {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            if ($this->hasFormTeacherColumn !== null) {
+                return $this->hasFormTeacherColumn;
+            }
+            $stmt = $this->pdo->query("SHOW COLUMNS FROM `classes` LIKE 'form_teacher_id'");
+            return $this->hasFormTeacherColumn = (bool)$stmt->fetchColumn();
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
     public function findClassById(int $id): ?SchoolClass
     {
+        $joinTeachers = $this->supportsTeachersJoin() && $this->supportsFormTeacherColumn();
+        $selectFields = 'c.*, al.name as level_name, al.stage as level_stage, al.rank_order as level_rank_order, al.grading_scale_id as level_grading_scale_id';
+        $joins = 'JOIN `academic_levels` al ON al.id = c.academic_level_id';
+
+        if ($joinTeachers) {
+            $selectFields .= ', ft.staff_id as form_teacher_staff_id, ftu.name as form_teacher_name';
+            $joins .= ' LEFT JOIN `teachers` ft ON ft.id = c.form_teacher_id LEFT JOIN `users` ftu ON ftu.id = ft.user_id';
+        }
+
         $stmt = $this->pdo->prepare(
-            'SELECT c.*, al.name as level_name, al.stage as level_stage, al.rank_order as level_rank_order, al.grading_scale_id as level_grading_scale_id
+            "SELECT {$selectFields}
              FROM `classes` c
-             JOIN `academic_levels` al ON al.id = c.academic_level_id
-             WHERE c.id = :id LIMIT 1'
+             {$joins}
+             WHERE c.id = :id LIMIT 1"
         );
         $stmt->execute([':id' => $id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -496,12 +552,58 @@ class AcademicRepository
      */
     public function getAllClasses(): array
     {
-        $sql = 'SELECT c.*, al.name as level_name, al.stage as level_stage, al.rank_order as level_rank_order, al.grading_scale_id as level_grading_scale_id
+        $joinTeachers = $this->supportsTeachersJoin() && $this->supportsFormTeacherColumn();
+        $selectFields = 'c.*, al.name as level_name, al.stage as level_stage, al.rank_order as level_rank_order, al.grading_scale_id as level_grading_scale_id';
+        $joins = 'JOIN `academic_levels` al ON al.id = c.academic_level_id';
+
+        if ($joinTeachers) {
+            $selectFields .= ', ft.staff_id as form_teacher_staff_id, ftu.name as form_teacher_name';
+            $joins .= ' LEFT JOIN `teachers` ft ON ft.id = c.form_teacher_id LEFT JOIN `users` ftu ON ftu.id = ft.user_id';
+        }
+
+        $sql = "SELECT {$selectFields}
                 FROM `classes` c
-                JOIN `academic_levels` al ON al.id = c.academic_level_id
-                ORDER BY al.rank_order ASC, c.name ASC, c.id ASC';
+                {$joins}
+                ORDER BY al.rank_order ASC, c.name ASC, c.id ASC";
 
         $stmt = $this->pdo->query($sql);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return array_map(function (array $row) {
+            $level = new AcademicLevel(
+                id: (int)$row['academic_level_id'],
+                name: (string)$row['level_name'],
+                stage: (string)$row['level_stage'],
+                rankOrder: (int)$row['level_rank_order'],
+                gradingScaleId: isset($row['level_grading_scale_id']) ? (int)$row['level_grading_scale_id'] : null
+            );
+
+            return SchoolClass::fromArray($row, $level);
+        }, $rows);
+    }
+
+    /**
+     * @return SchoolClass[]
+     */
+    public function getClassesByLevel(int $levelId): array
+    {
+        $joinTeachers = $this->supportsTeachersJoin() && $this->supportsFormTeacherColumn();
+        $selectFields = 'c.*, al.name as level_name, al.stage as level_stage, al.rank_order as level_rank_order, al.grading_scale_id as level_grading_scale_id';
+        $joins = 'JOIN `academic_levels` al ON al.id = c.academic_level_id';
+
+        if ($joinTeachers) {
+            $selectFields .= ', ft.staff_id as form_teacher_staff_id, ftu.name as form_teacher_name';
+            $joins .= ' LEFT JOIN `teachers` ft ON ft.id = c.form_teacher_id LEFT JOIN `users` ftu ON ftu.id = ft.user_id';
+        }
+
+        $sql = "SELECT {$selectFields}
+                FROM `classes` c
+                {$joins}
+                WHERE c.academic_level_id = :level_id
+                ORDER BY c.name ASC, c.id ASC";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':level_id' => $levelId]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         return array_map(function (array $row) {
@@ -520,19 +622,39 @@ class AcademicRepository
     public function createClass(array $data): SchoolClass
     {
         $now = date('Y-m-d H:i:s');
-        $stmt = $this->pdo->prepare(
-            'INSERT INTO `classes` (`academic_level_id`, `name`, `section_arm`, `status`, `created_at`, `updated_at`)
-             VALUES (:academic_level_id, :name, :section_arm, :status, :created_at, :updated_at)'
-        );
+        $hasFormTeacher = $this->supportsFormTeacherColumn();
+        $formTeacherId = isset($data['form_teacher_id']) && $data['form_teacher_id'] !== '' && $data['form_teacher_id'] !== null
+            ? (int)$data['form_teacher_id']
+            : null;
 
-        $stmt->execute([
-            ':academic_level_id' => (int)$data['academic_level_id'],
-            ':name' => trim($data['name']),
-            ':section_arm' => !empty($data['section_arm']) ? trim($data['section_arm']) : null,
-            ':status' => $data['status'] ?? SchoolClass::STATUS_ACTIVE,
-            ':created_at' => $now,
-            ':updated_at' => $now,
-        ]);
+        if ($hasFormTeacher) {
+            $stmt = $this->pdo->prepare(
+                'INSERT INTO `classes` (`academic_level_id`, `name`, `section_arm`, `form_teacher_id`, `status`, `created_at`, `updated_at`)
+                 VALUES (:academic_level_id, :name, :section_arm, :form_teacher_id, :status, :created_at, :updated_at)'
+            );
+            $stmt->execute([
+                ':academic_level_id' => (int)$data['academic_level_id'],
+                ':name' => trim($data['name']),
+                ':section_arm' => !empty($data['section_arm']) ? trim($data['section_arm']) : null,
+                ':form_teacher_id' => $formTeacherId,
+                ':status' => $data['status'] ?? SchoolClass::STATUS_ACTIVE,
+                ':created_at' => $now,
+                ':updated_at' => $now,
+            ]);
+        } else {
+            $stmt = $this->pdo->prepare(
+                'INSERT INTO `classes` (`academic_level_id`, `name`, `section_arm`, `status`, `created_at`, `updated_at`)
+                 VALUES (:academic_level_id, :name, :section_arm, :status, :created_at, :updated_at)'
+            );
+            $stmt->execute([
+                ':academic_level_id' => (int)$data['academic_level_id'],
+                ':name' => trim($data['name']),
+                ':section_arm' => !empty($data['section_arm']) ? trim($data['section_arm']) : null,
+                ':status' => $data['status'] ?? SchoolClass::STATUS_ACTIVE,
+                ':created_at' => $now,
+                ':updated_at' => $now,
+            ]);
+        }
 
         $id = (int)$this->pdo->lastInsertId();
 
@@ -542,6 +664,26 @@ class AcademicRepository
     public function updateClass(int $id, array $data): bool
     {
         $now = date('Y-m-d H:i:s');
+        $hasFormTeacher = $this->supportsFormTeacherColumn();
+
+        if ($hasFormTeacher && array_key_exists('form_teacher_id', $data)) {
+            $formTeacherId = !empty($data['form_teacher_id']) ? (int)$data['form_teacher_id'] : null;
+            $stmt = $this->pdo->prepare(
+                'UPDATE `classes`
+                 SET `academic_level_id` = :academic_level_id, `name` = :name, `section_arm` = :section_arm,
+                     `form_teacher_id` = :form_teacher_id, `updated_at` = :updated_at
+                 WHERE `id` = :id'
+            );
+            return $stmt->execute([
+                ':id' => $id,
+                ':academic_level_id' => (int)$data['academic_level_id'],
+                ':name' => trim($data['name']),
+                ':section_arm' => !empty($data['section_arm']) ? trim($data['section_arm']) : null,
+                ':form_teacher_id' => $formTeacherId,
+                ':updated_at' => $now,
+            ]);
+        }
+
         $stmt = $this->pdo->prepare(
             'UPDATE `classes`
              SET `academic_level_id` = :academic_level_id, `name` = :name, `section_arm` = :section_arm, `updated_at` = :updated_at
@@ -772,7 +914,30 @@ class AcademicRepository
      */
     public function getClassSubjectsByClass(int $classId, ?int $sessionId = null): array
     {
-        return $this->getClassSubjectsBySession($sessionId, $classId);
+        if ($sessionId !== null && $sessionId > 0) {
+            return $this->getClassSubjectsBySession($sessionId, $classId);
+        }
+
+        $sql = 'SELECT cs.*,
+                       s.name as session_name, s.start_date as session_start, s.end_date as session_end, s.status as session_status,
+                       c.name as class_name, c.section_arm as class_section_arm, c.academic_level_id as class_level_id, c.status as class_status,
+                       sub.name as subject_name, sub.code as subject_code, sub.status as subject_status,
+                       t.staff_id as teacher_staff_id, t.user_id as teacher_user_id,
+                       u.name as teacher_name, u.email as teacher_email
+                FROM `class_subjects` cs
+                JOIN `sessions` s ON s.id = cs.session_id
+                JOIN `classes` c ON c.id = cs.class_id
+                JOIN `subjects` sub ON sub.id = cs.subject_id
+                LEFT JOIN `teachers` t ON t.id = cs.teacher_id
+                LEFT JOIN `users` u ON u.id = t.user_id
+                WHERE cs.class_id = :class_id
+                ORDER BY c.name ASC, sub.name ASC';
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':class_id' => $classId]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return array_map(fn(array $row) => $this->hydrateClassSubject($row), $rows);
     }
 
     /**
@@ -838,6 +1003,56 @@ class AcademicRepository
             ':teacher_id' => $teacherId,
             ':status' => ClassSubject::STATUS_ACTIVE,
         ]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return array_map(fn(array $row) => $this->hydrateClassSubject($row), $rows);
+    }
+
+    /**
+     * @return ClassSubject[]
+     */
+    public function findAllClassSubjects(
+        ?int $sessionId = null,
+        ?int $classId = null,
+        ?int $subjectId = null,
+        ?int $academicLevelId = null
+    ): array {
+        $sql = 'SELECT cs.*,
+                       s.name as session_name, s.start_date as session_start, s.end_date as session_end, s.status as session_status,
+                       c.name as class_name, c.section_arm as class_section_arm, c.academic_level_id as class_level_id, c.status as class_status,
+                       sub.name as subject_name, sub.code as subject_code, sub.status as subject_status,
+                       t.staff_id as teacher_staff_id, t.user_id as teacher_user_id,
+                       u.name as teacher_name, u.email as teacher_email
+                FROM `class_subjects` cs
+                JOIN `sessions` s ON s.id = cs.session_id
+                JOIN `classes` c ON c.id = cs.class_id
+                JOIN `subjects` sub ON sub.id = cs.subject_id
+                JOIN `teachers` t ON t.id = cs.teacher_id
+                JOIN `users` u ON u.id = t.user_id
+                WHERE 1=1';
+
+        $params = [];
+        if ($sessionId !== null && $sessionId > 0) {
+            $sql .= ' AND cs.session_id = :session_id';
+            $params[':session_id'] = $sessionId;
+        }
+        if ($classId !== null && $classId > 0) {
+            $sql .= ' AND cs.class_id = :class_id';
+            $params[':class_id'] = $classId;
+        }
+        if ($subjectId !== null && $subjectId > 0) {
+            $sql .= ' AND cs.subject_id = :subject_id';
+            $params[':subject_id'] = $subjectId;
+        }
+        if ($academicLevelId !== null && $academicLevelId > 0) {
+            $sql .= ' AND c.academic_level_id = :academic_level_id';
+            $params[':academic_level_id'] = $academicLevelId;
+        }
+
+        $sql .= ' ORDER BY s.id DESC, c.name ASC, sub.name ASC';
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         return array_map(fn(array $row) => $this->hydrateClassSubject($row), $rows);

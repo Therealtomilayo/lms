@@ -9,13 +9,21 @@ $levelOptions = ['' => 'Select Level...'];
 foreach ($levels as $lvl) {
     $levelOptions[$lvl->id] = e($lvl->name) . ' (' . e($lvl->stage) . ')';
 }
+
+// Build teacher options for select components
+$teacherOptions = ['' => '-- None (Unassigned) --'];
+if (!empty($teachers)) {
+    foreach ($teachers as $t) {
+        $teacherOptions[$t->id] = e($t->name) . ' (' . e($t->staffId) . ')';
+    }
+}
 ?>
 <div class="space-y-6">
     <!-- Page Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
             <h2 class="text-2xl font-bold text-slate-900">Classes &amp; Arms</h2>
-            <p class="text-sm text-slate-500 mt-1">Manage class groups and optional section arms (A, B, Gold, Diamond) across academic levels.</p>
+            <p class="text-sm text-slate-500 mt-1">Manage class groups, section arms (A, B, Gold, Diamond), and assigned Form Teachers (Class Masters).</p>
         </div>
         <div>
             <?php $this->include('components/button', [
@@ -43,6 +51,7 @@ foreach ($levels as $lvl) {
                             <th scope="col" class="px-6 py-3.5">Level</th>
                             <th scope="col" class="px-6 py-3.5">Class Name</th>
                             <th scope="col" class="px-6 py-3.5">Section / Arm</th>
+                            <th scope="col" class="px-6 py-3.5">Form Teacher (Class Master)</th>
                             <th scope="col" class="px-6 py-3.5">Status</th>
                             <th scope="col" class="px-6 py-3.5 text-right">Actions</th>
                         </tr>
@@ -69,6 +78,25 @@ foreach ($levels as $lvl) {
                                     <?php endif; ?>
                                 </td>
                                 <td class="px-6 py-4">
+                                    <?php if (!empty($cls->formTeacherName)): ?>
+                                        <div class="flex items-center gap-2.5">
+                                            <span class="w-7 h-7 rounded-full bg-brand-100 text-brand-800 text-xs font-bold flex items-center justify-center shrink-0 border border-brand-200">
+                                                <?= strtoupper(substr($cls->formTeacherName, 0, 1)) ?>
+                                            </span>
+                                            <div class="min-w-0">
+                                                <p class="text-xs font-semibold text-slate-900 truncate"><?= e($cls->formTeacherName) ?></p>
+                                                <?php if (!empty($cls->formTeacherStaffId)): ?>
+                                                    <p class="text-[10px] font-mono text-slate-500"><?= e($cls->formTeacherStaffId) ?></p>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    <?php else: ?>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200">
+                                            Unassigned
+                                        </span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="px-6 py-4">
                                     <?php if ($cls->isActive()): ?>
                                         <?php $this->include('components/badge', ['label' => 'Active', 'variant' => 'success']); ?>
                                     <?php else: ?>
@@ -82,7 +110,7 @@ foreach ($levels as $lvl) {
                                             'variant' => 'secondary',
                                             'label' => 'Edit',
                                             'class' => 'px-2.5 py-1 min-h-0 text-xs font-semibold',
-                                            'attributes' => 'onclick="openEditModal(' . $cls->id . ', ' . $cls->academicLevelId . ', \'' . e(addslashes($cls->name)) . '\', \'' . e(addslashes($cls->sectionArm ?? '')) . '\')"'
+                                            'attributes' => 'onclick="openEditModal(' . $cls->id . ', ' . $cls->academicLevelId . ', \'' . e(addslashes($cls->name)) . '\', \'' . e(addslashes($cls->sectionArm ?? '')) . '\', ' . ($cls->formTeacherId ? $cls->formTeacherId : 'null') . ')"'
                                         ]); ?>
 
                                         <form method="POST" action="/admin/classes/<?= $cls->id ?>/status" class="inline">
@@ -139,6 +167,15 @@ foreach ($levels as $lvl) {
         'helpText' => 'Optional. Leave blank if the class has no arm designation.'
     ]); ?>
 
+    <?php $this->include('components/select', [
+        'name' => 'form_teacher_id',
+        'id' => 'create_form_teacher',
+        'label' => 'Form Teacher (Class Master)',
+        'options' => $teacherOptions,
+        'selected' => '',
+        'helpText' => 'Optional. Select the teacher responsible for this class cohort and report card remarks.'
+    ]); ?>
+
     <div class="pt-4 border-t border-slate-200 flex justify-end gap-3">
         <?php $this->include('components/button', [
             'type' => 'button',
@@ -191,6 +228,15 @@ foreach ($levels as $lvl) {
         'helpText' => 'Optional. Leave blank if the class has no arm designation.'
     ]); ?>
 
+    <?php $this->include('components/select', [
+        'name' => 'form_teacher_id',
+        'id' => 'edit_form_teacher',
+        'label' => 'Form Teacher (Class Master)',
+        'options' => $teacherOptions,
+        'selected' => '',
+        'helpText' => 'Optional. Select or change the Form Teacher for this class cohort.'
+    ]); ?>
+
     <div class="pt-4 border-t border-slate-200 flex justify-end gap-3">
         <?php $this->include('components/button', [
             'type' => 'button',
@@ -215,11 +261,12 @@ foreach ($levels as $lvl) {
 ]); ?>
 
 <script>
-    function openEditModal(id, levelId, name, arm) {
+    function openEditModal(id, levelId, name, arm, formTeacherId) {
         document.getElementById('edit-form').action = '/admin/classes/' + id;
         document.getElementById('edit_level').value = levelId;
         document.getElementById('edit_class_name').value = name;
         document.getElementById('edit_arm').value = arm || '';
+        document.getElementById('edit_form_teacher').value = formTeacherId || '';
         window.LMS.showModal('edit-modal');
     }
 </script>

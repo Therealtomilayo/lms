@@ -9,6 +9,7 @@ use App\Core\Exceptions\ResourceNotFoundException;
 use App\Models\StudentTermSummary;
 use App\Repositories\AcademicRepository;
 use App\Repositories\GradebookRepository;
+use App\Repositories\SkillRepository;
 use App\Repositories\StudentRepository;
 use App\Repositories\TeacherRepository;
 use PDO;
@@ -22,17 +23,20 @@ final class ReportCardService
     private readonly StudentRepository $studentRepo;
     private readonly AcademicRepository $academicRepo;
     private readonly TeacherRepository $teacherRepo;
+    private readonly SkillRepository $skillRepo;
 
     public function __construct(
         ?GradebookRepository $gradebookRepo = null,
         ?StudentRepository $studentRepo = null,
         ?AcademicRepository $academicRepo = null,
-        ?TeacherRepository $teacherRepo = null
+        ?TeacherRepository $teacherRepo = null,
+        ?SkillRepository $skillRepo = null
     ) {
         $this->gradebookRepo = $gradebookRepo ?? new GradebookRepository();
         $this->studentRepo = $studentRepo ?? new StudentRepository();
         $this->academicRepo = $academicRepo ?? new AcademicRepository();
         $this->teacherRepo = $teacherRepo ?? new TeacherRepository();
+        $this->skillRepo = $skillRepo ?? new SkillRepository();
     }
 
     public function getReportCardData(int $studentId, int $termId): array
@@ -124,7 +128,9 @@ final class ReportCardService
 
         // Form Teacher Name
         $formTeacher = 'Subject Teacher';
-        if (!empty($subjectResults)) {
+        if ($class && !empty($class->formTeacherName)) {
+            $formTeacher = $class->formTeacherName;
+        } elseif (!empty($subjectResults)) {
             foreach ($subjectResults as $res) {
                 if ($res->classSubject && $res->classSubject->teacherId) {
                     $t = $this->teacherRepo->findTeacherById($res->classSubject->teacherId);
@@ -133,6 +139,37 @@ final class ReportCardService
                         break;
                     }
                 }
+            }
+        }
+
+        // Fetch Behavioral & Psychomotor Skills
+        $allSkills = [];
+        try {
+            $allSkills = $this->skillRepo->getAllSkills(null, 'active');
+            $savedRatings = $this->skillRepo->getStudentRatings($studentId, $termId);
+        } catch (\Throwable) {
+            $savedRatings = [];
+        }
+
+        $ratingsBySkillId = [];
+        foreach ($savedRatings as $r) {
+            $ratingsBySkillId[$r->skillId] = $r->rating;
+        }
+
+        $psychomotorRatings = [];
+        $affectiveRatings = [];
+        foreach ($allSkills as $s) {
+            $ratingVal = $ratingsBySkillId[$s->id] ?? 5; // Default 5 if not yet custom-rated
+            $entry = [
+                'id' => $s->id,
+                'name' => $s->name,
+                'category' => $s->category,
+                'rating' => $ratingVal,
+            ];
+            if ($s->isPsychomotor()) {
+                $psychomotorRatings[] = $entry;
+            } else {
+                $affectiveRatings[] = $entry;
             }
         }
 
@@ -149,6 +186,8 @@ final class ReportCardService
             'cumulative_results' => $cumulativeResults,
             'cumulative_summaries' => $cumulativeSummaries,
             'form_teacher' => $formTeacher,
+            'psychomotor_ratings' => $psychomotorRatings,
+            'affective_ratings' => $affectiveRatings,
             'generated_at' => date('Y-m-d H:i:s'),
         ];
     }

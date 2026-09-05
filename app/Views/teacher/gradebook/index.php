@@ -131,16 +131,26 @@
                     </div>
 
                     <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between gap-2">
-                        <span class="text-xs font-medium text-slate-500 flex items-center gap-1.5">
-                            <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                            <span>Open for scoring</span>
-                        </span>
+                        <?php $isLocked = !empty($lockedMap[$cs->id]); ?>
+                        <?php if ($isLocked): ?>
+                            <span class="text-xs font-semibold text-amber-700 flex items-center gap-1.5 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
+                                <svg class="w-3.5 h-3.5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                </svg>
+                                <span>Locked by Admin</span>
+                            </span>
+                        <?php else: ?>
+                            <span class="text-xs font-semibold text-emerald-700 flex items-center gap-1.5 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                                <svg class="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <span>Open for scoring</span>
+                            </span>
+                        <?php endif; ?>
 
                         <a href="/teacher/gradebook/<?= (int)$cs->id ?>" 
-                           class="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition">
-                            <span>Open Gradebook</span>
+                           class="inline-flex items-center gap-1.5 px-4 py-2 <?= $isLocked ? 'bg-slate-700 hover:bg-slate-800' : 'bg-emerald-600 hover:bg-emerald-700' ?> text-white text-xs font-bold rounded-xl shadow-xs transition">
+                            <span><?= $isLocked ? 'View Gradebook' : 'Open Gradebook' ?></span>
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
                             </svg>

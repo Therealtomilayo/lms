@@ -832,6 +832,16 @@
             </div>
         </div>
 
+        <?php
+        $teacherRemarkText = !empty($summary?->classTeacherRemark) 
+            ? $summary->classTeacherRemark 
+            : "{$studentName} is an exemplary scholar whose intellectual curiosity and diligent coursework set a high academic standard for the cohort. Highly commended.";
+
+        $principalRemarkText = !empty($summary?->principalRemark)
+            ? $summary->principalRemark
+            : "An exceptional academic performance reflecting commendable discipline and mastery of core curriculum. Keep up the high standard.";
+        ?>
+
         <!-- Behavioral & Psychomotor Skills Domain -->
         <div class="skills-wrap">
             <div class="skills-panel">
@@ -839,14 +849,23 @@
                     Psychomotor Skills
                 </div>
                 <table>
-                    <thead><tr><th>Skill Dimension</th><th class="rate">Rating</th></tr></thead>
+                    <thead><tr><th>Skill Dimension</th><th class="rate">Rating (1-5)</th></tr></thead>
                     <tbody>
-                        <tr><td>Crafts & Practical Project</td><td class="rate">5</td></tr>
-                        <tr><td>Drawing & Creative Design</td><td class="rate">4</td></tr>
-                        <tr><td>Games & Team Collaboration</td><td class="rate">5</td></tr>
-                        <tr><td>Handwriting & Presentation</td><td class="rate">5</td></tr>
-                        <tr><td>Musical & Cultural Skills</td><td class="rate">4</td></tr>
-                        <tr><td>Sports & Physical Education</td><td class="rate">5</td></tr>
+                        <?php if (!empty($psychomotor_ratings)): ?>
+                            <?php foreach ($psychomotor_ratings as $sk): ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($sk['name']) ?></td>
+                                    <td class="rate"><?= (int)$sk['rating'] ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr><td>Crafts & Practical Project</td><td class="rate">5</td></tr>
+                            <tr><td>Drawing & Creative Design</td><td class="rate">4</td></tr>
+                            <tr><td>Games & Team Collaboration</td><td class="rate">5</td></tr>
+                            <tr><td>Handwriting & Presentation</td><td class="rate">5</td></tr>
+                            <tr><td>Musical & Cultural Skills</td><td class="rate">4</td></tr>
+                            <tr><td>Sports & Physical Education</td><td class="rate">5</td></tr>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -856,16 +875,23 @@
                     Affective Traits & Behavior
                 </div>
                 <table>
-                    <thead><tr><th>Behavioral Trait</th><th class="rate">Rating</th></tr></thead>
+                    <thead><tr><th>Behavioral Trait</th><th class="rate">Rating (1-5)</th></tr></thead>
                     <tbody>
-                        <tr><td>Classroom Attendance</td><td class="rate">5</td></tr>
-                        <tr><td>Attentiveness & Focus</td><td class="rate">5</td></tr>
-                        <tr><td>Honesty & Moral Integrity</td><td class="rate">5</td></tr>
-                        <tr><td>Personal Neatness & Hygiene</td><td class="rate">5</td></tr>
-                        <tr><td>Perseverance & Dedication</td><td class="rate">5</td></tr>
-                        <tr><td>Politeness & Respect for Staff</td><td class="rate">5</td></tr>
-                        <tr><td>Punctuality to Lectures</td><td class="rate">5</td></tr>
-                        <tr><td>Peer Leadership & Teamwork</td><td class="rate">5</td></tr>
+                        <?php if (!empty($affective_ratings)): ?>
+                            <?php foreach ($affective_ratings as $sk): ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($sk['name']) ?></td>
+                                    <td class="rate"><?= (int)$sk['rating'] ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr><td>Punctuality & Time Management</td><td class="rate">5</td></tr>
+                            <tr><td>Neatness & Personal Hygiene</td><td class="rate">5</td></tr>
+                            <tr><td>Politeness & Courtesy</td><td class="rate">5</td></tr>
+                            <tr><td>Honesty & Moral Uprightness</td><td class="rate">5</td></tr>
+                            <tr><td>Relationship with Peers & Staff</td><td class="rate">5</td></tr>
+                            <tr><td>Attentiveness & Class Focus</td><td class="rate">5</td></tr>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -880,7 +906,7 @@
             <div class="comment-box">
                 <div class="who">Form / Class Teacher's Remark</div>
                 <div class="text">
-                    <?= htmlspecialchars($studentName) ?> is an exemplary scholar whose intellectual curiosity and diligent coursework set a high academic standard for the cohort. Highly commended.
+                    <?= nl2br(htmlspecialchars($teacherRemarkText)) ?>
                 </div>
                 <div class="sig">
                     <div class="name">
@@ -894,7 +920,7 @@
             <div class="comment-box">
                 <div class="who">Principal's / Head of School Endorsement</div>
                 <div class="text">
-                    An exceptional academic performance reflecting commendable discipline and mastery of core curriculum. Keep up the high standard.
+                    <?= nl2br(htmlspecialchars($principalRemarkText)) ?>
                 </div>
                 <div class="sig">
                     <div class="name">

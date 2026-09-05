@@ -45,13 +45,7 @@
 
         <!-- Announcements Notification Bell Link -->
         <?php
-        $announcementUrl = match($role) {
-            'admin' => '/admin/announcements',
-            'teacher' => '/teacher/announcements',
-            'student' => '/student/announcements',
-            'parent' => (!empty($activeChild) && isset($activeChild->id)) ? "/parent/children/{$activeChild->id}/announcements" : '/parent/announcements',
-            default => '/student/announcements'
-        };
+        $notificationUrl = '/notifications';
         
         $headerUnreadCount = 0;
         try {
@@ -69,9 +63,9 @@
             $headerUnreadCount = 0;
         }
         ?>
-        <a href="<?= e($announcementUrl) ?>" 
+        <a href="<?= e($notificationUrl) ?>" 
            class="relative p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition flex items-center justify-center" 
-           title="Announcements & Bulletins (<?= $headerUnreadCount ?> unread)">
+           title="Notifications & Bulletins (<?= $headerUnreadCount ?> unread)">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
             </svg>
@@ -87,10 +81,14 @@
             <?= e($roleLabel) ?>
         </span>
 
-        <!-- Settings Link -->
-        <div class="border-l border-slate-200 pl-3.5">
+        <!-- Profile & Password Links -->
+        <div class="border-l border-slate-200 pl-3.5 flex items-center gap-2.5">
+            <a href="/profile" class="text-sm font-medium text-slate-600 hover:text-brand-600 focus:outline-none focus:underline transition">
+                Profile
+            </a>
+            <span class="text-slate-300 text-xs">&bull;</span>
             <a href="/profile/password" class="text-sm font-medium text-slate-600 hover:text-brand-600 focus:outline-none focus:underline transition">
-                Change Password
+                Password
             </a>
         </div>
     </div>

@@ -16,7 +16,30 @@ foreach ($classes as $c) {
 }
 ?>
 
-<div class="space-y-6">
+<div class="space-y-6 pb-12">
+
+    <!-- Unified Review Suite Tab Navigation -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-2 sm:p-3">
+        <nav class="flex flex-wrap items-center gap-1.5" aria-label="Review Navigation Tabs">
+            <a href="/admin/results/review<?= ($selectedTermId > 0 && $selectedClassId > 0) ? "?term_id={$selectedTermId}&class_id={$selectedClassId}" : '' ?>"
+               class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-brand-700 bg-brand-50 border border-brand-200/60 shadow-xs transition" aria-current="page">
+                <svg class="w-4 h-4 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                <span>Results Review &amp; Publication</span>
+            </a>
+
+            <a href="/admin/results/broadsheet<?= ($selectedTermId > 0 && $selectedClassId > 0) ? "?term_id={$selectedTermId}&class_id={$selectedClassId}" : '' ?>"
+               class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                <span>Class Broadsheet Matrix</span>
+            </a>
+
+            <a href="/admin/results/comments<?= ($selectedTermId > 0 && $selectedClassId > 0) ? "?term_id={$selectedTermId}&class_id={$selectedClassId}" : '' ?>"
+               class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
+                <span>Batch Remarks &amp; Ratings</span>
+            </a>
+        </nav>
+    </div>
 
     <!-- Filter Bar -->
     <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
@@ -47,8 +70,9 @@ foreach ($classes as $c) {
             <div class="flex-shrink-0">
                 <?php $this->include('components/button', [
                     'type'    => 'submit',
-                    'variant' => 'secondary',
+                    'variant' => 'primary',
                     'label'   => 'View Class Results',
+                    'icon'    => '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>',
                     'class'   => 'min-h-[44px] w-full md:w-auto',
                 ]); ?>
             </div>
@@ -89,6 +113,7 @@ foreach ($classes as $c) {
                             'type'    => 'submit',
                             'variant' => 'secondary',
                             'label'   => 'Recompute & Rank Class',
+                            'icon'    => '<svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>',
                         ]); ?>
                     </form>
 
@@ -116,6 +141,7 @@ foreach ($classes as $c) {
                                 'type'    => 'submit',
                                 'variant' => 'danger',
                                 'label'   => 'Unpublish Results',
+                                'icon'    => '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>',
                             ]); ?>
                         </form>
                     <?php endif; ?>

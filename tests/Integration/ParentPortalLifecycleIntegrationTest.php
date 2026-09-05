@@ -434,7 +434,20 @@ class ParentPortalLifecycleIntegrationTest extends TestCase
         $this->assertEquals('/parent/dashboard', $response->getHeader('Location'));
         $this->assertEquals($this->student2Id, Session::get('_selected_child_id'));
 
-        // 2. Attempt to switch to unlinked child (Student 3) -> 403 Forbidden
+        // 2. Switch while on a child-scoped subpage (e.g. /parent/children/1/timetable)
+        $subpageReq = new Request(
+            queryParams: [],
+            postParams: ['redirect_to' => "/parent/children/{$this->student1Id}/timetable?term_id=1"],
+            serverParams: ['REQUEST_METHOD' => 'POST', 'REQUEST_URI' => "/parent/children/{$this->student2Id}/select"]
+        );
+        $subpageReq->setAttribute('studentId', (string)$this->student2Id);
+        $subpageResponse = $controller->select($subpageReq);
+
+        $this->assertEquals(302, $subpageResponse->getStatusCode());
+        $this->assertEquals("/parent/children/{$this->student2Id}/timetable?term_id=1", $subpageResponse->getHeader('Location'));
+        $this->assertEquals($this->student2Id, Session::get('_selected_child_id'));
+
+        // 3. Attempt to switch to unlinked child (Student 3) -> 403 Forbidden
         $unlinkedReq = new Request(
             queryParams: [],
             postParams: [],
