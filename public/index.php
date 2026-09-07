@@ -157,6 +157,7 @@ try {
     $router->post('/admin/users/{id}', [\App\Controllers\Admin\UserController::class, 'update'], $adminFormAuth);
     $router->post('/admin/users/{id}/status', [\App\Controllers\Admin\UserController::class, 'status'], $adminFormAuth);
     $router->post('/admin/users/{id}/reset-password', [\App\Controllers\Admin\UserController::class, 'resetPassword'], $adminFormAuth);
+    $router->post('/admin/users/{id}/delete', [\App\Controllers\Admin\UserController::class, 'delete'], $adminFormAuth);
 
     // Class & Subject Enrollments
     $router->get('/admin/enrollments', [\App\Controllers\Admin\EnrollmentController::class, 'index'], $adminAuth);
@@ -204,6 +205,13 @@ try {
     $router->post('/admin/skills/{id}/delete', [\App\Controllers\Admin\SkillController::class, 'deleteSkill'], $adminFormAuth);
     $router->get('/admin/results/comments', [\App\Controllers\Admin\BatchRemarkController::class, 'index'], $adminAuth);
     $router->post('/admin/results/comments', [\App\Controllers\Admin\BatchRemarkController::class, 'save'], $adminFormAuth);
+
+    // Super Admin Two-Tier Approval Queue Routes (ADMIN-30, §6, §58.1-§58.3)
+    $superAdminAuth = [AuthMiddleware::class, RoleMiddleware::allow(['super_admin'])];
+    $superAdminFormAuth = [AuthMiddleware::class, RoleMiddleware::allow(['super_admin']), CsrfMiddleware::class];
+    $router->get('/admin/approvals', [\App\Controllers\Admin\ApprovalController::class, 'index'], $superAdminAuth);
+    $router->post('/admin/approvals/{id}/approve', [\App\Controllers\Admin\ApprovalController::class, 'approve'], $superAdminFormAuth);
+    $router->post('/admin/approvals/{id}/reject', [\App\Controllers\Admin\ApprovalController::class, 'reject'], $superAdminFormAuth);
 
     // Admin Attendance Oversight & Reporting Routes
     $router->get('/admin/attendance', [\App\Controllers\Admin\AttendanceController::class, 'index'], $adminAuth);

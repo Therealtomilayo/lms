@@ -25,15 +25,18 @@ class UserController extends Controller
     private UserService $userService;
     private UserRepository $userRepository;
     private AcademicRepository $academicRepository;
+    private \App\Services\ApprovalService $approvalService;
 
     public function __construct(
         ?UserService $userService = null,
         ?UserRepository $userRepository = null,
-        ?AcademicRepository $academicRepository = null
+        ?AcademicRepository $academicRepository = null,
+        ?\App\Services\ApprovalService $approvalService = null
     ) {
         $this->userService = $userService ?? new UserService();
         $this->userRepository = $userRepository ?? new UserRepository();
         $this->academicRepository = $academicRepository ?? new AcademicRepository();
+        $this->approvalService = $approvalService ?? new \App\Services\ApprovalService();
     }
 
     public function index(Request $request): Response
@@ -95,13 +98,29 @@ class UserController extends Controller
         $roles = (array)($request->post('roles', []));
 
         try {
-            $this->userService->createUser([
+            $isSuperAdmin = $userContext->hasRole('super_admin');
+            $requestedAdminRole = in_array('admin', $roles, true);
+            $stageAdminRole = !$isSuperAdmin && $requestedAdminRole;
+
+            // If a non-super-admin requested admin role, strip it from initial creation
+            $assigningRoles = $roles;
+            if ($stageAdminRole) {
+                $assigningRoles = array_values(array_diff($roles, ['admin']));
+                if (empty($assigningRoles)) {
+                    $assigningRoles = ['student'];
+                }
+            }
+
+            // Normal user creation is active immediately
+            $status = $request->post('status', 'active');
+
+            $result = $this->userService->createUser([
                 'name' => $request->post('name'),
                 'email' => $request->post('email'),
                 'phone' => $request->post('phone'),
                 'password' => $request->post('password'),
-                'roles' => $roles,
-                'status' => $request->post('status', 'active'),
+                'roles' => $assigningRoles,
+                'status' => $status,
                 'must_change_password' => $request->post('must_change_password', 1),
                 'admission_number' => $request->post('admission_number'),
                 'staff_id' => $request->post('staff_id'),
@@ -109,6 +128,25 @@ class UserController extends Controller
                 'gender' => $request->post('gender'),
                 'current_class_id' => $request->post('current_class_id'),
             ], $userContext);
+
+            $createdUser = $result->data;
+
+            if ($stageAdminRole && $createdUser) {
+                $this->approvalService->stageAdminRoleAssignment(
+                    $createdUser->id,
+                    $userContext->getUserId(),
+                    'Admin role requested during user creation by ' . $userContext->name,
+                    [
+                        'name' => $createdUser->name,
+                        'email' => $createdUser->email,
+                    ]
+                );
+
+                return $this->redirectWithSuccess(
+                    '/admin/users',
+                    "Account for {$createdUser->name} created. Request to grant Admin role submitted to Super Admin for approval."
+                );
+            }
 
             return $this->redirectWithSuccess('/admin/users', 'User account created successfully.');
         } catch (ValidationException|DomainRuleException $e) {
@@ -149,9 +187,25 @@ class UserController extends Controller
         }
 
         $userId = (int)$id;
+        $targetUser = $this->userRepository->findById($userId);
+        if (!$targetUser) {
+            return Response::html('User not found', 404);
+        }
+
         $roles = $request->post('roles') !== null ? (array)$request->post('roles') : null;
 
         try {
+            $isSuperAdmin = $userContext->hasRole('super_admin');
+            $stageAdminRole = false;
+
+            if ($roles !== null && in_array('admin', $roles, true) && !$isSuperAdmin && !$targetUser->hasRole('admin')) {
+                $stageAdminRole = true;
+                $roles = array_values(array_diff($roles, ['admin']));
+                if (empty($roles)) {
+                    $roles = $targetUser->roles;
+                }
+            }
+
             $data = [
                 'name' => $request->post('name'),
                 'email' => $request->post('email'),
@@ -169,6 +223,23 @@ class UserController extends Controller
 
             $this->userService->updateUser($userId, $data, $userContext);
 
+            if ($stageAdminRole) {
+                $this->approvalService->stageAdminRoleAssignment(
+                    $userId,
+                    $userContext->getUserId(),
+                    'Admin role elevation requested by ' . $userContext->name,
+                    [
+                        'name' => $targetUser->name,
+                        'email' => $targetUser->email,
+                    ]
+                );
+
+                return $this->redirectWithSuccess(
+                    '/admin/users',
+                    "User updated. Request to grant Admin role submitted to Super Admin for approval."
+                );
+            }
+
             return $this->redirectWithSuccess('/admin/users', 'User updated successfully.');
         } catch (ValidationException $e) {
             return $this->redirectWithErrors("/admin/users/{$userId}/edit", $e->getErrors(), $request->all());
@@ -177,6 +248,55 @@ class UserController extends Controller
         } catch (ResourceNotFoundException $e) {
             return Response::html($e->getMessage(), 404);
         }
+    }
+
+    public function delete(Request $request, string|int $id = 0): Response
+    {
+        $userContext = $request->getAttribute('user_context');
+        if (!$userContext instanceof UserContext || !UserPolicy::canListUsers($userContext)) {
+            return $this->forbidden('Forbidden');
+        }
+
+        $userId = (int)($id ?: $request->post('id', 0));
+        $targetUser = $this->userRepository->findById($userId);
+        if (!$targetUser) {
+            return $this->redirectWithError('/admin/users', 'User not found.');
+        }
+
+        if (!UserPolicy::canDeleteUser($userContext, $targetUser)) {
+            return $this->redirectWithError('/admin/users', 'You cannot delete this user account.');
+        }
+
+        if ($userContext->hasRole('super_admin')) {
+            try {
+                $this->userService->updateUserStatus($userId, 'inactive', $userContext);
+                return $this->redirectWithSuccess('/admin/users', "User account for {$targetUser->name} deleted successfully.");
+            } catch (\Throwable $e) {
+                return $this->redirectWithError('/admin/users', $e->getMessage());
+            }
+        }
+
+        // Standard Admin: Stage deletion request for Super Admin review
+        $reason = trim((string)$request->post('reason', ''));
+        if ($reason === '') {
+            return $this->redirectWithError('/admin/users', 'A justification reason is required to submit a user deletion request.');
+        }
+
+        $this->approvalService->stageUserDeletion(
+            $userId,
+            $userContext->getUserId(),
+            $reason,
+            [
+                'name' => $targetUser->name,
+                'email' => $targetUser->email,
+                'roles' => $targetUser->roles,
+            ]
+        );
+
+        return $this->redirectWithSuccess(
+            '/admin/users',
+            "Deletion request for {$targetUser->name} submitted to Super Admin approval queue."
+        );
     }
 
     public function status(Request $request, string|int $id = 0): Response

@@ -62,6 +62,8 @@ class UserService
         }
         if (empty($roles)) {
             $errors['roles'] = ['At least one role must be assigned.'];
+        } elseif (in_array('student', $roles, true) && count($roles) > 1) {
+            $errors['roles'] = ['Student accounts cannot be combined with faculty, administrative, or parent roles.'];
         }
 
         if (!empty($errors)) {
@@ -139,6 +141,14 @@ class UserService
         }
 
         $roles = isset($data['roles']) ? (array)$data['roles'] : $user->roles;
+        if (isset($data['roles'])) {
+            if (empty($roles)) {
+                throw new ValidationException(['roles' => ['At least one role must be assigned.']]);
+            }
+            if (in_array('student', $roles, true) && count($roles) > 1) {
+                throw new ValidationException(['roles' => ['Student accounts cannot be combined with faculty, administrative, or parent roles.']]);
+            }
+        }
 
         if (!UserPolicy::canEditUser($actor, $user, $roles)) {
             throw new DomainRuleException('You do not have permission to modify this user or grant Super Admin privileges.');
@@ -195,6 +205,29 @@ class UserService
 
         if (isset($data['roles'])) {
             $this->userRepository->syncRoles($userId, $roles);
+
+            // If 'teacher' role is assigned and teacher record does not exist, provision teacher profile
+            if (in_array('teacher', $roles, true) && !$this->teacherRepository->findTeacherByUserId($userId)) {
+                $staffId = !empty($data['staff_id']) ? trim($data['staff_id']) : 'TCH-' . str_pad((string)$userId, 4, '0', STR_PAD_LEFT);
+                $this->teacherRepository->createTeacher($userId, $staffId);
+            }
+
+            // If 'parent' role is assigned and parent record does not exist, provision parent profile
+            if (in_array('parent', $roles, true) && !$this->parentRepository->findByUserId($userId)) {
+                $this->parentRepository->create($userId);
+            }
+
+            // If 'student' role is assigned and student record does not exist, provision student profile
+            if (in_array('student', $roles, true) && !$this->studentRepository->findByUserId($userId)) {
+                $admNo = !empty($data['admission_number']) ? trim($data['admission_number']) : 'STD-' . str_pad((string)$userId, 5, '0', STR_PAD_LEFT);
+                $this->studentRepository->create(
+                    userId: $userId,
+                    admissionNumber: $admNo,
+                    dateOfBirth: $data['date_of_birth'] ?? null,
+                    gender: $data['gender'] ?? null,
+                    currentClassId: !empty($data['current_class_id']) ? (int)$data['current_class_id'] : null
+                );
+            }
         }
 
         return ServiceResult::success($this->userRepository->findById($userId));

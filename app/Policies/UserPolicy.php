@@ -89,4 +89,17 @@ final class UserPolicy
     {
         return $context->hasAnyRole(['super_admin', 'admin']);
     }
+
+    public static function canDeleteUser(UserContext $context, User $targetUser): bool
+    {
+        if ($context->getUserId() === $targetUser->id) {
+            return false;
+        }
+
+        if ($targetUser->hasRole('super_admin')) {
+            return false;
+        }
+
+        return $context->hasAnyRole(['super_admin', 'admin']);
+    }
 }

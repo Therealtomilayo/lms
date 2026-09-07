@@ -951,8 +951,12 @@ class AcademicRepository
     /**
      * @return ClassSubject[]
      */
-    public function getClassSubjectsByTeacher(int $teacherId, int $sessionId): array
+    public function getClassSubjectsByTeacher(int $teacherId, ?int $sessionId = null): array
     {
+        if ($sessionId === null || $sessionId <= 0) {
+            return $this->findClassSubjectsByTeacherId($teacherId);
+        }
+
         $stmt = $this->pdo->prepare(
             'SELECT cs.*,
                     s.name as session_name, s.start_date as session_start, s.end_date as session_end, s.status as session_status,
@@ -1006,6 +1010,20 @@ class AcademicRepository
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         return array_map(fn(array $row) => $this->hydrateClassSubject($row), $rows);
+    }
+
+    /**
+     * Alias for findAllClassSubjects() to support controllers retrieving all class subjects.
+     *
+     * @return ClassSubject[]
+     */
+    public function getAllClassSubjects(
+        ?int $sessionId = null,
+        ?int $classId = null,
+        ?int $subjectId = null,
+        ?int $academicLevelId = null
+    ): array {
+        return $this->findAllClassSubjects($sessionId, $classId, $subjectId, $academicLevelId);
     }
 
     /**

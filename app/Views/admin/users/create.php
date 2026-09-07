@@ -80,7 +80,7 @@ foreach ($classes as $c) {
         <div class="space-y-4 border-b border-slate-200 pb-6">
             <div>
                 <h3 class="text-base font-bold text-slate-900">2. Role Allocations <span class="text-brand-600">*</span></h3>
-                <p class="text-xs text-slate-500 mt-0.5">Select one or more permission roles for this account.</p>
+                <p class="text-xs text-slate-500 mt-0.5">Select one or more permission roles. <span class="text-amber-700 font-medium">Note: Student accounts are mutually exclusive with staff and parent roles.</span></p>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -177,3 +177,30 @@ foreach ($classes as $c) {
         </div>
     </form>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const roleInputs = Array.from(document.querySelectorAll('input[name="roles[]"]'));
+    const studentInput = roleInputs.find(i => i.value === 'student');
+    const otherInputs = roleInputs.filter(i => i.value !== 'student');
+
+    if (!studentInput) return;
+
+    studentInput.addEventListener('change', function () {
+        if (this.checked) {
+            otherInputs.forEach(input => {
+                input.checked = false;
+            });
+        }
+    });
+
+    otherInputs.forEach(input => {
+        input.addEventListener('change', function () {
+            if (this.checked && studentInput.checked) {
+                studentInput.checked = false;
+            }
+        });
+    });
+});
+</script>
+

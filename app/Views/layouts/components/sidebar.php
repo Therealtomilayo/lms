@@ -18,8 +18,10 @@ $linkedChildren = $children ?? [];
 $activeChild = $selectedChild ?? (!empty($linkedChildren) ? $linkedChildren[0] : null);
 $activeChildId = $activeChild ? (int)$activeChild->id : 0;
 
-// Resolve unread announcements count for current user
+// Resolve unread announcements and pending approvals count for current user
 $unreadAnnouncementsCount = 0;
+$pendingApprovalsCount = 0;
+$isSuperAdmin = false;
 try {
     $userId = $_SESSION['user_id'] ?? null;
     if ($userId) {
@@ -27,12 +29,18 @@ try {
         $user = $userRepo->findById((int)$userId);
         if ($user) {
             $userCtx = \App\Core\UserContext::fromUser($user);
+            $isSuperAdmin = $user->hasRole('super_admin');
             $annRepo = new \App\Repositories\AnnouncementRepository();
             $unreadAnnouncementsCount = $annRepo->getUnreadCount($userCtx, $role === 'parent' ? ($activeChildId ?: null) : null);
+            if ($isSuperAdmin) {
+                $approvalRepo = new \App\Repositories\ApprovalRepository();
+                $pendingApprovalsCount = $approvalRepo->countPending();
+            }
         }
     }
 } catch (\Throwable $e) {
     $unreadAnnouncementsCount = 0;
+    $pendingApprovalsCount = 0;
 }
 
 // Helper to check active state
@@ -176,6 +184,18 @@ $navConfig = [
 
 // Append child monitoring items if parent portal and a student is active
 $menuItems = $navConfig[$role] ?? [];
+
+// Append Super Admin Approval Queue if super_admin
+if ($isSuperAdmin) {
+    $menuItems[] = ['category' => 'Governance & Security'];
+    $menuItems[] = [
+        'label' => 'Approval Queue',
+        'route' => '/admin/approvals',
+        'icon' => 'shield',
+        'badge' => $pendingApprovalsCount,
+    ];
+}
+
 if ($role === 'parent' && $activeChildId > 0) {
     $menuItems[] = ['category' => 'Student Monitoring'];
     $menuItems[] = ['label' => 'Child Academic Profile', 'route' => "/parent/children/{$activeChildId}", 'icon' => 'user-profile'];
@@ -278,6 +298,10 @@ if ($role === 'parent' && $activeChildId > 0) {
                     <?php if ($isAnnouncementItem && $unreadAnnouncementsCount > 0): ?>
                         <span class="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-rose-500 text-white shadow-xs">
                             <?= $unreadAnnouncementsCount > 99 ? '99+' : $unreadAnnouncementsCount ?>
+                        </span>
+                    <?php elseif (!empty($item['badge']) && (int)$item['badge'] > 0): ?>
+                        <span class="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-amber-500 text-slate-950 shadow-xs">
+                            <?= (int)$item['badge'] > 99 ? '99+' : (int)$item['badge'] ?>
                         </span>
                     <?php endif; ?>
                 </a>

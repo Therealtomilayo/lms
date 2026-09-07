@@ -100,7 +100,7 @@ $hasRole = function(string $role) use ($selectedRoles, $user): bool {
         <div class="space-y-4 border-b border-slate-200 pb-6">
             <div>
                 <h3 class="text-base font-bold text-slate-900">Role Allocations <span class="text-brand-600">*</span></h3>
-                <p class="text-xs text-slate-500 mt-0.5">Select one or more permission roles for this account.</p>
+                <p class="text-xs text-slate-500 mt-0.5">Select one or more permission roles. <span class="text-amber-700 font-medium">Note: Student accounts are mutually exclusive with staff and parent roles.</span></p>
                 <?php if (!empty($errors['roles'])): ?>
                     <p class="text-xs font-semibold text-danger-700 mt-1 flex items-center gap-1.5">
                         <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
@@ -201,4 +201,70 @@ $hasRole = function(string $role) use ($selectedRoles, $user): bool {
             </form>
         </div>
     <?php endif; ?>
+
+    <!-- Danger Zone: Deletion / Deletion Request -->
+    <?php if (\App\Policies\UserPolicy::canDeleteUser($actor, $user)): ?>
+        <div class="bg-rose-50/40 rounded-xl border border-rose-200 shadow-sm p-6 sm:p-8 space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h3 class="text-base font-bold text-rose-900">Danger Zone: <?= $actor->hasRole('super_admin') ? 'Delete User Account' : 'Request Account Deletion' ?></h3>
+                    <p class="text-xs text-rose-700 mt-0.5">
+                        <?= $actor->hasRole('super_admin') 
+                            ? 'Permanently deactivate this account and revoke all sessions.' 
+                            : 'Submit a formal user account deletion request to the Super Admin approval queue.' ?>
+                    </p>
+                </div>
+            </div>
+
+            <form method="POST" action="/admin/users/<?= e($user->id) ?>/delete" class="space-y-4 pt-2">
+                <?= csrf_field() ?>
+
+                <?php if (!$actor->hasRole('super_admin')): ?>
+                    <div>
+                        <label for="edit_del_reason" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                            Justification Reason <span class="text-rose-500">*</span>
+                        </label>
+                        <textarea id="edit_del_reason" name="reason" rows="2" required
+                            placeholder="Reason for deletion request (e.g. transferred, withdrawn, account duplicated)"
+                            class="w-full text-sm rounded-xl border border-slate-300 focus:border-rose-500 focus:ring-rose-500 p-3 bg-white"></textarea>
+                    </div>
+                <?php endif; ?>
+
+                <div class="flex justify-end">
+                    <button type="submit" 
+                        onclick="return confirm('<?= $actor->hasRole('super_admin') ? 'Are you sure you want to delete this user?' : 'Submit this deletion request for Super Admin approval?' ?>')"
+                        class="px-4 py-2 text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-sm transition">
+                        <?= $actor->hasRole('super_admin') ? 'Delete User Account' : 'Submit Deletion Request' ?>
+                    </button>
+                </div>
+            </form>
+        </div>
+    <?php endif; ?>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const roleInputs = Array.from(document.querySelectorAll('input[name="roles[]"]'));
+    const studentInput = roleInputs.find(i => i.value === 'student');
+    const otherInputs = roleInputs.filter(i => i.value !== 'student');
+
+    if (!studentInput) return;
+
+    studentInput.addEventListener('change', function () {
+        if (this.checked) {
+            otherInputs.forEach(input => {
+                input.checked = false;
+            });
+        }
+    });
+
+    otherInputs.forEach(input => {
+        input.addEventListener('change', function () {
+            if (this.checked && studentInput.checked) {
+                studentInput.checked = false;
+            }
+        });
+    });
+});
+</script>
+
