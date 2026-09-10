@@ -15,6 +15,8 @@ final class AcademicLevel
         public readonly string $stage,
         public readonly int $rankOrder = 0,
         public readonly ?int $gradingScaleId = null,
+        public readonly bool $isTerminal = false,
+        public readonly ?int $nextLevelId = null,
         public readonly ?string $createdAt = null,
         public readonly ?string $updatedAt = null
     ) {
@@ -28,6 +30,8 @@ final class AcademicLevel
             stage: (string)$data['stage'],
             rankOrder: (int)($data['rank_order'] ?? 0),
             gradingScaleId: isset($data['grading_scale_id']) && $data['grading_scale_id'] !== '' ? (int)$data['grading_scale_id'] : null,
+            isTerminal: !empty($data['is_terminal']),
+            nextLevelId: isset($data['next_level_id']) && $data['next_level_id'] !== '' ? (int)$data['next_level_id'] : null,
             createdAt: isset($data['created_at']) ? (string)$data['created_at'] : null,
             updatedAt: isset($data['updated_at']) ? (string)$data['updated_at'] : null
         );
@@ -41,6 +45,8 @@ final class AcademicLevel
             'stage' => $this->stage,
             'rank_order' => $this->rankOrder,
             'grading_scale_id' => $this->gradingScaleId,
+            'is_terminal' => $this->isTerminal ? 1 : 0,
+            'next_level_id' => $this->nextLevelId,
             'created_at' => $this->createdAt,
             'updated_at' => $this->updatedAt,
         ];

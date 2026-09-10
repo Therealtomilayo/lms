@@ -16,6 +16,7 @@ use App\Repositories\GradebookRepository;
 use App\Repositories\ResultPublicationRepository;
 use App\Repositories\StudentRepository;
 use App\Services\ReportCardService;
+use App\Services\ResultPinService;
 
 /**
  * Controller for Student Published Grades and Report Card Access
@@ -27,6 +28,7 @@ class ReportCardController extends Controller
     private ResultPublicationRepository $publicationRepo;
     private AcademicRepository $academicRepo;
     private StudentRepository $studentRepo;
+    private ResultPinService $pinService;
 
     public function __construct(
         ?AuthenticatorInterface $authenticator = null,
@@ -34,7 +36,8 @@ class ReportCardController extends Controller
         ?GradebookRepository $gradebookRepo = null,
         ?ResultPublicationRepository $publicationRepo = null,
         ?AcademicRepository $academicRepo = null,
-        ?StudentRepository $studentRepo = null
+        ?StudentRepository $studentRepo = null,
+        ?ResultPinService $pinService = null
     ) {
         parent::__construct($authenticator);
         $this->reportCardService = $reportCardService ?? new ReportCardService();
@@ -42,6 +45,7 @@ class ReportCardController extends Controller
         $this->publicationRepo = $publicationRepo ?? new ResultPublicationRepository();
         $this->academicRepo = $academicRepo ?? new AcademicRepository();
         $this->studentRepo = $studentRepo ?? new StudentRepository();
+        $this->pinService = $pinService ?? new ResultPinService();
     }
 
     /**
@@ -110,9 +114,40 @@ class ReportCardController extends Controller
             return Response::forbidden('Results for this academic term are not yet published.');
         }
 
+        $activeSession = $this->academicRepo->findCurrentSession();
+        \App\Core\Session::start();
+        $sessionKey = "_unlocked_pin_student_{$studentId}_{$tId}";
+        $unlockedPinId = \App\Core\Session::get($sessionKey);
+        $activePin = null;
+
+        if ($unlockedPinId) {
+            $candidate = $this->pinService->getPinById((int)$unlockedPinId);
+            if ($candidate && $candidate->isUsable() && ($candidate->studentId === null || $candidate->studentId === $studentId)) {
+                $activePin = $candidate;
+            } else {
+                \App\Core\Session::remove($sessionKey);
+            }
+        }
+
+        // PIN Gate: Must be explicitly unlocked in the active login session
+        if (!$activePin) {
+            return Response::html($this->render('payments/pin_gate', [
+                'student' => $student,
+                'currentSession' => $activeSession,
+                'currentTerm' => $activeTerm,
+                'unlockUrl' => "/student/grades/unlock",
+                'backUrl' => "/student/grades",
+                'error' => \App\Core\Session::getFlash('error'),
+                'success' => \App\Core\Session::getFlash('success'),
+                'isParent' => false,
+            ]));
+        }
+
         $reportData = $this->reportCardService->getReportCardData($studentId, $tId);
         $reportData['user'] = $userContext;
         $reportData['student'] = $student;
+        $reportData['pin'] = $activePin;
+        $reportData['remainingUses'] = $activePin->getRemainingUses();
 
         return Response::html($this->render('student/grades/report_card', $reportData));
     }
@@ -124,5 +159,43 @@ class ReportCardController extends Controller
     public function pdf(Request $request, array|string|int|null $termId = null): Response
     {
         return $this->show($request, $termId);
+    }
+
+    /**
+     * Consume physical Scratch-Card PIN to unlock student report card access for the current session.
+     */
+    public function unlock(Request $request): Response
+    {
+        $userContext = $this->requireAuthContext($request);
+        $student = $this->studentRepo->findByUserId($userContext->id);
+
+        if (!$student && !$userContext->isAdmin()) {
+            return Response::forbidden('Student profile required.');
+        }
+
+        $studentId = $student ? $student->id : ($userContext->getStudentId() ?: 0);
+        $pinCode = trim((string)$request->post('pin_code', ''));
+        $termId = (int)$request->post('term_id', 0);
+        $sessionId = (int)$request->post('session_id', 0);
+
+        if ($pinCode === '') {
+            \App\Core\Session::flash('error', 'Please enter a valid Scratch-Card PIN.');
+            return Response::redirect("/student/grades/report-card?term_id={$termId}");
+        }
+
+        \App\Core\Session::start();
+        $admNo = $student ? $student->admissionNumber : '';
+        $result = $this->pinService->verifyAndConsumePin($admNo, $pinCode, $sessionId, $termId);
+        if (!$result->success) {
+            \App\Core\Session::flash('error', $result->error ?? 'PIN verification failed.');
+            return Response::redirect("/student/grades/report-card?term_id={$termId}");
+        }
+
+        $pin = $result->data['pin'];
+        $sessionKey = "_unlocked_pin_student_{$studentId}_{$termId}";
+        \App\Core\Session::set($sessionKey, $pin->id);
+
+        \App\Core\Session::flash('success', "PIN verified successfully! {$pin->getRemainingUses()} view(s) remaining.");
+        return Response::redirect("/student/grades/report-card?term_id={$termId}");
     }
 }

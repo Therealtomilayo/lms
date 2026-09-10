@@ -9,6 +9,7 @@ use App\Core\Exceptions\ResourceNotFoundException;
 use App\Models\StudentTermSummary;
 use App\Repositories\AcademicRepository;
 use App\Repositories\GradebookRepository;
+use App\Repositories\PromotionRepository;
 use App\Repositories\SkillRepository;
 use App\Repositories\StudentRepository;
 use App\Repositories\TeacherRepository;
@@ -17,26 +18,32 @@ use PDO;
 /**
  * Service for Student Report Card Aggregation and Rendering
  */
-final class ReportCardService
+class ReportCardService
 {
     private readonly GradebookRepository $gradebookRepo;
     private readonly StudentRepository $studentRepo;
     private readonly AcademicRepository $academicRepo;
     private readonly TeacherRepository $teacherRepo;
     private readonly SkillRepository $skillRepo;
+    private readonly PromotionService $promotionService;
+    private readonly PromotionRepository $promotionRepo;
 
     public function __construct(
         ?GradebookRepository $gradebookRepo = null,
         ?StudentRepository $studentRepo = null,
         ?AcademicRepository $academicRepo = null,
         ?TeacherRepository $teacherRepo = null,
-        ?SkillRepository $skillRepo = null
+        ?SkillRepository $skillRepo = null,
+        ?PromotionService $promotionService = null,
+        ?PromotionRepository $promotionRepo = null
     ) {
         $this->gradebookRepo = $gradebookRepo ?? new GradebookRepository();
         $this->studentRepo = $studentRepo ?? new StudentRepository();
         $this->academicRepo = $academicRepo ?? new AcademicRepository();
         $this->teacherRepo = $teacherRepo ?? new TeacherRepository();
         $this->skillRepo = $skillRepo ?? new SkillRepository();
+        $this->promotionService = $promotionService ?? new PromotionService();
+        $this->promotionRepo = $promotionRepo ?? new PromotionRepository();
     }
 
     public function getReportCardData(int $studentId, int $termId): array
@@ -173,6 +180,82 @@ final class ReportCardService
             }
         }
 
+        // Promotion Governance & Cumulative Verification (SRS §17, §18)
+        $isFinalTerm = false;
+        $isFinalTermPublished = false;
+        $promotionData = null;
+
+        if ($session) {
+            $finalTerm = $this->promotionService->getFinalTermOfSession($session->id);
+            $isFinalTerm = ($finalTerm && (int)$finalTerm->id === (int)$term->id);
+            $isFinalTermPublished = $isFinalTerm && $this->promotionService->isFinalTermPublished($session->id);
+        }
+
+        $isPromotionVisible = $isFinalTerm && $isFinalTermPublished;
+
+        if ($isPromotionVisible && $session) {
+            $existingPromo = $this->promotionRepo->findByStudentAndSession($studentId, $session->id);
+            $cumStats = $this->promotionRepo->getCumulativeSessionStats($studentId, $session->id);
+            $levelId = $class ? ((int)($class->academicLevelId ?? $class->academicLevel?->id ?? 0)) : 0;
+            $isTerminal = $levelId > 0 ? $this->academicRepo->isTerminalLevel($levelId) : false;
+
+            $status = 'promoted';
+            $badgeText = 'PROMOTED';
+            $note = 'Outstanding performance throughout the academic session. Qualified to advance to next class level.';
+
+            if ($existingPromo) {
+                $status = $existingPromo->decision;
+                if ($existingPromo->isGraduated()) {
+                    $badgeText = 'GRADUATED';
+                    $note = 'Commendable completion of academic curriculum. Officially graduated as alumnus of Claret Academy.';
+                } elseif ($existingPromo->isRepeating()) {
+                    $badgeText = 'REPEATING';
+                    $note = 'Cumulative average did not meet the advancement threshold. Required to repeat academic session.';
+                } elseif ($existingPromo->isWithdrawn()) {
+                    $badgeText = 'WITHDRAWN';
+                    $note = 'Student withdrawn from the academic cohort.';
+                } else {
+                    $badgeText = 'PROMOTED';
+                    $note = 'Successfully satisfied promotion standards. Promoted to ' . ($existingPromo->toClassName ?? 'next level') . '.';
+                }
+            } else {
+                $annualAvg = $cumStats['annual_average'] ?? (float)($summary?->averageScore ?? 0.0);
+                if ($isTerminal && $annualAvg >= PromotionService::PASSING_AVERAGE_THRESHOLD) {
+                    $status = 'graduated';
+                    $badgeText = 'GRADUATED';
+                    $note = 'Satisfied all graduation benchmarks. Conferred alumni standing upon conclusion of 3rd Term.';
+                } elseif ($annualAvg >= PromotionService::PASSING_AVERAGE_THRESHOLD) {
+                    $status = 'promoted';
+                    $badgeText = 'PROMOTED';
+                    $note = 'Attained passing cumulative annual average. Qualified for advancement.';
+                } elseif ($annualAvg >= PromotionService::BORDERLINE_MIN_THRESHOLD) {
+                    $status = 'borderline';
+                    $badgeText = 'BORDERLINE / PENDING REVIEW';
+                    $note = 'Annual standing subject to institutional academic board review.';
+                } else {
+                    $status = 'repeating';
+                    $badgeText = 'REPEAT CLASS';
+                    $note = 'Cumulative average falls below the promotion mark. Recommended to repeat class cohort.';
+                }
+            }
+
+            $promotionData = [
+                'is_visible' => true,
+                'status' => $status,
+                'badge_text' => $badgeText,
+                'note' => $note,
+                'annual_average' => $cumStats['annual_average'] ?? 0.0,
+                'term_scores' => $cumStats['terms'] ?? [],
+            ];
+        } else {
+            $promotionData = [
+                'is_visible' => false,
+                'reason' => !$isFinalTerm 
+                    ? 'Promotion status is finalized and published exclusively at the conclusion of the 3rd Term.' 
+                    : '3rd Term promotion decisions are pending official administrative publication.',
+            ];
+        }
+
         return [
             'student' => $student,
             'class' => $class,
@@ -188,6 +271,8 @@ final class ReportCardService
             'form_teacher' => $formTeacher,
             'psychomotor_ratings' => $psychomotorRatings,
             'affective_ratings' => $affectiveRatings,
+            'is_promotion_visible' => $isPromotionVisible,
+            'promotion_data' => $promotionData,
             'generated_at' => date('Y-m-d H:i:s'),
         ];
     }

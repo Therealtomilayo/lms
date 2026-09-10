@@ -15,7 +15,35 @@ $currentUri = $_SERVER['REQUEST_URI'] ?? '';
 
 // Build children context variables
 $linkedChildren = $children ?? [];
-$activeChild = $selectedChild ?? (!empty($linkedChildren) ? $linkedChildren[0] : null);
+if ($role === 'parent' && empty($linkedChildren)) {
+    try {
+        $sessionUserId = (int)($_SESSION['user_id'] ?? 0);
+        if ($sessionUserId > 0) {
+            $parentRepo = new \App\Repositories\ParentRepository();
+            $parent = $parentRepo->findByUserId($sessionUserId);
+            if ($parent) {
+                $linkedChildren = $parentRepo->getLinkedStudents($parent->id);
+            }
+        }
+    } catch (\Throwable $e) {
+        $linkedChildren = [];
+    }
+}
+$sessionSelectedChildId = (int)($_SESSION['_selected_child_id'] ?? ($_SESSION['selected_child_id'] ?? 0));
+$activeChild = $selectedChild ?? null;
+if (!$activeChild && !empty($linkedChildren)) {
+    if ($sessionSelectedChildId > 0) {
+        foreach ($linkedChildren as $child) {
+            if ($child->id === $sessionSelectedChildId) {
+                $activeChild = $child;
+                break;
+            }
+        }
+    }
+    if (!$activeChild) {
+        $activeChild = $linkedChildren[0];
+    }
+}
 $activeChildId = $activeChild ? (int)$activeChild->id : 0;
 
 // Resolve unread announcements and pending approvals count for current user
@@ -113,6 +141,8 @@ if (!function_exists('get_sidebar_icon')) {
                 return '<svg class="' . $svgClass . '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>';
             case 'scale':
                 return '<svg class="' . $svgClass . '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>';
+            case 'video':
+                return '<svg class="' . $svgClass . '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>';
             default:
                 return '<svg class="' . $svgClass . '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>';
         }
@@ -139,15 +169,21 @@ $navConfig = [
         ['category' => 'Attendance & Reports'],
         ['label' => 'Attendance Registers', 'route' => '/admin/attendance', 'icon' => 'check-circle'],
         ['label' => 'Attendance Analytics', 'route' => '/admin/attendance/report', 'icon' => 'chart'],
+        ['label' => 'Staff Geofenced Attendance', 'route' => '/admin/staff-attendance', 'icon' => 'clock'],
         ['category' => 'Grading & Results'],
         ['label' => 'Institutional Gradebook', 'route' => '/admin/gradebook', 'icon' => 'book'],
         ['label' => 'Batch Remarks & Traits', 'route' => '/admin/results/comments', 'icon' => 'document-text'],
+        ['label' => 'Scratch-Card PINs', 'route' => '/admin/results/pins', 'icon' => 'shield'],
         ['label' => 'Skills & Traits Catalog', 'route' => '/admin/skills', 'icon' => 'check-circle'],
         ['label' => 'Grading Scales', 'route' => '/admin/grading-scales', 'icon' => 'scale'],
         ['label' => 'Assessment Config', 'route' => '/admin/assessment-categories', 'icon' => 'clipboard'],
         ['label' => 'Results Review', 'route' => '/admin/results/review', 'icon' => 'document-text'],
-        ['category' => 'Communication'],
+        ['label' => 'Student Promotions', 'route' => '/admin/promotions', 'icon' => 'academic'],
+        ['category' => 'Online Classes & Comms'],
+        ['label' => 'Live Online Classes', 'route' => '/admin/live-classes', 'icon' => 'video'],
         ['label' => 'Announcements', 'route' => '/admin/announcements', 'icon' => 'announcement'],
+        ['category' => 'Finance & Payments'],
+        ['label' => 'Payments & Revenue', 'route' => '/admin/payments', 'icon' => 'document-text'],
         ['category' => 'System & Security'],
         ['label' => 'System Health', 'route' => '/admin/health', 'icon' => 'shield'],
         ['label' => 'Database Backups', 'route' => '/admin/backups', 'icon' => 'database'],
@@ -155,7 +191,9 @@ $navConfig = [
     ],
     'teacher' => [
         ['label' => 'Dashboard', 'route' => '/teacher/dashboard', 'icon' => 'home'],
+        ['label' => 'Staff Clock-In', 'route' => '/teacher/staff-attendance', 'icon' => 'clock'],
         ['label' => 'My Classes & Rosters', 'route' => '/teacher/classes', 'icon' => 'users'],
+        ['label' => 'Live Online Classes', 'route' => '/teacher/live-classes', 'icon' => 'video'],
         ['label' => 'Learning Materials', 'route' => '/teacher/content', 'icon' => 'book'],
         ['label' => 'Assignments', 'route' => '/teacher/assignments', 'icon' => 'clipboard'],
         ['label' => 'Question Bank', 'route' => '/teacher/question-bank', 'icon' => 'database'],
@@ -168,17 +206,21 @@ $navConfig = [
     ],
     'student' => [
         ['label' => 'Dashboard', 'route' => '/student/dashboard', 'icon' => 'home'],
+        ['label' => 'Live Online Classes', 'route' => '/student/live-classes', 'icon' => 'video'],
         ['label' => 'Enrolled Subjects', 'route' => '/student/subjects', 'icon' => 'academic'],
         ['label' => 'Learning Materials', 'route' => '/student/content', 'icon' => 'book'],
         ['label' => 'Assignments', 'route' => '/student/assignments', 'icon' => 'clipboard'],
         ['label' => 'Online Quizzes', 'route' => '/student/quizzes', 'icon' => 'quiz'],
         ['label' => 'Academic Grades', 'route' => '/student/grades', 'icon' => 'document-text'],
+        ['label' => 'Payment History', 'route' => '/payments/history', 'icon' => 'document-text'],
         ['label' => 'My Attendance', 'route' => '/student/attendance', 'icon' => 'calendar'],
         ['label' => 'Announcements', 'route' => '/student/announcements', 'icon' => 'announcement'],
         ['label' => 'My Timetable', 'route' => '/student/timetable', 'icon' => 'timetable'],
     ],
     'parent' => [
-        ['label' => 'Overview Dashboard', 'route' => '/parent/dashboard', 'icon' => 'home']
+        ['label' => 'Overview Dashboard', 'route' => '/parent/dashboard', 'icon' => 'home'],
+        ['label' => 'Live Online Classes', 'route' => '/parent/live-classes', 'icon' => 'video'],
+        ['label' => 'Payment History', 'route' => '/payments/history', 'icon' => 'document-text'],
     ]
 ];
 

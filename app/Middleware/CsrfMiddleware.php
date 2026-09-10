@@ -18,7 +18,7 @@ class CsrfMiddleware
         $method = $request->getMethod();
 
         if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
-            $token = $request->input('_csrf_token') ?? $request->header('X-CSRF-TOKEN');
+            $token = $request->input('_csrf_token') ?? $request->input('csrf_token') ?? $request->header('X-CSRF-TOKEN') ?? $request->header('X-XSRF-TOKEN');
 
             if (!$token || !Csrf::validate((string)$token)) {
                 if ($request->isJson() || $request->isAjax()) {

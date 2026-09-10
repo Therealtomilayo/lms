@@ -79,6 +79,11 @@ class Session
         $_SESSION['_flash_new'][$key] = $value;
     }
 
+    public static function flash(string $key, mixed $value): void
+    {
+        self::setFlash($key, $value);
+    }
+
     public static function getFlash(string $key, mixed $default = null): mixed
     {
         self::start();

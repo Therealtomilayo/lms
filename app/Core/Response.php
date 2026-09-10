@@ -77,6 +77,11 @@ class Response
         return $this->statusCode;
     }
 
+    public function isRedirect(): bool
+    {
+        return in_array($this->statusCode, [301, 302, 303, 307, 308], true);
+    }
+
     public function setHeader(string $name, string $value): self
     {
         $this->headers[$name] = $value;

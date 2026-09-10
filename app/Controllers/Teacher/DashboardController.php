@@ -103,6 +103,10 @@ class DashboardController extends Controller
         // Announcements feed
         $announcements = $this->announcementRepository->getFeedForUser($userContext, null, 4);
 
+        // Staff Duty Attendance Status
+        $staffAttRepo = new \App\Repositories\StaffAttendanceRepository(\App\Core\Database::getInstance());
+        $todayStaffAttendance = $staffAttRepo->getTodayAttendanceForUser($userContext->id, date('Y-m-d'));
+
         return Response::html($this->render('teacher/dashboard/index', [
             'title' => 'Teacher Dashboard — Claret Faculty Portal',
             'headerTitle' => 'Teacher Command Center',
@@ -116,6 +120,7 @@ class DashboardController extends Controller
             'todaySlots' => $todaySlots,
             'todayDayName' => date('l'),
             'announcements' => $announcements,
+            'todayStaffAttendance' => $todayStaffAttendance,
         ], 'layouts/teacher'));
     }
 }

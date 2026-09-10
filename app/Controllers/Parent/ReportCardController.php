@@ -17,6 +17,7 @@ use App\Repositories\ParentRepository;
 use App\Repositories\ResultPublicationRepository;
 use App\Repositories\StudentRepository;
 use App\Services\ReportCardService;
+use App\Services\ResultPinService;
 
 /**
  * Controller for Parent Access to Linked Child's Grades & Report Card
@@ -29,6 +30,7 @@ class ReportCardController extends Controller
     private ParentRepository $parentRepo;
     private StudentRepository $studentRepo;
     private AcademicRepository $academicRepo;
+    private ResultPinService $pinService;
 
     public function __construct(
         ?AuthenticatorInterface $authenticator = null,
@@ -37,7 +39,8 @@ class ReportCardController extends Controller
         ?ResultPublicationRepository $publicationRepo = null,
         ?ParentRepository $parentRepo = null,
         ?StudentRepository $studentRepo = null,
-        ?AcademicRepository $academicRepo = null
+        ?AcademicRepository $academicRepo = null,
+        ?ResultPinService $pinService = null
     ) {
         parent::__construct($authenticator);
         $this->reportCardService = $reportCardService ?? new ReportCardService();
@@ -46,6 +49,7 @@ class ReportCardController extends Controller
         $this->parentRepo = $parentRepo ?? new ParentRepository();
         $this->studentRepo = $studentRepo ?? new StudentRepository();
         $this->academicRepo = $academicRepo ?? new AcademicRepository();
+        $this->pinService = $pinService ?? new ResultPinService();
     }
 
     public function index(Request $request, array|string|int $studentId = 0): Response
@@ -122,9 +126,43 @@ class ReportCardController extends Controller
             throw new AuthorizationException('You are not authorized to view these results or they are not yet published.');
         }
 
+        $student = $this->studentRepo->findById($sId);
+        $activeSession = $this->academicRepo->getCurrentSession();
+
+        // Check Session-Based PIN Clearance (1 view count consumed per login session)
+        Session::start();
+        $sessionKey = "_unlocked_pin_{$sId}_{$tId}";
+        $unlockedPinId = Session::get($sessionKey);
+        $activePin = null;
+
+        if ($unlockedPinId) {
+            $candidate = $this->pinService->getPinById((int)$unlockedPinId);
+            if ($candidate && $candidate->isUsable() && ($candidate->studentId === null || $candidate->studentId === $sId)) {
+                $activePin = $candidate;
+            } else {
+                Session::remove($sessionKey);
+            }
+        }
+
+        // PIN Gate: Must be explicitly unlocked in the active login session
+        if (!$activePin) {
+            return Response::html($this->render('payments/pin_gate', [
+                'student' => $student,
+                'currentSession' => $activeSession,
+                'currentTerm' => $activeTerm,
+                'unlockUrl' => "/parent/children/{$sId}/grades/unlock",
+                'backUrl' => "/parent/children/{$sId}/grades",
+                'error' => Session::getFlash('error'),
+                'success' => Session::getFlash('success'),
+                'isParent' => true,
+            ]));
+        }
+
         $reportData = $this->reportCardService->getReportCardData($sId, $tId);
         $reportData['user'] = $userContext;
         $reportData['isParentPortal'] = true;
+        $reportData['pin'] = $activePin;
+        $reportData['remainingUses'] = $activePin->getRemainingUses();
 
         return Response::html($this->render('parent/grades/report_card', $reportData));
     }
@@ -148,11 +186,65 @@ class ReportCardController extends Controller
             throw new AuthorizationException('You are not authorized to view these results or they are not yet published.');
         }
 
+        Session::start();
+        $sessionKey = "_unlocked_pin_{$sId}_{$tId}";
+        $unlockedPinId = Session::get($sessionKey);
+        $activePin = $unlockedPinId ? $this->pinService->getPinById((int)$unlockedPinId) : null;
+        if (!$activePin || !$activePin->isUsable() || ($activePin->studentId !== null && $activePin->studentId !== $sId)) {
+            return Response::redirect("/parent/children/{$sId}/grades/report-card?term_id={$tId}");
+        }
+
         $reportData = $this->reportCardService->getReportCardData($sId, $tId);
+        $reportData['pin'] = $activePin;
+        $reportData['remainingUses'] = $activePin->getRemainingUses();
 
         $html = $this->render('parent/grades/report_card', $reportData);
 
         return Response::html($html)
             ->withHeader('Content-Disposition', 'inline; filename="report-card-' . $sId . '.html"');
+    }
+
+    /**
+     * Consume physical Scratch-Card PIN to unlock report card access for the current session.
+     */
+    public function unlock(Request $request, array|string|int $studentId = 0): Response
+    {
+        $userContext = $this->getUserContext($request);
+        if (!$userContext) {
+            return Response::redirect('/login');
+        }
+
+        $sId = is_array($studentId) ? (int)($studentId['studentId'] ?? 0) : (int)$studentId;
+        if ($sId <= 0) {
+            $sId = (int)($request->getAttribute('studentId') ?? $request->query('student_id', 0));
+        }
+
+        $student = $this->studentRepo->findById($sId);
+        if (!$student || !ParentPolicy::canViewStudent($userContext, $sId, $this->parentRepo)) {
+            throw new AuthorizationException('Unauthorized access to student.');
+        }
+
+        $pinCode = trim((string)$request->post('pin_code', ''));
+        $termId = (int)$request->post('term_id', 0);
+        $sessionId = (int)$request->post('session_id', 0);
+
+        if ($pinCode === '') {
+            Session::flash('error', 'Please enter a valid Scratch-Card PIN.');
+            return Response::redirect("/parent/children/{$sId}/grades/report-card?term_id={$termId}");
+        }
+
+        Session::start();
+        $result = $this->pinService->verifyAndConsumePin($student->admissionNumber, $pinCode, $sessionId, $termId);
+        if (!$result->success) {
+            Session::flash('error', $result->error ?? 'PIN verification failed.');
+            return Response::redirect("/parent/children/{$sId}/grades/report-card?term_id={$termId}");
+        }
+
+        $pin = $result->data['pin'];
+        $sessionKey = "_unlocked_pin_{$sId}_{$termId}";
+        Session::set($sessionKey, $pin->id);
+
+        Session::flash('success', "PIN verified successfully! {$pin->getRemainingUses()} view(s) remaining.");
+        return Response::redirect("/parent/children/{$sId}/grades/report-card?term_id={$termId}");
     }
 }

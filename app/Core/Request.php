@@ -228,6 +228,11 @@ class Request
         return (string)($this->serverParams['REMOTE_ADDR'] ?? '127.0.0.1');
     }
 
+    public function ip(): string
+    {
+        return $this->clientIp();
+    }
+
     public function getIp(): string
     {
         return $this->clientIp();
@@ -244,9 +249,43 @@ class Request
         return 'http';
     }
 
+    public function getHost(): string
+    {
+        return (string)($this->serverParams['HTTP_HOST'] ?? $this->serverParams['SERVER_NAME'] ?? '');
+    }
+
+    public function getBaseUrl(): string
+    {
+        $host = $this->getHost();
+        if (!empty($host) && !str_contains($host, 'localhost') && !str_contains($host, '127.0.0.1')) {
+            return $this->getScheme() . '://' . $host;
+        }
+
+        $configured = (string)Config::get('app.url', '');
+        if (!empty($configured) && !str_contains($configured, 'localhost')) {
+            return rtrim($configured, '/');
+        }
+
+        return !empty($host) ? $this->getScheme() . '://' . $host : 'https://lms.test';
+    }
+
     public function userAgent(): string
     {
         return (string)($this->serverParams['HTTP_USER_AGENT'] ?? '');
+    }
+
+    public function server(?string $key = null, mixed $default = null): mixed
+    {
+        if ($key === null) {
+            return $this->serverParams;
+        }
+
+        return $this->serverParams[$key] ?? $default;
+    }
+
+    public function getServerParams(): array
+    {
+        return $this->serverParams;
     }
 
     public function setAttribute(string $key, mixed $value): void

@@ -67,6 +67,11 @@ class Config
                 'max_bytes' => (int)($_ENV['UPLOAD_MAX_BYTES'] ?? 10485760),
                 'path' => dirname(__DIR__, 2) . '/' . trim($_ENV['STORAGE_PATH'] ?? 'storage', '/\\'),
             ],
+            'paystack' => [
+                'secret_key' => $_ENV['PAYSTACK_SECRET_KEY'] ?? '',
+                'public_key' => $_ENV['PAYSTACK_PUBLIC_KEY'] ?? '',
+                'payment_url' => $_ENV['PAYSTACK_PAYMENT_URL'] ?? 'https://api.paystack.co',
+            ],
         ];
 
         self::$loaded = true;

@@ -143,6 +143,44 @@ class ParentPortalLifecycleIntegrationTest extends TestCase
                 updated_at TEXT
             );
 
+            CREATE TABLE payments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                reference TEXT,
+                user_id INTEGER,
+                student_id INTEGER,
+                session_id INTEGER,
+                term_id INTEGER,
+                purpose TEXT,
+                amount REAL,
+                currency TEXT DEFAULT 'NGN',
+                channel TEXT,
+                status TEXT DEFAULT 'pending',
+                gateway_reference TEXT,
+                metadata TEXT,
+                paid_at TEXT,
+                created_at TEXT,
+                updated_at TEXT
+            );
+
+            CREATE TABLE result_access_pins (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                serial_number TEXT,
+                pin_code TEXT,
+                pin_hash TEXT,
+                payment_id INTEGER,
+                student_id INTEGER,
+                session_id INTEGER,
+                term_id INTEGER,
+                created_by INTEGER,
+                max_uses INTEGER DEFAULT 5,
+                times_used INTEGER DEFAULT 0,
+                status TEXT DEFAULT 'active',
+                first_used_at TEXT,
+                last_used_at TEXT,
+                created_at TEXT,
+                updated_at TEXT
+            );
+
             CREATE TABLE files (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 uuid TEXT,
@@ -573,6 +611,17 @@ class ParentPortalLifecycleIntegrationTest extends TestCase
         $mockAuth = $this->createMock(AuthenticatorInterface::class);
         $mockAuth->method('user')->willReturn($parent1);
 
+        $this->db->exec("
+            INSERT INTO result_access_pins (serial_number, pin_code, pin_hash, student_id, session_id, term_id, max_uses, times_used, status)
+            VALUES ('SNTEST001', 'TEST-PIN1-2345', 'dummy_hash', {$this->student1Id}, {$this->sessionId}, {$this->termId}, 5, 0, 'active');
+        ");
+
+        $pinId = (int)$this->db->lastInsertId();
+        \App\Core\Session::set("_unlocked_pin_{$this->student1Id}_{$this->termId}", $pinId);
+
+        $pinRepo = new \App\Repositories\ResultPinRepository($this->db);
+        $pinService = new \App\Services\ResultPinService($pinRepo, $this->studentRepo, $this->academicRepo);
+
         $controller = new ReportCardController(
             $mockAuth,
             $reportCardService,
@@ -580,7 +629,8 @@ class ParentPortalLifecycleIntegrationTest extends TestCase
             $this->publicationRepo,
             $this->parentRepo,
             $this->studentRepo,
-            $this->academicRepo
+            $this->academicRepo,
+            $pinService
         );
 
         $req = new Request(

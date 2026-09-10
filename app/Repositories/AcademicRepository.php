@@ -438,6 +438,43 @@ class AcademicRepository
         return $stmt->execute([':id' => $id]);
     }
 
+    public function getNextAcademicLevel(int $levelId): ?AcademicLevel
+    {
+        $current = $this->findLevelById($levelId);
+        if (!$current || $current->isTerminal) {
+            return null;
+        }
+
+        if ($current->nextLevelId) {
+            return $this->findLevelById($current->nextLevelId);
+        }
+
+        // Default: find subsequent level by rank_order
+        $stmt = $this->pdo->prepare('SELECT * FROM `academic_levels` WHERE `rank_order` > :rank ORDER BY `rank_order` ASC LIMIT 1');
+        $stmt->execute([':rank' => $current->rankOrder]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row ? AcademicLevel::fromArray($row) : null;
+    }
+
+    public function isTerminalLevel(int $levelId): bool
+    {
+        $level = $this->findLevelById($levelId);
+        if (!$level) {
+            return false;
+        }
+
+        if ($level->isTerminal) {
+            return true;
+        }
+
+        $name = strtolower($level->name);
+        return str_contains($name, 'primary 5') 
+            || str_contains($name, 'ss 3') 
+            || str_contains($name, 'sss 3') 
+            || str_contains($name, 'senior secondary 3');
+    }
+
     // ==========================================
     // 4. CLASSES
     // ==========================================

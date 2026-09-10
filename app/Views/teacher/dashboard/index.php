@@ -38,6 +38,51 @@
         </div>
     </div>
 
+    <!-- Staff Duty Geofenced Clock-In Banner (SRS §22, §23) -->
+    <div class="rounded-2xl border p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition <?= !empty($todayStaffAttendance) ? ($todayStaffAttendance->isClockedOut() ? 'bg-slate-50 border-slate-200' : 'bg-emerald-50/80 border-emerald-200') : 'bg-brand-50/60 border-brand-200' ?>">
+        <div class="flex items-center gap-3.5">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 <?= !empty($todayStaffAttendance) ? ($todayStaffAttendance->isClockedOut() ? 'bg-slate-200 text-slate-700' : 'bg-emerald-600 text-white shadow-xs') : 'bg-brand-700 text-white shadow-xs' ?>">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Staff Duty Attendance</span>
+                    <?php if (empty($todayStaffAttendance)): ?>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">Pending Today's Clock-In</span>
+                    <?php elseif (!$todayStaffAttendance->isClockedOut()): ?>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span>On Duty Active</span>
+                        </span>
+                    <?php else: ?>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-800">Concluded for Today</span>
+                    <?php endif; ?>
+                </div>
+
+                <?php if (empty($todayStaffAttendance)): ?>
+                    <h4 class="text-sm font-extrabold text-slate-900 mt-0.5">Physical Campus Presence Verification</h4>
+                    <p class="text-xs text-slate-600">Please clock in using your device GPS within the Mabushi campus perimeter.</p>
+                <?php elseif (!$todayStaffAttendance->isClockedOut()): ?>
+                    <h4 class="text-sm font-extrabold text-slate-900 mt-0.5">
+                        Clocked In at <?= htmlspecialchars($todayStaffAttendance->getFormattedClockInTime()) ?> 
+                        <span class="text-xs font-normal text-slate-500">(<?= $todayStaffAttendance->isLate ? 'Late Arrival' : 'On Time' ?>)</span>
+                    </h4>
+                    <p class="text-xs text-slate-600">Active session recording in progress. Remember to clock out before leaving campus.</p>
+                <?php else: ?>
+                    <h4 class="text-sm font-extrabold text-slate-900 mt-0.5">
+                        Completed Duty (<?= htmlspecialchars($todayStaffAttendance->getFormattedWorkDuration()) ?>)
+                    </h4>
+                    <p class="text-xs text-slate-600">In: <?= htmlspecialchars($todayStaffAttendance->getFormattedClockInTime()) ?> • Out: <?= htmlspecialchars($todayStaffAttendance->getFormattedClockOutTime()) ?></p>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <a href="/teacher/staff-attendance"
+           class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs shadow-xs transition <?= !empty($todayStaffAttendance) ? ($todayStaffAttendance->isClockedOut() ? 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100' : 'bg-amber-600 hover:bg-amber-700 text-white') : 'bg-brand-700 hover:bg-brand-800 text-white' ?>">
+            <span><?= empty($todayStaffAttendance) ? 'Open Duty Terminal & Clock In &rarr;' : (!$todayStaffAttendance->isClockedOut() ? 'Clock Out & Duty Terminal &rarr;' : 'View Attendance History &rarr;') ?></span>
+        </a>
+    </div>
+
     <!-- 4-Card Overview Metric Strip -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- Assigned Class-Subjects -->

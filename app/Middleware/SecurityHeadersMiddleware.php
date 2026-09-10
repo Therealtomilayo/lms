@@ -30,8 +30,8 @@ class SecurityHeadersMiddleware
         // Browser XSS filter
         $response->setHeader('X-XSS-Protection', '1; mode=block');
 
-        // Permissions policy
-        $response->setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+        // Permissions policy (allow geolocation for self to support staff geofencing)
+        $response->setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)');
 
         // Content Security Policy
         $csp = [

@@ -42,6 +42,19 @@ final class ServiceResult
         );
     }
 
+    public static function error(string $message, ?string $errorCode = null): self
+    {
+        return self::failure($message, $errorCode, $message);
+    }
+
+    public function __get(string $name): mixed
+    {
+        if ($name === 'error') {
+            return $this->getFirstError() ?? $this->message;
+        }
+        return null;
+    }
+
     public function isSuccess(): bool
     {
         return $this->success;

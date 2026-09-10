@@ -46,7 +46,35 @@ final class UserContext
         if ($name === 'userId') {
             return $this->id;
         }
+        if ($name === 'primaryRole') {
+            return $this->getPrimaryRole();
+        }
+        if ($name === 'primaryRoleLabel') {
+            return $this->getPrimaryRoleLabel();
+        }
         return null;
+    }
+
+    public function getPrimaryRole(): string
+    {
+        if ($this->hasRole('super_admin')) return 'super_admin';
+        if ($this->hasRole('admin')) return 'admin';
+        if ($this->hasRole('teacher')) return 'teacher';
+        if ($this->hasRole('parent')) return 'parent';
+        if ($this->hasRole('student')) return 'student';
+        return $this->roles[0] ?? 'user';
+    }
+
+    public function getPrimaryRoleLabel(): string
+    {
+        return match ($this->getPrimaryRole()) {
+            'super_admin' => 'Super Administrator',
+            'admin' => 'Administrator',
+            'teacher' => 'Teacher',
+            'parent' => 'Parent / Guardian',
+            'student' => 'Student',
+            default => 'User',
+        };
     }
 
     public function getUserId(): int

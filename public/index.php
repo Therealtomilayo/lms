@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-// Set execution timezone to UTC
-date_default_timezone_set('UTC');
-
 require_once dirname(__DIR__) . '/vendor/autoload.php';
 require_once dirname(__DIR__) . '/config/config.php';
+
+// Set execution timezone to institutional default (Africa/Lagos / WAT)
+date_default_timezone_set((string)\App\Core\Config::get('app.timezone', 'Africa/Lagos'));
 
 use App\Controllers\AuthController;
 use App\Core\Config;
@@ -91,6 +91,11 @@ try {
     $router->post('/reset-password', [AuthController::class, 'resetPassword'], [$passwordResetThrottle, CsrfMiddleware::class]);
     $router->get('/password/reset/{token}', [AuthController::class, 'showResetPassword']);
     $router->post('/password/reset', [AuthController::class, 'resetPassword'], [$passwordResetThrottle, CsrfMiddleware::class]);
+
+    // Public Self-Service Result Checker Gateway (SRS §38, §39, §40, §58.5)
+    $router->get('/results/check', [\App\Controllers\PublicResultCheckerController::class, 'show']);
+    $router->post('/results/check', [\App\Controllers\PublicResultCheckerController::class, 'verify'], [CsrfMiddleware::class]);
+    $router->get('/results/view', [\App\Controllers\PublicResultCheckerController::class, 'viewReport']);
 
     // Developer Showcase Route (Environment-restricted inside the controller)
     $router->get('/dev/showcase', [\App\Controllers\Dev\ShowcaseController::class, 'index']);
@@ -206,6 +211,23 @@ try {
     $router->get('/admin/results/comments', [\App\Controllers\Admin\BatchRemarkController::class, 'index'], $adminAuth);
     $router->post('/admin/results/comments', [\App\Controllers\Admin\BatchRemarkController::class, 'save'], $adminFormAuth);
 
+    // Admin Scratch-Card PIN Generation & Printing (SRS §38, §39, §40, §58.5)
+    $router->get('/admin/results/pins', [\App\Controllers\Admin\ResultPinController::class, 'index'], $adminAuth);
+    $router->post('/admin/results/pins/generate', [\App\Controllers\Admin\ResultPinController::class, 'generate'], $adminFormAuth);
+    $router->get('/admin/results/pins/print', [\App\Controllers\Admin\ResultPinController::class, 'print'], $adminAuth);
+    $router->get('/admin/results/pins/export', [\App\Controllers\Admin\ResultPinController::class, 'export'], $adminAuth);
+    $router->post('/admin/results/pins/{id}/revoke', [\App\Controllers\Admin\ResultPinController::class, 'revoke'], $adminFormAuth);
+
+    // Student Promotions, Cohort Advancement & Terminal Graduation (SRS §17, §18, §58.3)
+    $router->get('/admin/promotions', [\App\Controllers\Admin\PromotionController::class, 'index'], $adminAuth);
+    $router->get('/admin/promotions/class/{classId}', [\App\Controllers\Admin\PromotionController::class, 'classCohort'], $adminAuth);
+    $router->get('/admin/promotions/class/{classId}/export', [\App\Controllers\Admin\PromotionController::class, 'export'], $adminAuth);
+    $router->post('/admin/promotions/stage-repetition', [\App\Controllers\Admin\PromotionController::class, 'stageRepetition'], $adminFormAuth);
+    $router->post('/admin/promotions/execute', [\App\Controllers\Admin\PromotionController::class, 'executeBatch'], $adminFormAuth);
+
+    // Admin Payments & Financial Ledger
+    $router->get('/admin/payments', [\App\Controllers\PaymentController::class, 'adminLedger'], $adminAuth);
+
     // Super Admin Two-Tier Approval Queue Routes (ADMIN-30, §6, §58.1-§58.3)
     $superAdminAuth = [AuthMiddleware::class, RoleMiddleware::allow(['super_admin'])];
     $superAdminFormAuth = [AuthMiddleware::class, RoleMiddleware::allow(['super_admin']), CsrfMiddleware::class];
@@ -218,6 +240,19 @@ try {
     $router->get('/admin/attendance/{classId}/{date}/edit', [\App\Controllers\Admin\AttendanceController::class, 'edit'], $adminAuth);
     $router->post('/admin/attendance/{classId}/{date}/edit', [\App\Controllers\Admin\AttendanceController::class, 'update'], $adminFormAuth);
     $router->get('/admin/attendance/report', [\App\Controllers\Admin\AttendanceReportController::class, 'report'], $adminAuth);
+
+    // Admin Staff Geofenced Attendance Routes (SRS §22, §23)
+    $router->get('/admin/staff-attendance', [\App\Controllers\Admin\StaffAttendanceController::class, 'index'], $adminAuth);
+    $router->get('/admin/staff-attendance/breaches', [\App\Controllers\Admin\StaffAttendanceController::class, 'breaches'], $adminAuth);
+    $router->post('/admin/staff-attendance/settings', [\App\Controllers\Admin\StaffAttendanceController::class, 'updateSettings'], $adminFormAuth);
+    $router->get('/admin/staff-attendance/export', [\App\Controllers\Admin\StaffAttendanceController::class, 'export'], $adminAuth);
+    $router->post('/admin/staff-attendance/override', [\App\Controllers\Admin\StaffAttendanceController::class, 'manualCorrection'], $adminFormAuth);
+
+    // Admin Live Online Classes Routes (SRS §31)
+    $router->get('/admin/live-classes', [\App\Controllers\Admin\LiveClassController::class, 'index'], $adminAuth);
+    $router->post('/admin/live-classes/{id}/cancel', [\App\Controllers\Admin\LiveClassController::class, 'cancel'], $adminFormAuth);
+    $router->post('/admin/live-classes/{id}/delete', [\App\Controllers\Admin\LiveClassController::class, 'destroy'], $adminFormAuth);
+    $router->get('/admin/live-classes/{id}/attendees', [\App\Controllers\Admin\LiveClassController::class, 'attendees'], $adminAuth);
 
     // Admin Announcement Broadcast Management Routes
     $router->get('/admin/announcements', [\App\Controllers\Admin\AnnouncementController::class, 'index'], $adminAuth);
@@ -317,6 +352,23 @@ try {
     // Teacher Timetable Route
     $router->get('/teacher/timetable', [\App\Controllers\Teacher\TimetableController::class, 'index'], $teacherAuth);
 
+    // Teacher Staff Geofenced Attendance Routes (SRS §22, §23, §24)
+    $router->get('/teacher/staff-attendance', [\App\Controllers\Teacher\StaffAttendanceController::class, 'index'], $teacherAuth);
+    $router->post('/teacher/staff-attendance/clock-in', [\App\Controllers\Teacher\StaffAttendanceController::class, 'clockIn'], $teacherFormAuth);
+    $router->post('/teacher/staff-attendance/clock-out', [\App\Controllers\Teacher\StaffAttendanceController::class, 'clockOut'], $teacherFormAuth);
+    $router->post('/teacher/staff-attendance/sync', [\App\Controllers\Teacher\StaffAttendanceController::class, 'syncOffline'], $teacherAuth);
+    $router->get('/api/staff-attendance/status', [\App\Controllers\Teacher\StaffAttendanceController::class, 'status'], $teacherAuth);
+
+    // Teacher Live Online Classes Routes (SRS §31)
+    $router->get('/teacher/live-classes', [\App\Controllers\Teacher\LiveClassController::class, 'index'], $teacherAuth);
+    $router->post('/teacher/live-classes', [\App\Controllers\Teacher\LiveClassController::class, 'store'], $teacherFormAuth);
+    $router->post('/teacher/live-classes/{id}/update', [\App\Controllers\Teacher\LiveClassController::class, 'update'], $teacherFormAuth);
+    $router->post('/teacher/live-classes/{id}/start', [\App\Controllers\Teacher\LiveClassController::class, 'start'], $teacherFormAuth);
+    $router->post('/teacher/live-classes/{id}/end', [\App\Controllers\Teacher\LiveClassController::class, 'end'], $teacherFormAuth);
+    $router->post('/teacher/live-classes/{id}/cancel', [\App\Controllers\Teacher\LiveClassController::class, 'cancel'], $teacherFormAuth);
+    $router->post('/teacher/live-classes/{id}/delete', [\App\Controllers\Teacher\LiveClassController::class, 'destroy'], $teacherFormAuth);
+    $router->get('/teacher/live-classes/{id}/attendees', [\App\Controllers\Teacher\LiveClassController::class, 'attendees'], $teacherAuth);
+
     // Student Content & Enrolled Subjects Routes
     $studentAuth = [AuthMiddleware::class, RoleMiddleware::allow(['student', 'admin', 'super_admin'])];
     $studentFormAuth = [AuthMiddleware::class, RoleMiddleware::allow(['student', 'admin', 'super_admin']), CsrfMiddleware::class];
@@ -344,6 +396,7 @@ try {
     $router->get('/student/grades', [\App\Controllers\Student\ReportCardController::class, 'index'], $studentAuth);
     $router->get('/student/grades/report-card', [\App\Controllers\Student\ReportCardController::class, 'show'], $studentAuth);
     $router->get('/student/grades/report-card.pdf', [\App\Controllers\Student\ReportCardController::class, 'pdf'], $studentAuth);
+    $router->post('/student/grades/unlock', [\App\Controllers\Student\ReportCardController::class, 'unlock'], $studentFormAuth);
 
     // Student Attendance & Announcements Routes
     $router->get('/student/attendance', [\App\Controllers\Student\AttendanceController::class, 'index'], $studentAuth);
@@ -352,6 +405,10 @@ try {
 
     // Student Timetable Route
     $router->get('/student/timetable', [\App\Controllers\Student\TimetableController::class, 'index'], $studentAuth);
+
+    // Student Live Online Classes Hub Routes (SRS §31)
+    $router->get('/student/live-classes', [\App\Controllers\Student\LiveClassController::class, 'index'], $studentAuth);
+    $router->get('/student/live-classes/{id}/join', [\App\Controllers\Student\LiveClassController::class, 'join'], $studentAuth);
 
     // Parent Portal Routes
     $parentAuth = [AuthMiddleware::class, RoleMiddleware::allow(['parent', 'admin', 'super_admin'])];
@@ -364,6 +421,7 @@ try {
     $router->get('/parent/children/{studentId}/grades', [\App\Controllers\Parent\ReportCardController::class, 'index'], $parentAuth);
     $router->get('/parent/children/{studentId}/grades/report-card', [\App\Controllers\Parent\ReportCardController::class, 'show'], $parentAuth);
     $router->get('/parent/children/{studentId}/grades/report-card.pdf', [\App\Controllers\Parent\ReportCardController::class, 'pdf'], $parentAuth);
+    $router->post('/parent/children/{studentId}/grades/unlock', [\App\Controllers\Parent\ReportCardController::class, 'unlock'], $parentFormAuth);
 
     // Parent Attendance & Announcements Routes
     $router->get('/parent/attendance', [\App\Controllers\Parent\AttendanceController::class, 'index'], $parentAuth);
@@ -374,6 +432,19 @@ try {
 
     // Parent Timetable Route
     $router->get('/parent/children/{studentId}/timetable', [\App\Controllers\Parent\TimetableController::class, 'index'], $parentAuth);
+
+    // Parent Live Classes Route (SRS §31)
+    $router->get('/parent/live-classes', [\App\Controllers\Parent\LiveClassController::class, 'index'], $parentAuth);
+
+    // Payments & Paystack-Ready Commerce Routes
+    $paymentAuth = [AuthMiddleware::class];
+    $personalPaymentAuth = [AuthMiddleware::class, RoleMiddleware::allow(['parent', 'student'])];
+    $paymentFormAuth = [AuthMiddleware::class, CsrfMiddleware::class];
+    $router->post('/payments/checkout/pin', [\App\Controllers\PaymentController::class, 'checkoutPin'], $paymentFormAuth);
+    $router->post('/payments/simulate/{reference}', [\App\Controllers\PaymentController::class, 'simulate'], $paymentFormAuth);
+    $router->get('/payments/callback', [\App\Controllers\PaymentController::class, 'callback'], $paymentAuth);
+    $router->get('/payments/history', [\App\Controllers\PaymentController::class, 'history'], $personalPaymentAuth);
+    $router->get('/payments/{reference}/receipt', [\App\Controllers\PaymentController::class, 'receipt'], $paymentAuth);
 
     // Role-Guarded Dashboards
     $router->get('/admin/dashboard', [\App\Controllers\Admin\DashboardController::class, 'index'], $adminAuth);

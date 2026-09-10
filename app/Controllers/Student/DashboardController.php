@@ -12,6 +12,7 @@ use App\Repositories\AcademicRepository;
 use App\Repositories\AnnouncementRepository;
 use App\Repositories\AttendanceRepository;
 use App\Repositories\EnrollmentRepository;
+use App\Repositories\LiveClassRepository;
 use App\Repositories\StudentRepository;
 use App\Repositories\TimetableRepository;
 use App\Services\AssignmentService;
@@ -30,6 +31,7 @@ class DashboardController extends Controller
     private AttendanceRepository $attendanceRepo;
     private TimetableRepository $timetableRepo;
     private AnnouncementRepository $announcementRepo;
+    private LiveClassRepository $liveClassRepo;
 
     public function __construct(
         ?AuthenticatorInterface $authenticator = null,
@@ -40,7 +42,8 @@ class DashboardController extends Controller
         ?QuizService $quizService = null,
         ?AttendanceRepository $attendanceRepo = null,
         ?TimetableRepository $timetableRepo = null,
-        ?AnnouncementRepository $announcementRepo = null
+        ?AnnouncementRepository $announcementRepo = null,
+        ?LiveClassRepository $liveClassRepo = null
     ) {
         parent::__construct($authenticator);
         $this->studentRepo = $studentRepo ?? new StudentRepository();
@@ -51,6 +54,7 @@ class DashboardController extends Controller
         $this->attendanceRepo = $attendanceRepo ?? new AttendanceRepository();
         $this->timetableRepo = $timetableRepo ?? new TimetableRepository();
         $this->announcementRepo = $announcementRepo ?? new AnnouncementRepository();
+        $this->liveClassRepo = $liveClassRepo ?? new LiveClassRepository();
     }
 
     /**
@@ -126,6 +130,16 @@ class DashboardController extends Controller
         // Announcements feed
         $announcements = $this->announcementRepo->getFeedForUser($userContext, null, 4);
 
+        // Upcoming and Live Online Classes (SRS §31)
+        $upcomingLiveClasses = [];
+        if ($student) {
+            try {
+                $upcomingLiveClasses = $this->liveClassRepo->getUpcomingForStudent($student->id, 3);
+            } catch (\Throwable) {
+                $upcomingLiveClasses = [];
+            }
+        }
+
         return Response::html($this->render('student/dashboard/index', [
             'title' => 'Student Dashboard — Claret Learning Portal',
             'headerTitle' => 'Student Learning Portal',
@@ -141,6 +155,7 @@ class DashboardController extends Controller
             'todaySlots' => $todaySlots,
             'todayDayName' => date('l'),
             'announcements' => $announcements,
+            'upcomingLiveClasses' => $upcomingLiveClasses,
         ], 'layouts/student'));
     }
 }

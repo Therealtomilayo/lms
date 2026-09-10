@@ -543,12 +543,14 @@
     $gpa = $summary && $summary->gpa !== null ? number_format((float)$summary->gpa, 2) : 'N/A';
 
     // Helper to format Nigerian Ordinal (1st, 2nd, 3rd)
-    function format_ordinal(int $number): string {
-        $ends = ['th','st','nd','rd','th','th','th','th','th','th'];
-        if ((($number % 100) >= 11) && (($number % 100) <= 13)) {
-            return $number . 'th';
+    if (!function_exists('format_ordinal')) {
+        function format_ordinal(int $number): string {
+            $ends = ['th','st','nd','rd','th','th','th','th','th','th'];
+            if ((($number % 100) >= 11) && (($number % 100) <= 13)) {
+                return $number . 'th';
+            }
+            return $number . $ends[$number % 10];
         }
-        return $number . $ends[$number % 10];
     }
     ?>
 
@@ -575,6 +577,16 @@
                 Cumulative Annual View
             </button>
         </div>
+
+        <?php if (!empty($pin) || isset($remainingUses)): ?>
+            <div style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; padding: 6px 14px; border-radius: 8px; font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+                <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                <span>PIN Access Cleared: <strong><?= (int)($remainingUses ?? ($pin ? $pin->getRemainingUses() : 5)) ?></strong> of <strong><?= (int)($pin?->maxUses ?? 5) ?></strong> views remaining</span>
+                <?php if (!empty($pin)): ?>
+                    <span style="font-family: monospace; background: #ffffff; padding: 2px 6px; border-radius: 4px; border: 1px solid #a7f3d0; font-size: 10px;">S/N: <?= htmlspecialchars($pin->serialNumber) ?></span>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
 
         <div style="display: flex; gap: 8px;">
             <button type="button" onclick="window.print()" class="btn btn-primary">
@@ -708,7 +720,7 @@
             <!-- Summary KPI Strip for Term -->
             <div class="summary">
                 <div class="stat"><div class="lbl">Total Score</div><div class="val"><?= $totalScore ?></div></div>
-                <div class="stat"><div class="lbl">Subjects</div><div class="val"><?= count($subject_results) ?></div></div>
+                <div class="stat"><div class="lbl">Subjects</div><div class="val"><?= count($subject_results ?? []) ?></div></div>
                 <div class="stat highlight"><div class="lbl">Term Avg</div><div class="val"><?= $avgScore ?></div></div>
                 <div class="stat highlight"><div class="lbl">Grade</div><div class="val"><?= !empty($subject_results) ? htmlspecialchars($subject_results[0]->gradeLetter ?: 'A') : 'A' ?></div></div>
                 <div class="stat highlight"><div class="lbl">Position</div><div class="val"><?= $studentRank ?></div></div>
@@ -740,7 +752,7 @@
                 <thead>
                     <tr>
                         <th rowspan="2" style="text-align:left; padding-left:7px;">Academic Subject</th>
-                        <th colspan="<?= count($session_terms) ?>">Termly Scores (100)</th>
+                        <th colspan="<?= count($session_terms ?? []) ?>">Termly Scores (100)</th>
                         <th rowspan="2">Cumulative Avg</th>
                         <th rowspan="2">Class Avg</th>
                         <th rowspan="2">Grade</th>
@@ -750,7 +762,7 @@
                         <th rowspan="2" style="text-align:left; padding-left:6px;">Annual Remark</th>
                     </tr>
                     <tr>
-                        <?php foreach ($session_terms as $st): ?>
+                        <?php foreach ($session_terms ?? [] as $st): ?>
                             <th style="font-size:7.5px;"><?= htmlspecialchars($st->name) ?></th>
                         <?php endforeach; ?>
                     </tr>
@@ -813,23 +825,48 @@
                 <div class="stat"><div class="lbl">Lowest Avg</div><div class="val"><?= number_format($class_stats['lowest_avg'] ?: 45.0, 1) ?>%</div></div>
             </div>
 
-            <!-- Promotion Status Banner -->
-            <div class="promotion-box">
-                <div>
-                    <div class="promo-title">
-                        Promotion Status &bull; Cumulative Performance (First + Second + Third Term): <?= $avgScore ?>
+            <!-- Promotion Status Banner (Visible Exclusively on Published 3rd Term Results) -->
+            <?php if (!empty($is_promotion_visible) && !empty($promotion_data['is_visible'])): ?>
+                <?php
+                $pBadge = $promotion_data['badge_text'] ?? 'PROMOTED';
+                $pStatus = $promotion_data['status'] ?? 'promoted';
+                $pBg = match($pStatus) {
+                    'graduated' => 'background: #0284c7;',
+                    'repeating' => 'background: #b91c1c;',
+                    'borderline' => 'background: #d97706;',
+                    'withdrawn' => 'background: #475569;',
+                    default => 'background: var(--brand-700);',
+                };
+                ?>
+                <div class="promotion-box">
+                    <div>
+                        <div class="promo-title">
+                            Promotion Status &bull; Cumulative Session Average: <?= number_format((float)($promotion_data['annual_average'] ?? 0), 2) ?>%
+                        </div>
+                        <div class="terms-line">
+                            <?php if (!empty($promotion_data['term_scores'])): ?>
+                                <?php foreach ($promotion_data['term_scores'] as $tScore): ?>
+                                    <span><b><?= htmlspecialchars($tScore['term_name']) ?>:</b> <?= $tScore['average'] !== null ? number_format((float)$tScore['average'], 1) . '%' : 'N/A' ?></span>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <span><b>Cumulative Standing:</b> Computed</span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="promo-note"><?= htmlspecialchars($promotion_data['note'] ?? '') ?></div>
                     </div>
-                    <div class="terms-line">
-                        <span><b>First Term:</b> <?= $avgScore ?></span>
-                        <span><b>Second Term:</b> Processing</span>
-                        <span><b>Third Term:</b> Processing</span>
+                    <div class="promotion-badge" style="<?= $pBg ?>">
+                        <?= htmlspecialchars($pBadge) ?>
                     </div>
-                    <div class="promo-note">Outstanding performance throughout the academic session. Qualified to proceed.</div>
                 </div>
-                <div class="promotion-badge">
-                    PROMOTED
+            <?php else: ?>
+                <div style="margin-bottom: 6px; border: 1.5px dashed var(--slate-300); border-radius: 5px; padding: 7px 10px; background: var(--slate-50); display: flex; align-items: center; justify-content: space-between; font-size: 8.5px; color: var(--slate-600);">
+                    <div>
+                        <strong style="color: var(--slate-800); text-transform: uppercase; font-size: 8px; letter-spacing: 0.3px;">Promotion Standing:</strong>
+                        <span><?= htmlspecialchars($promotion_data['reason'] ?? 'Promotion decision is finalized upon 3rd Term publication.') ?></span>
+                    </div>
+                    <span style="background: var(--slate-200); color: var(--slate-700); font-weight: 800; padding: 3px 8px; border-radius: 3px; font-size: 8px; text-transform: uppercase; letter-spacing: 0.4px;">Locked Until 3rd Term Release</span>
                 </div>
-            </div>
+            <?php endif; ?>
         </div>
 
         <?php

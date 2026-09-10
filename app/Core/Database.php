@@ -46,6 +46,9 @@ class Database
 
             try {
                 self::$instance = new PDO($dsn, $username, $password, $options);
+                if ($driver === 'mysql') {
+                    self::$instance->exec("SET time_zone = '+01:00'");
+                }
             } catch (PDOException $e) {
                 throw new PDOException("Database connection error: " . $e->getMessage(), (int)$e->getCode());
             }
@@ -55,6 +58,11 @@ class Database
     }
 
     public static function getConnection(): PDO
+    {
+        return self::getInstance();
+    }
+
+    public static function connection(): PDO
     {
         return self::getInstance();
     }

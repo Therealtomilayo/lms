@@ -103,6 +103,76 @@
         </a>
     </div>
 
+    <!-- Live Online Classes Widget (SRS §31) -->
+    <?php if (!empty($upcomingLiveClasses)): ?>
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                        <h2 class="text-base font-bold text-slate-900">Live Online Classrooms</h2>
+                    </div>
+                    <p class="text-xs text-slate-500">Synchronous video lessons scheduled by your subject instructors.</p>
+                </div>
+                <a href="/student/live-classes" class="text-xs font-bold text-sky-600 hover:text-sky-700 transition">
+                    View Schedule (<?= count($upcomingLiveClasses) ?>) &rarr;
+                </a>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <?php foreach ($upcomingLiveClasses as $lc): ?>
+                    <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white hover:border-slate-300 transition flex flex-col justify-between space-y-3">
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs border <?= $lc->getPlatformColorClass() ?>">
+                                    <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                    </svg>
+                                    <span><?= htmlspecialchars($lc->getPlatformLabel()) ?></span>
+                                </span>
+                                <?php if ($lc->isInProgress()): ?>
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+                                        <span>Live Now</span>
+                                    </span>
+                                <?php else: ?>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                                        Scheduled
+                                    </span>
+                                <?php endif; ?>
+                            </div>
+                            <h3 class="text-sm font-bold text-slate-900 leading-snug">
+                                <?= htmlspecialchars($lc->title) ?>
+                            </h3>
+                            <p class="text-[11px] text-slate-500">
+                                <?= htmlspecialchars($lc->subjectName ?? 'Subject') ?> &bull; <?= htmlspecialchars($lc->formatSchedule()) ?>
+                            </p>
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+                            <?php if ($lc->isJoinable()): ?>
+                                <a href="/student/live-classes/<?= $lc->id ?>/join" target="_blank" rel="noopener noreferrer" 
+                                   class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-sky-600 hover:bg-sky-700 shadow-xs transition">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                    </svg>
+                                    <span>Join Live Class</span>
+                                </a>
+                            <?php else: ?>
+                                <a href="/student/live-classes" class="text-xs font-bold text-sky-600 hover:text-sky-700 transition inline-flex items-center gap-1">
+                                    <span>View Details</span>
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                    </svg>
+                                </a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    <?php endif; ?>
+
     <!-- Main Content 2-Column Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Left Section (2 Cols): Enrolled Subjects & Coursework -->

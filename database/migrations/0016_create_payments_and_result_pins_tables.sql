@@ -1,0 +1,57 @@
+-- Migration: 0016_create_payments_and_result_pins_tables.sql
+-- Description: Creates payments ledger and result access scratch-card PIN tables for Paystack-ready commerce and result access gating (SRS §38, §39, §40, §58.5)
+
+CREATE TABLE IF NOT EXISTS `payments` (
+    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `reference` VARCHAR(64) NOT NULL UNIQUE,
+    `user_id` BIGINT UNSIGNED NOT NULL,
+    `student_id` BIGINT UNSIGNED NOT NULL,
+    `session_id` BIGINT UNSIGNED NOT NULL,
+    `term_id` BIGINT UNSIGNED NOT NULL,
+    `purpose` ENUM('result_pin', 'school_fees', 'admission') NOT NULL DEFAULT 'result_pin',
+    `amount` DECIMAL(10,2) NOT NULL,
+    `currency` VARCHAR(3) NOT NULL DEFAULT 'NGN',
+    `channel` VARCHAR(30) NOT NULL DEFAULT 'simulated',
+    `status` ENUM('pending', 'successful', 'failed') NOT NULL DEFAULT 'pending',
+    `gateway_reference` VARCHAR(100) NULL,
+    `metadata` JSON NULL,
+    `paid_at` DATETIME NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX `idx_payments_reference` (`reference`),
+    INDEX `idx_payments_user` (`user_id`),
+    INDEX `idx_payments_student_term` (`student_id`, `session_id`, `term_id`),
+    INDEX `idx_payments_status_purpose` (`status`, `purpose`),
+    CONSTRAINT `fk_payments_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_payments_student` FOREIGN KEY (`student_id`) REFERENCES `students` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_payments_session` FOREIGN KEY (`session_id`) REFERENCES `sessions` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_payments_term` FOREIGN KEY (`term_id`) REFERENCES `terms` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `result_access_pins` (
+    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `serial_number` VARCHAR(30) NOT NULL UNIQUE,
+    `pin_code` VARCHAR(20) NOT NULL,
+    `pin_hash` VARCHAR(64) NOT NULL,
+    `payment_id` BIGINT UNSIGNED NULL,
+    `student_id` BIGINT UNSIGNED NULL,
+    `session_id` BIGINT UNSIGNED NULL,
+    `term_id` BIGINT UNSIGNED NULL,
+    `created_by` BIGINT UNSIGNED NOT NULL,
+    `max_uses` SMALLINT UNSIGNED NOT NULL DEFAULT 5,
+    `times_used` SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    `status` ENUM('active', 'depleted', 'revoked') NOT NULL DEFAULT 'active',
+    `first_used_at` DATETIME NULL,
+    `last_used_at` DATETIME NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX `idx_pins_serial` (`serial_number`),
+    INDEX `idx_pins_hash` (`pin_hash`),
+    INDEX `idx_pins_student_term` (`student_id`, `session_id`, `term_id`),
+    INDEX `idx_pins_status` (`status`),
+    CONSTRAINT `fk_pins_payment` FOREIGN KEY (`payment_id`) REFERENCES `payments` (`id`) ON DELETE SET NULL,
+    CONSTRAINT `fk_pins_student` FOREIGN KEY (`student_id`) REFERENCES `students` (`id`) ON DELETE SET NULL,
+    CONSTRAINT `fk_pins_session` FOREIGN KEY (`session_id`) REFERENCES `sessions` (`id`) ON DELETE SET NULL,
+    CONSTRAINT `fk_pins_term` FOREIGN KEY (`term_id`) REFERENCES `terms` (`id`) ON DELETE SET NULL,
+    CONSTRAINT `fk_pins_creator` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
