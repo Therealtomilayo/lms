@@ -19,7 +19,9 @@ $className = is_object($selectedChild)
     ? ($selectedChild->className ?: ($selectedChild->currentClass?->name ?: 'JSS 1A'))
     : ($selectedChild['class_name'] ?? 'JSS 1A');
 
-$rate = isset($summary['attendance_rate']) ? (float)$summary['attendance_rate'] : 100.0;
+$rate = isset($summary['weighted_rate']) ? (float)$summary['weighted_rate'] : (isset($summary['attendance_rate']) ? (float)$summary['attendance_rate'] : 100.0);
+$unweightedRate = isset($summary['unweighted_rate']) ? (float)$summary['unweighted_rate'] : $rate;
+$lateWeight = isset($summary['late_weight']) ? (float)$summary['late_weight'] : 0.6;
 $totalDays = isset($summary['total_days']) ? (int)$summary['total_days'] : 0;
 $presentDays = isset($summary['present_days']) ? (int)$summary['present_days'] : 0;
 $lateDays = isset($summary['late_days']) ? (int)$summary['late_days'] : 0;
@@ -173,10 +175,15 @@ $excusedDays = isset($summary['excused_days']) ? (int)$summary['excused_days'] :
     <!-- 4. 4-CARD OVERVIEW STATS STRIP -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
-        <!-- Attendance Rate % Card -->
+        <!-- Attendance Rate % Card (Weighted SRS §26) -->
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Attendance Rate</span>
+                <div>
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500 block">Attendance Rate</span>
+                    <span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200 mt-0.5">
+                        <?= round($lateWeight * 100) ?>% Late Credit
+                    </span>
+                </div>
                 <span class="p-2 rounded-xl bg-brand-50 text-brand-700">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
@@ -434,7 +441,7 @@ $excusedDays = isset($summary['excused_days']) ? (int)$summary['excused_days'] :
                 School Statutory Attendance Requirement & Examination Policy
             </h4>
             <p class="text-xs text-slate-600 mt-1 leading-relaxed">
-                In compliance with the Ministry of Education standards and Claret Academy academic regulations, all enrolled students must maintain a minimum of <strong>75% cumulative attendance</strong> across each subject during the term to qualify to sit for terminal examinations and promote to the next grade cohort.
+                In compliance with the Ministry of Education standards and Claret International School academic regulations, all enrolled students must maintain a minimum of <strong>75% cumulative attendance</strong> across each subject during the term to qualify to sit for terminal examinations and promote to the next grade cohort.
             </p>
             <div class="mt-2 text-xs text-brand-700 font-semibold flex flex-wrap gap-4">
                 <span>&bull; To report an illness or planned absence, submit a doctor's certificate or guardian letter.</span>

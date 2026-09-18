@@ -239,7 +239,22 @@ try {
     $router->get('/admin/attendance', [\App\Controllers\Admin\AttendanceController::class, 'index'], $adminAuth);
     $router->get('/admin/attendance/{classId}/{date}/edit', [\App\Controllers\Admin\AttendanceController::class, 'edit'], $adminAuth);
     $router->post('/admin/attendance/{classId}/{date}/edit', [\App\Controllers\Admin\AttendanceController::class, 'update'], $adminFormAuth);
+    $router->post('/admin/attendance/settings', [\App\Controllers\Admin\AttendanceController::class, 'updatePolicy'], $adminFormAuth);
     $router->get('/admin/attendance/report', [\App\Controllers\Admin\AttendanceReportController::class, 'report'], $adminAuth);
+
+    // Admin Badges & Honors Management Routes (ADMIN-34, SRS §33, §57 Phase 3)
+    $router->get('/admin/badges', [\App\Controllers\Admin\BadgeController::class, 'index'], $adminAuth);
+    $router->post('/admin/badges/award', [\App\Controllers\Admin\BadgeController::class, 'award'], $adminFormAuth);
+    $router->post('/admin/badges/{id}/revoke', [\App\Controllers\Admin\BadgeController::class, 'revoke'], $adminFormAuth);
+
+    // Admin Class Group Discussions Oversight Routes (ADMIN-35, SRS §47, §57 Phase 3)
+    $router->get('/admin/discussions', [\App\Controllers\Admin\DiscussionController::class, 'index'], $adminAuth);
+    $router->get('/admin/discussions/{classSubjectId}/{discussionId}', [\App\Controllers\Admin\DiscussionController::class, 'show'], $adminAuth);
+    $router->post('/admin/discussions/{classSubjectId}/{discussionId}/replies', [\App\Controllers\Admin\DiscussionController::class, 'reply'], $adminFormAuth);
+    $router->post('/admin/discussions/{classSubjectId}/{discussionId}/pin', [\App\Controllers\Admin\DiscussionController::class, 'togglePin'], $adminFormAuth);
+    $router->post('/admin/discussions/{classSubjectId}/{discussionId}/lock', [\App\Controllers\Admin\DiscussionController::class, 'toggleLock'], $adminFormAuth);
+    $router->post('/admin/discussions/{classSubjectId}/{discussionId}/delete', [\App\Controllers\Admin\DiscussionController::class, 'delete'], $adminFormAuth);
+    $router->post('/admin/discussions/{classSubjectId}/{discussionId}/replies/{replyId}/delete', [\App\Controllers\Admin\DiscussionController::class, 'deleteReply'], $adminFormAuth);
 
     // Admin Staff Geofenced Attendance Routes (SRS §22, §23)
     $router->get('/admin/staff-attendance', [\App\Controllers\Admin\StaffAttendanceController::class, 'index'], $adminAuth);
@@ -278,6 +293,7 @@ try {
 
     // Protected File System Delivery
     $router->get('/files/{id}/download', [\App\Controllers\FileController::class, 'download'], [AuthMiddleware::class]);
+    $router->get('/files/{id}/stream', [\App\Controllers\FileController::class, 'stream'], [AuthMiddleware::class]);
 
     // Teacher Content & Coursework Management Routes
     $teacherAuth = [AuthMiddleware::class, RoleMiddleware::allow(['teacher', 'admin', 'super_admin'])];
@@ -294,6 +310,24 @@ try {
     $router->post('/teacher/content/{id}/edit', [\App\Controllers\Teacher\ContentController::class, 'update'], $teacherFormAuth);
     $router->post('/teacher/content/{id}/publish', [\App\Controllers\Teacher\ContentController::class, 'togglePublish'], $teacherFormAuth);
     $router->post('/teacher/content/{id}/delete', [\App\Controllers\Teacher\ContentController::class, 'delete'], $teacherFormAuth);
+    $router->post('/teacher/content/{id}/sections', [\App\Controllers\Teacher\ContentController::class, 'storeSection'], $teacherFormAuth);
+    $router->post('/teacher/content/{id}/sections/{sectionId}/delete', [\App\Controllers\Teacher\ContentController::class, 'deleteSection'], $teacherFormAuth);
+    $router->post('/teacher/content/{id}/sections/delete', [\App\Controllers\Teacher\ContentController::class, 'deleteSection'], $teacherFormAuth);
+    $router->post('/teacher/content/{id}/prerequisites', [\App\Controllers\Teacher\ContentController::class, 'addPrerequisite'], $teacherFormAuth);
+    $router->post('/teacher/content/{id}/prerequisites/{prerequisiteId}/delete', [\App\Controllers\Teacher\ContentController::class, 'deletePrerequisite'], $teacherFormAuth);
+    $router->post('/teacher/content/{id}/prerequisites/delete', [\App\Controllers\Teacher\ContentController::class, 'deletePrerequisite'], $teacherFormAuth);
+
+    // Teacher Course Modules & Learning Progression Routes (PHASE-6 & PHASE-7)
+    $router->get('/teacher/modules', [\App\Controllers\Teacher\ModuleController::class, 'index'], $teacherAuth);
+    $router->post('/teacher/modules', [\App\Controllers\Teacher\ModuleController::class, 'store'], $teacherFormAuth);
+    $router->post('/teacher/modules/{id}/edit', [\App\Controllers\Teacher\ModuleController::class, 'update'], $teacherFormAuth);
+    $router->post('/teacher/modules/{id}/delete', [\App\Controllers\Teacher\ModuleController::class, 'delete'], $teacherFormAuth);
+    $router->post('/teacher/modules/reorder', [\App\Controllers\Teacher\ModuleController::class, 'reorder'], $teacherFormAuth);
+    $router->post('/teacher/modules/{id}/items', [\App\Controllers\Teacher\ModuleController::class, 'addItem'], $teacherFormAuth);
+    $router->post('/teacher/modules/{id}/items/reorder', [\App\Controllers\Teacher\ModuleController::class, 'reorderItems'], $teacherFormAuth);
+    $router->post('/teacher/modules/items/{itemId}/delete', [\App\Controllers\Teacher\ModuleController::class, 'removeItem'], $teacherFormAuth);
+    $router->get('/teacher/subjects/{classSubjectId}/progress', [\App\Controllers\Teacher\ModuleController::class, 'progress'], $teacherAuth);
+    $router->get('/teacher/subjects/{classSubjectId}/students/{studentId}/progress', [\App\Controllers\Teacher\ModuleController::class, 'studentProgress'], $teacherAuth);
 
     // Teacher Assignment & Grading Routes
     $router->get('/teacher/assignments', [\App\Controllers\Teacher\AssignmentController::class, 'index'], $teacherAuth);
@@ -321,6 +355,9 @@ try {
     $router->post('/teacher/quizzes/create', [\App\Controllers\Teacher\QuizController::class, 'store'], $teacherFormAuth);
     $router->get('/teacher/quizzes/{id}/edit', [\App\Controllers\Teacher\QuizController::class, 'edit'], $teacherAuth);
     $router->post('/teacher/quizzes/{id}/edit', [\App\Controllers\Teacher\QuizController::class, 'update'], $teacherFormAuth);
+    $router->post('/teacher/quizzes/{id}/prerequisites', [\App\Controllers\Teacher\QuizController::class, 'addPrerequisite'], $teacherFormAuth);
+    $router->post('/teacher/quizzes/{id}/prerequisites/{prerequisiteId}/delete', [\App\Controllers\Teacher\QuizController::class, 'deletePrerequisite'], $teacherFormAuth);
+    $router->post('/teacher/quizzes/{id}/prerequisites/delete', [\App\Controllers\Teacher\QuizController::class, 'deletePrerequisite'], $teacherFormAuth);
     $router->get('/teacher/quizzes/{id}/questions', [\App\Controllers\Teacher\QuizController::class, 'questions'], $teacherAuth);
     $router->post('/teacher/quizzes/{id}/questions', [\App\Controllers\Teacher\QuizController::class, 'saveQuestions'], $teacherFormAuth);
     $router->post('/teacher/quizzes/{id}/publish', [\App\Controllers\Teacher\QuizController::class, 'publish'], $teacherFormAuth);
@@ -369,6 +406,19 @@ try {
     $router->post('/teacher/live-classes/{id}/delete', [\App\Controllers\Teacher\LiveClassController::class, 'destroy'], $teacherFormAuth);
     $router->get('/teacher/live-classes/{id}/attendees', [\App\Controllers\Teacher\LiveClassController::class, 'attendees'], $teacherAuth);
 
+    // Teacher Badges & Gamification Routes (SRS §33, §57 Phase 3)
+    $router->get('/teacher/badges', [\App\Controllers\Teacher\BadgeController::class, 'index'], $teacherAuth);
+    $router->post('/teacher/badges/award', [\App\Controllers\Teacher\BadgeController::class, 'award'], $teacherFormAuth);
+
+    // Teacher Class Discussions Routes (SRS §47, §57 Phase 3)
+    $router->get('/teacher/subjects/{classSubjectId}/discussions', [\App\Controllers\Teacher\DiscussionController::class, 'index'], $teacherAuth);
+    $router->post('/teacher/subjects/{classSubjectId}/discussions', [\App\Controllers\Teacher\DiscussionController::class, 'store'], $teacherFormAuth);
+    $router->get('/teacher/subjects/{classSubjectId}/discussions/{discussionId}', [\App\Controllers\Teacher\DiscussionController::class, 'show'], $teacherAuth);
+    $router->post('/teacher/subjects/{classSubjectId}/discussions/{discussionId}/replies', [\App\Controllers\Teacher\DiscussionController::class, 'reply'], $teacherFormAuth);
+    $router->post('/teacher/subjects/{classSubjectId}/discussions/{discussionId}/pin', [\App\Controllers\Teacher\DiscussionController::class, 'togglePin'], $teacherFormAuth);
+    $router->post('/teacher/subjects/{classSubjectId}/discussions/{discussionId}/lock', [\App\Controllers\Teacher\DiscussionController::class, 'toggleLock'], $teacherFormAuth);
+    $router->post('/teacher/subjects/{classSubjectId}/discussions/{discussionId}/delete', [\App\Controllers\Teacher\DiscussionController::class, 'delete'], $teacherFormAuth);
+
     // Student Content & Enrolled Subjects Routes
     $studentAuth = [AuthMiddleware::class, RoleMiddleware::allow(['student', 'admin', 'super_admin'])];
     $studentFormAuth = [AuthMiddleware::class, RoleMiddleware::allow(['student', 'admin', 'super_admin']), CsrfMiddleware::class];
@@ -377,6 +427,9 @@ try {
     $router->get('/student/subjects/{classSubjectId}', [\App\Controllers\Student\SubjectController::class, 'show'], $studentAuth);
     $router->get('/student/content', [\App\Controllers\Student\ContentController::class, 'index'], $studentAuth);
     $router->get('/student/content/{id}', [\App\Controllers\Student\ContentController::class, 'show'], $studentAuth);
+    $router->get('/student/content/{id}/read', [\App\Controllers\Student\ContentController::class, 'read'], $studentAuth);
+    $router->get('/student/content/{id}/progress', [\App\Controllers\Student\ContentController::class, 'getProgress'], $studentAuth);
+    $router->post('/student/content/{id}/progress', [\App\Controllers\Student\ContentController::class, 'saveProgress'], $studentAuth); // AJAX progress autosave (session auth)
 
     // Student Assignment Routes
     $router->get('/student/assignments', [\App\Controllers\Student\AssignmentController::class, 'index'], $studentAuth);
@@ -410,6 +463,15 @@ try {
     $router->get('/student/live-classes', [\App\Controllers\Student\LiveClassController::class, 'index'], $studentAuth);
     $router->get('/student/live-classes/{id}/join', [\App\Controllers\Student\LiveClassController::class, 'join'], $studentAuth);
 
+    // Student Badges & Gamification Routes (SRS §33, §57 Phase 3)
+    $router->get('/student/badges', [\App\Controllers\Student\BadgeController::class, 'index'], $studentAuth);
+
+    // Student Class Discussions Routes (SRS §47, §57 Phase 3)
+    $router->get('/student/subjects/{classSubjectId}/discussions', [\App\Controllers\Student\DiscussionController::class, 'index'], $studentAuth);
+    $router->post('/student/subjects/{classSubjectId}/discussions', [\App\Controllers\Student\DiscussionController::class, 'store'], $studentFormAuth);
+    $router->get('/student/subjects/{classSubjectId}/discussions/{discussionId}', [\App\Controllers\Student\DiscussionController::class, 'show'], $studentAuth);
+    $router->post('/student/subjects/{classSubjectId}/discussions/{discussionId}/replies', [\App\Controllers\Student\DiscussionController::class, 'reply'], $studentFormAuth);
+
     // Parent Portal Routes
     $parentAuth = [AuthMiddleware::class, RoleMiddleware::allow(['parent', 'admin', 'super_admin'])];
     $parentFormAuth = [AuthMiddleware::class, RoleMiddleware::allow(['parent', 'admin', 'super_admin']), CsrfMiddleware::class];
@@ -435,6 +497,10 @@ try {
 
     // Parent Live Classes Route (SRS §31)
     $router->get('/parent/live-classes', [\App\Controllers\Parent\LiveClassController::class, 'index'], $parentAuth);
+
+    // Parent Child Badges & Class Discussions Routes (SRS §33, §47 Phase 3)
+    $router->get('/parent/children/{studentId}/badges', [\App\Controllers\Parent\ChildController::class, 'badges'], $parentAuth);
+    $router->get('/parent/children/{studentId}/discussions', [\App\Controllers\Parent\ChildController::class, 'discussions'], $parentAuth);
 
     // Payments & Paystack-Ready Commerce Routes
     $paymentAuth = [AuthMiddleware::class];

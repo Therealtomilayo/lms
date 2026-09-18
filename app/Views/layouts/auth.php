@@ -21,9 +21,9 @@
     <!-- Brand / School Header -->
     <div class="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white p-2 shadow-xs border border-slate-200 mb-4">
-            <img src="/assets/img/logo.png" alt="Claret Academy Logo" class="w-full h-full object-contain" onerror="this.parentElement.innerHTML='<span class=\'font-bold text-brand-700 text-xl\'>CL</span>'">
+            <img src="/assets/img/logo.png" alt="Claret International School Logo" class="w-full h-full object-contain" onerror="this.parentElement.innerHTML='<span class=\'font-bold text-brand-700 text-xl\'>CL</span>'">
         </div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-900 leading-tight">Claret Academy</h1>
+        <h1 class="text-2xl font-bold tracking-tight text-slate-900 leading-tight">Claret International School</h1>
         <p class="text-sm text-slate-500 mt-1">Learning Management System</p>
     </div>
 
@@ -55,7 +55,7 @@
     </main>
 
     <footer class="mt-8 text-center text-xs text-slate-400">
-        &copy; <?= date('Y') ?> Claret Academy LMS. All rights reserved.
+        &copy; <?= date('Y') ?> Claret International School LMS. All rights reserved.
     </footer>
 </body>
 </html>

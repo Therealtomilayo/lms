@@ -10,8 +10,10 @@ use App\Core\Exceptions\AuthorizationException;
 use App\Core\Exceptions\ResourceNotFoundException;
 use App\Core\Request;
 use App\Core\Response;
+use App\Models\ActivityProgress;
 use App\Repositories\AcademicRepository;
 use App\Repositories\StudentRepository;
+use App\Services\PrerequisiteService;
 use App\Services\QuizService;
 
 /**
@@ -22,17 +24,20 @@ class QuizController extends Controller
     private QuizService $quizService;
     private AcademicRepository $academicRepo;
     private StudentRepository $studentRepo;
+    private PrerequisiteService $prerequisiteService;
 
     public function __construct(
         ?AuthenticatorInterface $authenticator = null,
         ?QuizService $quizService = null,
         ?AcademicRepository $academicRepo = null,
-        ?StudentRepository $studentRepo = null
+        ?StudentRepository $studentRepo = null,
+        ?PrerequisiteService $prerequisiteService = null
     ) {
         parent::__construct($authenticator);
         $this->quizService = $quizService ?? new QuizService();
         $this->academicRepo = $academicRepo ?? new AcademicRepository();
         $this->studentRepo = $studentRepo ?? new StudentRepository();
+        $this->prerequisiteService = $prerequisiteService ?? new PrerequisiteService();
     }
 
     /**
@@ -52,6 +57,20 @@ class QuizController extends Controller
         $activeTerm = $this->academicRepo->findCurrentTerm();
 
         $data = $this->quizService->getStudentQuizzes($userContext);
+
+        // Attach prerequisite status for student
+        if ($student) {
+            foreach ($data['active'] as &$item) {
+                $status = $this->prerequisiteService->getPrerequisiteStatus(
+                    studentId: $student->id,
+                    activityType: ActivityProgress::TYPE_QUIZ,
+                    activityId: $item['quiz']->id
+                );
+                $item['prerequisite_status'] = $status;
+                $item['is_unlocked'] = $status['is_unlocked'];
+            }
+            unset($item);
+        }
 
         return Response::html($this->render('student/quizzes/index', [
             'title' => 'Online CBT Quizzes & Assessments — Student Portal',
@@ -85,6 +104,18 @@ class QuizController extends Controller
         $student = $this->studentRepo->findByUserId($userContext->id);
         $activeTerm = $this->academicRepo->findCurrentTerm();
 
+        // Prerequisite evaluation
+        $prerequisiteStatus = null;
+        $isUnlocked = true;
+        if ($student) {
+            $prerequisiteStatus = $this->prerequisiteService->getPrerequisiteStatus(
+                studentId: $student->id,
+                activityType: ActivityProgress::TYPE_QUIZ,
+                activityId: $quizId
+            );
+            $isUnlocked = $prerequisiteStatus['is_unlocked'];
+        }
+
         return Response::html($this->render('student/quizzes/show', [
             'title' => "{$data['quiz']->title} — Exam Guidelines",
             'headerTitle' => 'Assessment Guidelines',
@@ -94,7 +125,9 @@ class QuizController extends Controller
             'quiz' => $data['quiz'],
             'attempts' => $data['attempts'],
             'activeAttempt' => $data['active_attempt'],
-            'canStart' => $data['can_start'],
+            'canStart' => $data['can_start'] && $isUnlocked,
+            'isUnlocked' => $isUnlocked,
+            'prerequisiteStatus' => $prerequisiteStatus,
         ], 'layouts/student'));
     }
 }

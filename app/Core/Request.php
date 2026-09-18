@@ -298,6 +298,17 @@ class Request
         return $this->attributes[$key] ?? $default;
     }
 
+    public function wantsJson(): bool
+    {
+        $accept = (string)$this->header('Accept', '');
+        return str_contains($accept, 'application/json') || $this->isAjax();
+    }
+
+    public function expectsJson(): bool
+    {
+        return $this->wantsJson();
+    }
+
     public function getSession(): Session
     {
         Session::start();

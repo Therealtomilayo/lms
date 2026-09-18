@@ -12,19 +12,29 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Services\QuizService;
 
+use App\Models\ActivityProgress;
+use App\Repositories\StudentRepository;
+use App\Services\PrerequisiteService;
+
 /**
  * Controller for Student CBT Exam Player, Autosaving, Submission, and Results
  */
 class QuizAttemptController extends Controller
 {
     private QuizService $quizService;
+    private PrerequisiteService $prerequisiteService;
+    private StudentRepository $studentRepository;
 
     public function __construct(
         ?AuthenticatorInterface $authenticator = null,
-        ?QuizService $quizService = null
+        ?QuizService $quizService = null,
+        ?PrerequisiteService $prerequisiteService = null,
+        ?StudentRepository $studentRepository = null
     ) {
         parent::__construct($authenticator);
         $this->quizService = $quizService ?? new QuizService();
+        $this->prerequisiteService = $prerequisiteService ?? new PrerequisiteService();
+        $this->studentRepository = $studentRepository ?? new StudentRepository();
     }
 
     /**
@@ -35,6 +45,23 @@ class QuizAttemptController extends Controller
     {
         $userContext = $this->requireAuthContext($request);
         $quizId = is_array($id) ? (int)($id['id'] ?? 0) : (int)$id;
+
+        // Server-authoritative prerequisite check
+        $student = $this->studentRepository->findByUserId($userContext->id);
+        if ($student) {
+            $isUnlocked = $this->prerequisiteService->isActivityUnlocked(
+                studentId: $student->id,
+                activityType: ActivityProgress::TYPE_QUIZ,
+                activityId: $quizId
+            );
+
+            if (!$isUnlocked) {
+                return $this->redirectWithError(
+                    "/student/quizzes/{$quizId}",
+                    'Access denied: You have not completed all required prerequisite learning activities for this assessment.'
+                );
+            }
+        }
 
         try {
             $result = $this->quizService->startAttempt($quizId, $userContext);

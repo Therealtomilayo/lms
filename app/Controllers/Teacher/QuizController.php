@@ -12,10 +12,15 @@ use App\Core\Exceptions\ResourceNotFoundException;
 use App\Core\Exceptions\ValidationException;
 use App\Core\Request;
 use App\Core\Response;
+use App\Models\ActivityProgress;
+use App\Policies\QuizPolicy;
 use App\Repositories\AcademicRepository;
+use App\Repositories\ContentRepository;
+use App\Repositories\DocumentSectionRepository;
 use App\Repositories\QuestionBankRepository;
 use App\Repositories\QuizRepository;
 use App\Repositories\TeacherRepository;
+use App\Services\PrerequisiteService;
 use App\Services\QuizService;
 
 /**
@@ -28,6 +33,9 @@ class QuizController extends Controller
     private QuestionBankRepository $questionBankRepository;
     private AcademicRepository $academicRepository;
     private TeacherRepository $teacherRepository;
+    private PrerequisiteService $prerequisiteService;
+    private ContentRepository $contentRepository;
+    private DocumentSectionRepository $sectionRepository;
 
     public function __construct(
         ?AuthenticatorInterface $authenticator = null,
@@ -35,7 +43,10 @@ class QuizController extends Controller
         ?QuizRepository $quizRepository = null,
         ?QuestionBankRepository $questionBankRepository = null,
         ?AcademicRepository $academicRepository = null,
-        ?TeacherRepository $teacherRepository = null
+        ?TeacherRepository $teacherRepository = null,
+        ?PrerequisiteService $prerequisiteService = null,
+        ?ContentRepository $contentRepository = null,
+        ?DocumentSectionRepository $sectionRepository = null
     ) {
         parent::__construct($authenticator);
         $this->quizService = $quizService ?? new QuizService();
@@ -43,6 +54,9 @@ class QuizController extends Controller
         $this->questionBankRepository = $questionBankRepository ?? new QuestionBankRepository();
         $this->academicRepository = $academicRepository ?? new AcademicRepository();
         $this->teacherRepository = $teacherRepository ?? new TeacherRepository();
+        $this->prerequisiteService = $prerequisiteService ?? new PrerequisiteService();
+        $this->contentRepository = $contentRepository ?? new ContentRepository();
+        $this->sectionRepository = $sectionRepository ?? new DocumentSectionRepository();
     }
 
     /**
@@ -139,12 +153,49 @@ class QuizController extends Controller
 
         $terms = $this->academicRepository->findAllTerms();
 
+        // Load configured prerequisites for this quiz
+        $configuredPrerequisites = $this->prerequisiteService->getConfiguredPrerequisites(
+            ActivityProgress::TYPE_QUIZ,
+            $quizId
+        );
+
+        // Load available activities from the same class_subject to offer as potential prerequisites
+        $availableSections = [];
+        $availableQuizzes = [];
+        if ($quiz->classSubjectId) {
+            $contentItems = $this->contentRepository->getByClassSubject($quiz->classSubjectId);
+            foreach ($contentItems as $ci) {
+                if ($ci->type === 'document') {
+                    $secs = $this->sectionRepository->getByContentItemId($ci->id);
+                    foreach ($secs as $s) {
+                        $availableSections[] = [
+                            'id' => $s->id,
+                            'title' => "{$ci->title} &bull; Section #{$s->sequenceOrder}: {$s->title}",
+                        ];
+                    }
+                }
+            }
+
+            $teacherQuizzes = $this->quizRepository->findByClassSubject($quiz->classSubjectId);
+            foreach ($teacherQuizzes as $tq) {
+                if ($tq->id !== $quizId) {
+                    $availableQuizzes[] = [
+                        'id' => $tq->id,
+                        'title' => $tq->title,
+                    ];
+                }
+            }
+        }
+
         return Response::html($this->render('teacher/quizzes/edit', [
             'title' => 'Edit Quiz Settings — ' . htmlspecialchars($quiz->title),
             'headerTitle' => 'Edit Quiz Settings',
             'user' => $userContext,
             'quiz' => $quiz,
             'terms' => $terms,
+            'configuredPrerequisites' => $configuredPrerequisites,
+            'availableSections' => $availableSections,
+            'availableQuizzes' => $availableQuizzes,
             'errors' => $request->getSession()?->getFlash('errors') ?? [],
             'old' => $request->getSession()?->getFlash('old') ?? [],
         ], 'layouts/teacher'));
@@ -256,6 +307,83 @@ class QuizController extends Controller
             return $this->redirectWithSuccess('/teacher/quizzes', $result->message);
         } catch (\Throwable $e) {
             return $this->redirectWithError('/teacher/quizzes', $e->getMessage());
+        }
+    }
+
+    /**
+     * Add prerequisite for quiz.
+     * Route: POST /teacher/quizzes/{id}/prerequisites
+     */
+    public function addPrerequisite(Request $request, array|string|int $id): Response
+    {
+        $userContext = $this->requireAuthContext($request);
+        $quizId = is_array($id) ? (int)($id['id'] ?? 0) : (int)$id;
+        $quiz = $this->quizRepository->findById($quizId, false);
+
+        if (!$quiz) {
+            return $this->notFound('Quiz not found.');
+        }
+
+        if (!QuizPolicy::canEditQuiz($userContext, $quiz, $this->academicRepository, $this->teacherRepository)) {
+            return $this->forbidden('You are not authorized to manage prerequisites for this quiz.');
+        }
+
+        $prereqType = trim((string)$request->post('prerequisite_type', ''));
+        $prereqId = (int)$request->post('prerequisite_id', 0);
+
+        try {
+            $this->prerequisiteService->createPrerequisite(
+                targetType: ActivityProgress::TYPE_QUIZ,
+                targetId: $quizId,
+                prereqType: $prereqType,
+                prereqId: $prereqId
+            );
+
+            return $this->redirectWithSuccess(
+                "/teacher/quizzes/{$quizId}/edit",
+                'Prerequisite added successfully.'
+            );
+        } catch (ValidationException|DomainRuleException $e) {
+            return $this->redirectWithError(
+                "/teacher/quizzes/{$quizId}/edit",
+                $e instanceof ValidationException ? implode(' ', $e->getErrors()) : $e->getMessage()
+            );
+        } catch (\Throwable $e) {
+            return $this->redirectWithError("/teacher/quizzes/{$quizId}/edit", $e->getMessage());
+        }
+    }
+
+    /**
+     * Delete prerequisite for quiz.
+     * Route: POST /teacher/quizzes/{id}/prerequisites/{prerequisiteId}/delete
+     */
+    public function deletePrerequisite(Request $request, array|string|int $id, array|string|int $prerequisiteId = 0): Response
+    {
+        $userContext = $this->requireAuthContext($request);
+        $quizId = is_array($id) ? (int)($id['id'] ?? 0) : (int)$id;
+        $prereqRelId = is_array($prerequisiteId) ? (int)($prerequisiteId['prerequisiteId'] ?? 0) : (int)$prerequisiteId;
+        if ($prereqRelId <= 0) {
+            $prereqRelId = (int)$request->post('prerequisite_id', 0);
+        }
+
+        $quiz = $this->quizRepository->findById($quizId, false);
+        if (!$quiz) {
+            return $this->notFound('Quiz not found.');
+        }
+
+        if (!QuizPolicy::canEditQuiz($userContext, $quiz, $this->academicRepository, $this->teacherRepository)) {
+            return $this->forbidden('You are not authorized to manage prerequisites for this quiz.');
+        }
+
+        try {
+            $this->prerequisiteService->deletePrerequisite($prereqRelId);
+
+            return $this->redirectWithSuccess(
+                "/teacher/quizzes/{$quizId}/edit",
+                'Prerequisite removed successfully.'
+            );
+        } catch (\Throwable $e) {
+            return $this->redirectWithError("/teacher/quizzes/{$quizId}/edit", $e->getMessage());
         }
     }
 }

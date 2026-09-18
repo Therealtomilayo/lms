@@ -12,14 +12,18 @@ use App\Core\UserContext;
 use App\DTO\ServiceResult;
 use App\Models\Assignment;
 use App\Models\AssignmentSubmission;
+use App\Models\ActivityProgress;
 use App\Policies\AssignmentPolicy;
 use App\Repositories\AcademicRepository;
+use App\Repositories\ActivityPrerequisiteRepository;
+use App\Repositories\ActivityProgressRepository;
 use App\Repositories\AssignmentRepository;
 use App\Repositories\EnrollmentRepository;
 use App\Repositories\FileRepository;
 use App\Repositories\ParentRepository;
 use App\Repositories\StudentRepository;
 use App\Repositories\TeacherRepository;
+use PDO;
 
 /**
  * Application Service for Coursework Assignments and Grading Lifecycle
@@ -36,6 +40,10 @@ class AssignmentService
     private ParentRepository $parentRepository;
     private FileRepository $fileRepository;
     private FileStorageService $fileStorageService;
+    private ActivityProgressRepository $activityProgressRepository;
+    private ActivityPrerequisiteRepository $prerequisiteRepository;
+    private \App\Repositories\ModuleRepository $moduleRepository;
+    private PDO $pdo;
 
     public function __construct(
         ?AssignmentRepository $assignmentRepository = null,
@@ -45,7 +53,10 @@ class AssignmentService
         ?EnrollmentRepository $enrollmentRepository = null,
         ?ParentRepository $parentRepository = null,
         ?FileRepository $fileRepository = null,
-        ?FileStorageService $fileStorageService = null
+        ?FileStorageService $fileStorageService = null,
+        ?ActivityProgressRepository $activityProgressRepository = null,
+        ?ActivityPrerequisiteRepository $prerequisiteRepository = null,
+        ?\App\Repositories\ModuleRepository $moduleRepository = null
     ) {
         $this->assignmentRepository = $assignmentRepository ?? new AssignmentRepository();
         $this->academicRepository = $academicRepository ?? new AcademicRepository();
@@ -63,6 +74,10 @@ class AssignmentService
             parentRepository: $this->parentRepository,
             assignmentRepository: $this->assignmentRepository
         );
+        $this->pdo = $this->assignmentRepository->getPdo();
+        $this->activityProgressRepository = $activityProgressRepository ?? new ActivityProgressRepository($this->pdo);
+        $this->prerequisiteRepository = $prerequisiteRepository ?? new ActivityPrerequisiteRepository($this->pdo);
+        $this->moduleRepository = $moduleRepository ?? new \App\Repositories\ModuleRepository($this->pdo);
     }
 
     /**
@@ -299,10 +314,28 @@ class AssignmentService
             return ServiceResult::success(null);
         }
 
-        // No submissions exist, safe to hard delete
-        $this->assignmentRepository->delete($id);
+        $this->pdo->beginTransaction();
 
-        return ServiceResult::success(null);
+        try {
+            // Clean up prerequisites referencing this assignment (as target or prerequisite)
+            $this->prerequisiteRepository->deleteForActivity(ActivityProgress::TYPE_ASSIGNMENT, $id);
+
+            // Clean up module item links referencing this assignment
+            $this->moduleRepository->deleteItemsByActivity(\App\Models\ModuleItem::TYPE_ASSIGNMENT, $id);
+
+            // Clean up learning activity progress records for this assignment
+            $this->activityProgressRepository->deleteProgressForActivity(ActivityProgress::TYPE_ASSIGNMENT, $id);
+
+            // No submissions exist, safe to hard delete
+            $this->assignmentRepository->delete($id);
+
+            $this->pdo->commit();
+
+            return ServiceResult::success(null);
+        } catch (\Throwable $e) {
+            $this->pdo->rollBack();
+            throw new DomainRuleException('Failed to delete assignment: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -338,14 +371,15 @@ class AssignmentService
             throw new AuthorizationException('You are not eligible to submit this assignment.');
         }
 
-        $textResponse = isset($data['text_response']) && trim((string)$data['text_response']) !== ''
+        $textResponse = array_key_exists('text_response', $data) && trim((string)$data['text_response']) !== ''
             ? trim((string)$data['text_response'])
             : null;
-
-        $hasUpload = $uploadedFile && isset($uploadedFile['error']) && $uploadedFile['error'] !== UPLOAD_ERR_NO_FILE;
+        $hasUpload = $uploadedFile !== null && isset($uploadedFile['error']) && $uploadedFile['error'] === UPLOAD_ERR_OK;
 
         if ($textResponse === null && !$hasUpload) {
-            throw new ValidationException(['submission' => ['You must provide a text response or upload a file.']]);
+            throw new ValidationException([
+                'submission' => ['You must provide a written response or upload a file.']
+            ]);
         }
 
         $existing = $this->assignmentRepository->findSubmissionByAssignmentAndStudent($assignmentId, $student->id);
@@ -354,19 +388,23 @@ class AssignmentService
         }
 
         $now = date('Y-m-d H:i:s');
-        $fileId = $existing?->fileId;
+        $fileId = null;
 
         if ($hasUpload) {
             $fileRecord = $this->fileStorageService->storeUploadedFile(
-                $uploadedFile,
-                $actor->id,
-                'assignment_submission',
-                $existing ? $existing->id : 0
+                file: $uploadedFile,
+                uploadedBy: $actor->id,
+                ownerType: 'assignment_submission',
+                ownerId: 0
             );
             $fileId = $fileRecord->id;
         }
 
         if ($existing) {
+            if ($hasUpload && $existing->fileId) {
+                $this->fileRepository->softDelete($existing->fileId);
+            }
+
             $this->assignmentRepository->updateSubmission($existing->id, [
                 'text_response' => $textResponse,
                 'file_id' => $fileId,
@@ -386,6 +424,14 @@ class AssignmentService
                 $this->fileRepository->updateOwner($fileId, 'assignment_submission', $submission->id);
             }
         }
+
+        // Record authoritative assignment completion in learning_activity_progress
+        $this->activityProgressRepository->recordActivityCompletion(
+            studentId: $student->id,
+            activityType: ActivityProgress::TYPE_ASSIGNMENT,
+            activityId: $assignmentId,
+            progressPercent: 100.0
+        );
 
         return ServiceResult::success($submission);
     }

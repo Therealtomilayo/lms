@@ -225,6 +225,83 @@ class QuizRepository
     }
 
     /**
+     * Bulk fetch quizzes by IDs.
+     *
+     * @param int[] $ids
+     * @return array<int, Quiz>
+     */
+    public function findByIds(array $ids): array
+    {
+        $cleanIds = array_values(array_unique(array_filter(array_map('intval', $ids), fn($id) => $id > 0)));
+        if (empty($cleanIds)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($cleanIds), '?'));
+        $stmt = $this->pdo->prepare(
+            "SELECT q.*, 
+                    cs.id AS cs_id, cs.session_id AS cs_session_id, cs.class_id AS cs_class_id, cs.subject_id AS cs_subject_id, cs.teacher_id AS cs_teacher_id,
+                    sub.name AS subject_name, sub.code AS subject_code,
+                    c.name AS class_name, c.section_arm,
+                    tu.name AS teacher_name, tu.email AS teacher_email, tchr.staff_id AS teacher_staff_id, tchr.user_id AS teacher_user_id,
+                    t.name AS term_name, t.session_id AS term_session_id
+             FROM `quizzes` q
+             LEFT JOIN `class_subjects` cs ON q.class_subject_id = cs.id
+             LEFT JOIN `subjects` sub ON cs.subject_id = sub.id
+             LEFT JOIN `classes` c ON cs.class_id = c.id
+             LEFT JOIN `teachers` tchr ON (q.teacher_id = tchr.id OR cs.teacher_id = tchr.id)
+             LEFT JOIN `users` tu ON tchr.user_id = tu.id
+             LEFT JOIN `terms` t ON q.term_id = t.id
+             WHERE q.id IN ({$placeholders})"
+        );
+        $stmt->execute($cleanIds);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $map = [];
+        foreach ($rows as $row) {
+            $teacher = null;
+            if (!empty($row['teacher_name']) || !empty($row['teacher_id'])) {
+                $teacher = Teacher::fromArray([
+                    'id' => (int)($row['teacher_id'] ?: ($row['cs_teacher_id'] ?? 0)),
+                    'user_id' => (int)($row['teacher_user_id'] ?? 0),
+                    'staff_id' => (string)($row['teacher_staff_id'] ?? ''),
+                    'user_name' => (string)($row['teacher_name'] ?? ''),
+                ]);
+            }
+
+            $classSubject = null;
+            if (!empty($row['cs_id'])) {
+                $classSubject = ClassSubject::fromArray([
+                    'id' => $row['cs_id'],
+                    'session_id' => $row['cs_session_id'] ?? 0,
+                    'class_id' => $row['cs_class_id'],
+                    'subject_id' => $row['cs_subject_id'],
+                    'teacher_id' => $row['cs_teacher_id'],
+                    'subject_name' => $row['subject_name'] ?? '',
+                    'subject_code' => $row['subject_code'] ?? '',
+                    'class_name' => $row['class_name'] ?? '',
+                    'section_arm' => $row['section_arm'] ?? null,
+                    'teacher_name' => $row['teacher_name'] ?? null,
+                    'teacher_staff_id' => $row['teacher_staff_id'] ?? null,
+                ], null, null, null, $teacher);
+            }
+
+            $term = null;
+            if (!empty($row['term_id'])) {
+                $term = Term::fromArray([
+                    'id' => $row['term_id'],
+                    'session_id' => $row['term_session_id'] ?? 0,
+                    'name' => $row['term_name'] ?? '',
+                ]);
+            }
+
+            $map[(int)$row['id']] = Quiz::fromArray($row, $classSubject, $term, $teacher, []);
+        }
+
+        return $map;
+    }
+
+    /**
      * Get quizzes taught by a teacher.
      *
      * @return array<int, Quiz>

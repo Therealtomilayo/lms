@@ -20,7 +20,7 @@ $csrfToken = \App\Core\Csrf::getToken();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scratch-Card PIN Required — Claret Academy</title>
+    <title>Scratch-Card PIN Required — Claret International School</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://js.paystack.co/v1/inline.js"></script>
     <script>
@@ -197,7 +197,7 @@ $csrfToken = \App\Core\Csrf::getToken();
         </div>
 
         <footer class="text-center text-xs text-slate-400">
-            &copy; <?= date('Y') ?> Claret Academy &bull; Continuous Assessment & Result Security
+            &copy; <?= date('Y') ?> Claret International School &bull; Continuous Assessment & Result Security
         </footer>
     </div>
 

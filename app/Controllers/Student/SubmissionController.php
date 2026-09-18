@@ -12,7 +12,10 @@ use App\Core\Exceptions\ResourceNotFoundException;
 use App\Core\Exceptions\ValidationException;
 use App\Core\Request;
 use App\Core\Response;
+use App\Models\ActivityProgress;
+use App\Repositories\StudentRepository;
 use App\Services\AssignmentService;
+use App\Services\PrerequisiteService;
 
 /**
  * Controller for Student Assignment Submission
@@ -20,13 +23,19 @@ use App\Services\AssignmentService;
 class SubmissionController extends Controller
 {
     private AssignmentService $assignmentService;
+    private PrerequisiteService $prerequisiteService;
+    private StudentRepository $studentRepository;
 
     public function __construct(
         ?AuthenticatorInterface $authenticator = null,
-        ?AssignmentService $assignmentService = null
+        ?AssignmentService $assignmentService = null,
+        ?PrerequisiteService $prerequisiteService = null,
+        ?StudentRepository $studentRepository = null
     ) {
         parent::__construct($authenticator);
         $this->assignmentService = $assignmentService ?? new AssignmentService();
+        $this->prerequisiteService = $prerequisiteService ?? new PrerequisiteService();
+        $this->studentRepository = $studentRepository ?? new StudentRepository();
     }
 
     /**
@@ -37,6 +46,24 @@ class SubmissionController extends Controller
     {
         $userContext = $this->requireAuthContext($request);
         $assignmentId = is_array($id) ? (int)($id['id'] ?? 0) : (int)$id;
+
+        // Server-authoritative prerequisite check
+        $student = $this->studentRepository->findByUserId($userContext->id);
+        if ($student) {
+            $isUnlocked = $this->prerequisiteService->isActivityUnlocked(
+                studentId: $student->id,
+                activityType: ActivityProgress::TYPE_ASSIGNMENT,
+                activityId: $assignmentId
+            );
+
+            if (!$isUnlocked) {
+                return $this->redirectWithError(
+                    "/student/assignments/{$assignmentId}",
+                    'Access denied: You have not completed all required prerequisite learning activities for this assignment.'
+                );
+            }
+        }
+
         $postData = $request->all();
         $files = $_FILES ?? [];
         $uploadedFile = $files['attachment'] ?? null;

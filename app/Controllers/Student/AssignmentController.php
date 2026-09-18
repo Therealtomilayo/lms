@@ -12,10 +12,12 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Policies\AssignmentPolicy;
 use App\Repositories\AcademicRepository;
+use App\Models\ActivityProgress;
 use App\Repositories\AssignmentRepository;
 use App\Repositories\EnrollmentRepository;
 use App\Repositories\StudentRepository;
 use App\Services\AssignmentService;
+use App\Services\PrerequisiteService;
 
 /**
  * Controller for Student Coursework Discovery & Assignment Overview
@@ -27,6 +29,7 @@ class AssignmentController extends Controller
     private AcademicRepository $academicRepo;
     private StudentRepository $studentRepo;
     private EnrollmentRepository $enrollmentRepo;
+    private PrerequisiteService $prerequisiteService;
 
     public function __construct(
         ?AuthenticatorInterface $authenticator = null,
@@ -34,7 +37,8 @@ class AssignmentController extends Controller
         ?AssignmentRepository $assignmentRepo = null,
         ?AcademicRepository $academicRepo = null,
         ?StudentRepository $studentRepo = null,
-        ?EnrollmentRepository $enrollmentRepo = null
+        ?EnrollmentRepository $enrollmentRepo = null,
+        ?PrerequisiteService $prerequisiteService = null
     ) {
         parent::__construct($authenticator);
         $this->assignmentService = $assignmentService ?? new AssignmentService();
@@ -42,6 +46,7 @@ class AssignmentController extends Controller
         $this->academicRepo = $academicRepo ?? new AcademicRepository();
         $this->studentRepo = $studentRepo ?? new StudentRepository();
         $this->enrollmentRepo = $enrollmentRepo ?? new EnrollmentRepository();
+        $this->prerequisiteService = $prerequisiteService ?? new PrerequisiteService();
     }
 
     /**
@@ -104,6 +109,18 @@ class AssignmentController extends Controller
         $student = $this->studentRepo->findByUserId($userContext->id);
         $submission = $student ? $this->assignmentRepo->findSubmissionByAssignmentAndStudent($assignmentId, $student->id) : null;
 
+        // Prerequisite evaluation
+        $prerequisiteStatus = null;
+        $isUnlocked = true;
+        if ($student) {
+            $prerequisiteStatus = $this->prerequisiteService->getPrerequisiteStatus(
+                studentId: $student->id,
+                activityType: ActivityProgress::TYPE_ASSIGNMENT,
+                activityId: $assignmentId
+            );
+            $isUnlocked = $prerequisiteStatus['is_unlocked'];
+        }
+
         return Response::html($this->render('student/assignments/show', [
             'title' => "{$assignment->title} — Coursework Task",
             'headerTitle' => 'Coursework Task',
@@ -111,6 +128,8 @@ class AssignmentController extends Controller
             'student' => $student,
             'assignment' => $assignment,
             'submission' => $submission,
+            'isUnlocked' => $isUnlocked,
+            'prerequisiteStatus' => $prerequisiteStatus,
         ], 'layouts/student'));
     }
 }

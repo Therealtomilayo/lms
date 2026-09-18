@@ -94,7 +94,7 @@
                     <label class="relative flex flex-col items-center p-3.5 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50/50">
                         <input type="radio" name="type" value="document" class="sr-only" <?= old('type') === 'document' ? 'checked' : '' ?> onchange="updateTypeFields('document')">
                         <svg class="w-5 h-5 text-emerald-600 mb-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-                        <span class="text-xs font-bold text-slate-900">Document / PDF</span>
+                        <span class="text-xs font-bold text-slate-900">Document (PDF / DOCX)</span>
                     </label>
 
                     <label class="relative flex flex-col items-center p-3.5 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50/50">
@@ -148,7 +148,7 @@
                             </span>
                             <span class="pl-1 text-slate-500">or drag and drop</span>
                         </div>
-                        <p class="text-[11px] text-slate-400">PDF, DOCX, PPTX, XLSX, MP4, MP3 up to 25MB</p>
+                        <p class="text-[11px] text-slate-400">PDF, DOCX, PPTX, XLSX, MP4, MP3 up to 10MB</p>
                         <p id="file-chosen-name" class="text-xs font-bold text-emerald-700 pt-1"></p>
                     </div>
                 </div>

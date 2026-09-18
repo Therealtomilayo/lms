@@ -96,7 +96,7 @@ class DatabaseSeeder
     private function seedSystemSettings(PDO $pdo): void
     {
         $settings = [
-            'school_name' => 'Claret Academy',
+            'school_name' => 'Claret International School',
             'school_motto' => 'Discipline, Integrity & Ardour',
             'school_email' => 'info@claret.edu',
             'school_phone' => '+234 803 788 1737',

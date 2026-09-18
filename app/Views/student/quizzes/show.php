@@ -119,13 +119,30 @@
             </div>
         </div>
 
+        <?php if (!empty($isUnlocked) === false && !empty($prerequisiteStatus)): ?>
+            <!-- Locked Activity Warning Banner -->
+            <div class="pt-2">
+                <?php $this->include('components/locked_activity', [
+                    'title' => $quiz->title,
+                    'allPrerequisites' => $prerequisiteStatus['prerequisites'] ?? [],
+                    'unmet' => $prerequisiteStatus['unmet'] ?? [],
+                    'backUrl' => '/student/quizzes',
+                ]); ?>
+            </div>
+        <?php endif; ?>
+
         <!-- Action Submission / Start Button -->
         <div class="pt-4 border-t border-slate-100 flex items-center justify-between flex-wrap gap-4">
             <a href="/student/quizzes" class="text-xs font-bold text-slate-500 hover:text-slate-800 transition">
                 &larr; Return to Catalog
             </a>
 
-            <?php if ($activeAttempt): ?>
+            <?php if (!empty($isUnlocked) === false): ?>
+                <button disabled class="px-6 py-3 bg-amber-100 border border-amber-300 text-amber-800 text-xs font-bold rounded-xl cursor-not-allowed inline-flex items-center gap-2">
+                    <svg class="w-4 h-4 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                    <span>Assessment Locked &bull; Prerequisites Incomplete</span>
+                </button>
+            <?php elseif ($activeAttempt): ?>
                 <a href="/student/quiz-attempts/<?= (int)$activeAttempt->id ?>" 
                    class="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-xs transition inline-flex items-center gap-2">
                     <span>Resume Active Attempt &rarr;</span>

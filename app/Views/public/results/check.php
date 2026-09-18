@@ -17,7 +17,7 @@ $csrfToken = \App\Core\Csrf::getToken();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Result Portal — Check Terminal Report Card | Claret Academy</title>
+    <title>Result Portal — Check Terminal Report Card | Claret International School</title>
     <meta name="description" content="Access and verify terminal report cards securely using your Student ID and Scratch-Card PIN.">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -53,7 +53,7 @@ $csrfToken = \App\Core\Csrf::getToken();
         <div class="flex items-center gap-3">
             <img src="/assets/img/logo.png" alt="Logo" class="w-11 h-11 object-contain drop-shadow" onerror="this.src='/favicon.ico'; this.onerror=null;">
             <div>
-                <span class="text-sm font-black tracking-tight text-white uppercase block leading-none">Claret Academy</span>
+                <span class="text-sm font-black tracking-tight text-white uppercase block leading-none">Claret International School</span>
                 <span class="text-[10px] tracking-wider text-sky-400 font-semibold uppercase">Official Result Portal</span>
             </div>
         </div>
@@ -207,7 +207,7 @@ $csrfToken = \App\Core\Csrf::getToken();
 
     <!-- Footer -->
     <footer class="max-w-4xl w-full mx-auto text-center py-4 text-xs text-slate-500">
-        &copy; <?= date('Y') ?> Claret Academy &bull; Continuous Assessment & Result Security System
+        &copy; <?= date('Y') ?> Claret International School &bull; Continuous Assessment & Result Security System
     </footer>
 
     <!-- Auto-formatting PIN Input Mask (XXXX-XXXX-XXXX) -->

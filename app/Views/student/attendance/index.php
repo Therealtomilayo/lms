@@ -43,23 +43,30 @@
 
     <!-- 4-Card KPI Summary Metrics Strip -->
     <?php
-        $rate = (float)($summary['attendance_rate'] ?? 100);
+        $weightedRate = (float)($summary['weighted_rate'] ?? $summary['attendance_rate'] ?? 100);
+        $unweightedRate = (float)($summary['unweighted_rate'] ?? $summary['attendance_rate'] ?? 100);
+        $lateWeight = (float)($summary['late_weight'] ?? 0.6);
         $totalDays = (int)($summary['total_days'] ?? 0);
         $presentDays = (int)($summary['present_days'] ?? 0);
         $lateDays = (int)($summary['late_days'] ?? 0);
         $absentDays = (int)($summary['absent_days'] ?? 0);
     ?>
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <!-- Attendance Rate -->
+        <!-- Attendance Rate (Weighted SRS §26) -->
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-            <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Attendance Rate</p>
+            <div class="flex items-center justify-between">
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Attendance Rate</p>
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200" title="School Policy: Late arrivals receive <?= round($lateWeight * 100) ?>% credit">
+                    <?= round($lateWeight * 100) ?>% Late Credit
+                </span>
+            </div>
             <div class="flex items-baseline gap-1 mt-1">
-                <h3 class="text-2xl font-extrabold <?= $rate >= 75 ? 'text-emerald-600' : 'text-rose-600' ?>">
-                    <?= number_format($rate, 1) ?>%
+                <h3 class="text-2xl font-extrabold <?= $weightedRate >= 75 ? 'text-emerald-600' : 'text-rose-600' ?>">
+                    <?= number_format($weightedRate, 1) ?>%
                 </h3>
             </div>
-            <span class="text-[11px] font-medium <?= $rate >= 75 ? 'text-emerald-600' : 'text-rose-600' ?> mt-1 block">
-                <?= $rate >= 75 ? 'Good Standing (&ge; 75%)' : 'Warning: Below 75%' ?>
+            <span class="text-[11px] font-medium <?= $weightedRate >= 75 ? 'text-emerald-600' : 'text-rose-600' ?> mt-1 block">
+                <?= $weightedRate >= 75 ? 'Good Standing (&ge; 75%)' : 'Warning: Below 75%' ?>
             </span>
         </div>
 

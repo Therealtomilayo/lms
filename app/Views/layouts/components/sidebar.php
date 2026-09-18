@@ -85,6 +85,12 @@ if (!function_exists('is_sidebar_item_active')) {
         if (preg_match('#^/parent/children/\d+$#', $route) === 1) {
             return $parsedUri === $route || $parsedUri === $route . '/';
         }
+        if ($route === '/teacher/modules?tab=progress') {
+            return str_contains($currentUri, 'tab=progress') || preg_match('#^/teacher/subjects/\d+/.*progress#', $parsedUri) === 1;
+        }
+        if ($route === '/teacher/modules') {
+            return $parsedUri === '/teacher/modules' && !str_contains($currentUri, 'tab=progress');
+        }
         if ($route !== '/' && !in_array($route, ['/admin/dashboard', '/teacher/dashboard', '/student/dashboard', '/parent/dashboard'], true)) {
             return str_starts_with($parsedUri, $route);
         }
@@ -143,6 +149,8 @@ if (!function_exists('get_sidebar_icon')) {
                 return '<svg class="' . $svgClass . '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>';
             case 'video':
                 return '<svg class="' . $svgClass . '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>';
+            case 'award':
+                return '<svg class="' . $svgClass . '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>';
             default:
                 return '<svg class="' . $svgClass . '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>';
         }
@@ -179,8 +187,10 @@ $navConfig = [
         ['label' => 'Assessment Config', 'route' => '/admin/assessment-categories', 'icon' => 'clipboard'],
         ['label' => 'Results Review', 'route' => '/admin/results/review', 'icon' => 'document-text'],
         ['label' => 'Student Promotions', 'route' => '/admin/promotions', 'icon' => 'academic'],
+        ['label' => 'Badges & Honors', 'route' => '/admin/badges', 'icon' => 'award'],
         ['category' => 'Online Classes & Comms'],
         ['label' => 'Live Online Classes', 'route' => '/admin/live-classes', 'icon' => 'video'],
+        ['label' => 'Class Discussions', 'route' => '/admin/discussions', 'icon' => 'announcement'],
         ['label' => 'Announcements', 'route' => '/admin/announcements', 'icon' => 'announcement'],
         ['category' => 'Finance & Payments'],
         ['label' => 'Payments & Revenue', 'route' => '/admin/payments', 'icon' => 'document-text'],
@@ -195,6 +205,9 @@ $navConfig = [
         ['label' => 'My Classes & Rosters', 'route' => '/teacher/classes', 'icon' => 'users'],
         ['label' => 'Live Online Classes', 'route' => '/teacher/live-classes', 'icon' => 'video'],
         ['label' => 'Learning Materials', 'route' => '/teacher/content', 'icon' => 'book'],
+        ['label' => 'Course Modules', 'route' => '/teacher/modules', 'icon' => 'academic'],
+        ['label' => 'Progression Reports', 'route' => '/teacher/modules?tab=progress', 'icon' => 'chart'],
+        ['label' => 'Badges & Rewards', 'route' => '/teacher/badges', 'icon' => 'award'],
         ['label' => 'Assignments', 'route' => '/teacher/assignments', 'icon' => 'clipboard'],
         ['label' => 'Question Bank', 'route' => '/teacher/question-bank', 'icon' => 'database'],
         ['label' => 'Quiz Management', 'route' => '/teacher/quizzes', 'icon' => 'quiz'],
@@ -209,6 +222,7 @@ $navConfig = [
         ['label' => 'Live Online Classes', 'route' => '/student/live-classes', 'icon' => 'video'],
         ['label' => 'Enrolled Subjects', 'route' => '/student/subjects', 'icon' => 'academic'],
         ['label' => 'Learning Materials', 'route' => '/student/content', 'icon' => 'book'],
+        ['label' => 'My Achievements', 'route' => '/student/badges', 'icon' => 'award'],
         ['label' => 'Assignments', 'route' => '/student/assignments', 'icon' => 'clipboard'],
         ['label' => 'Online Quizzes', 'route' => '/student/quizzes', 'icon' => 'quiz'],
         ['label' => 'Academic Grades', 'route' => '/student/grades', 'icon' => 'document-text'],
@@ -243,7 +257,9 @@ if ($role === 'parent' && $activeChildId > 0) {
     $menuItems[] = ['label' => 'Child Academic Profile', 'route' => "/parent/children/{$activeChildId}", 'icon' => 'user-profile'];
     $menuItems[] = ['label' => 'Grades & Report Cards', 'route' => "/parent/children/{$activeChildId}/grades", 'icon' => 'document-text'];
     $menuItems[] = ['label' => 'Daily Attendance', 'route' => "/parent/children/{$activeChildId}/attendance", 'icon' => 'calendar'];
+    $menuItems[] = ['label' => 'Achievements & Badges', 'route' => "/parent/children/{$activeChildId}/badges", 'icon' => 'award'];
     $menuItems[] = ['label' => 'Coursework & Tasks', 'route' => "/parent/children/{$activeChildId}/assignments", 'icon' => 'clipboard'];
+    $menuItems[] = ['label' => 'Class Discussions', 'route' => "/parent/children/{$activeChildId}/discussions", 'icon' => 'announcement'];
     $menuItems[] = ['label' => 'Announcements', 'route' => "/parent/children/{$activeChildId}/announcements", 'icon' => 'announcement'];
     $menuItems[] = ['label' => 'Weekly Timetable', 'route' => "/parent/children/{$activeChildId}/timetable", 'icon' => 'timetable'];
 }
@@ -263,10 +279,10 @@ if ($role === 'parent' && $activeChildId > 0) {
     <div class="p-5 border-b border-slate-800 flex items-center justify-between gap-3">
         <div class="flex items-center gap-3 min-w-0">
             <div class="w-10 h-10 rounded-lg overflow-hidden bg-white flex items-center justify-center p-1 flex-shrink-0 shadow-xs">
-                <img src="/assets/img/logo.png" alt="Claret Academy Logo" class="w-full h-full object-contain" onerror="this.parentElement.innerHTML='<span class=\'font-bold text-slate-900 text-sm\'>CL</span>'">
+                <img src="/assets/img/logo.png" alt="Claret International School Logo" class="w-full h-full object-contain" onerror="this.parentElement.innerHTML='<span class=\'font-bold text-slate-900 text-sm\'>CL</span>'">
             </div>
             <div class="truncate">
-                <h2 class="font-bold text-white leading-tight truncate">Claret Academy</h2>
+                <h2 class="font-bold text-white leading-tight truncate">Claret International School</h2>
                 <span class="text-xs font-semibold tracking-wide uppercase <?= e($roleBadgeColor ?? 'text-brand-400') ?>">
                     <?= e($roleLabel) ?>
                 </span>

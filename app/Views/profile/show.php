@@ -531,7 +531,7 @@ $displayRole = $roleLabels[$primaryRole] ?? ucfirst($primaryRole);
                 </div>
 
                 <p class="text-xs text-slate-500 leading-relaxed">
-                    Protect your Claret Academy portal identity. Regularly updating your password prevents unauthorized access to sensitive academic records.
+                    Protect your Claret International School portal identity. Regularly updating your password prevents unauthorized access to sensitive academic records.
                 </p>
 
                 <div class="mt-4 pt-4 border-t border-slate-100 space-y-3">
@@ -559,10 +559,10 @@ $displayRole = $roleLabels[$primaryRole] ?? ucfirst($primaryRole);
             <div class="bg-brand-50 rounded-2xl border border-brand-100 p-6">
                 <div class="flex items-center gap-3 mb-3">
                     <div class="w-10 h-10 rounded-lg overflow-hidden bg-white flex items-center justify-center p-1 shadow-xs flex-shrink-0">
-                        <img src="/assets/img/logo.png" alt="Claret Academy" class="w-full h-full object-contain" onerror="this.parentElement.innerHTML='<span class=\'font-bold text-brand-700 text-sm\'>CL</span>'">
+                        <img src="/assets/img/logo.png" alt="Claret International School" class="w-full h-full object-contain" onerror="this.parentElement.innerHTML='<span class=\'font-bold text-brand-700 text-sm\'>CL</span>'">
                     </div>
                     <div>
-                        <h4 class="text-sm font-bold text-brand-900 leading-tight">Claret Academy</h4>
+                        <h4 class="text-sm font-bold text-brand-900 leading-tight">Claret International School</h4>
                         <span class="text-[11px] font-semibold text-brand-700">Secondary School</span>
                     </div>
                 </div>

@@ -20,7 +20,7 @@
                 <div class="logo-fallback" style="display:none;">CL</div>
             </div>                </div>
                 <div>
-                    <h3 class="text-base font-bold text-white">Claret Academy Online Payments</h3>
+                    <h3 class="text-base font-bold text-white">Claret International School Online Payments</h3>
                     <p class="text-xs text-brand-200">Official Result Scratch-Card PIN Gateway</p>
                 </div>
             </div>

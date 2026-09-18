@@ -437,7 +437,7 @@ $days = [
                 </div>
                 <div>
                     <h1 class="text-base font-extrabold uppercase tracking-wide text-slate-900 leading-tight">
-                        Claret Academy Secondary School
+                        Claret International School
                     </h1>
                     <p class="text-xs font-semibold text-brand-700">
                         Official Classroom Timetable &amp; Weekly Lesson Schedule
@@ -623,7 +623,7 @@ $days = [
                 Official School Day Schedule & Bell Times
             </h4>
             <p class="text-xs text-slate-600 mt-1 leading-relaxed">
-                Claret Academy Secondary School operates on a disciplined bell schedule. Guardians are advised to ensure wards arrive before 07:45 AM for morning assembly and devotion roll-call.
+                Claret International School operates on a disciplined bell schedule. Guardians are advised to ensure wards arrive before 07:45 AM for morning assembly and devotion roll-call.
             </p>
             <div class="mt-2.5 text-xs text-brand-700 font-semibold flex flex-wrap gap-x-6 gap-y-1">
                 <span>&bull; <strong>Morning Assembly & Devotion:</strong> 07:45 AM &ndash; 08:00 AM</span>

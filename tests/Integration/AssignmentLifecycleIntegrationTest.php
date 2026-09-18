@@ -271,6 +271,35 @@ final class AssignmentLifecycleIntegrationTest extends TestCase
                 `updated_at` DATETIME NOT NULL,
                 UNIQUE(`assignment_id`, `student_id`)
             );
+
+            CREATE TABLE `learning_activity_progress` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT,
+                `student_id` INTEGER NOT NULL,
+                `activity_type` VARCHAR(50) NOT NULL,
+                `activity_id` INTEGER NOT NULL,
+                `last_page` INTEGER NULL,
+                `total_pages` INTEGER NULL,
+                `pages_read_json` TEXT NULL,
+                `progress_percent` REAL NOT NULL DEFAULT 0.00,
+                `is_completed` INTEGER NOT NULL DEFAULT 0,
+                `completed_at` DATETIME NULL,
+                `last_accessed_at` DATETIME NOT NULL,
+                `created_at` DATETIME NOT NULL,
+                `updated_at` DATETIME NOT NULL,
+                UNIQUE (`student_id`, `activity_type`, `activity_id`)
+            );
+
+            CREATE TABLE `activity_prerequisites` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT,
+                `activity_type` VARCHAR(50) NOT NULL,
+                `activity_id` INTEGER NOT NULL,
+                `prerequisite_activity_type` VARCHAR(50) NOT NULL,
+                `prerequisite_activity_id` INTEGER NOT NULL,
+                `requirement_type` VARCHAR(30) NOT NULL DEFAULT 'completion',
+                `created_at` DATETIME NOT NULL,
+                `updated_at` DATETIME NOT NULL,
+                UNIQUE (`activity_type`, `activity_id`, `prerequisite_activity_type`, `prerequisite_activity_id`)
+            );
         ");
 
         $this->userRepo = new UserRepository($this->pdo);

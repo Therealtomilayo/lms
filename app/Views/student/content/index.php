@@ -191,9 +191,24 @@
                         </h3>
 
                         <?php if (!empty($item->description)): ?>
-                            <p class="text-xs text-slate-500 line-clamp-3 leading-relaxed mt-2">
+                            <p class="text-xs text-slate-500 line-clamp-2 leading-relaxed mt-2">
                                 <?= htmlspecialchars($item->description) ?>
                             </p>
+                        <?php endif; ?>
+
+                        <?php $prog = ($progressMap ?? [])[(int)$item->id] ?? null; ?>
+                        <?php if ($prog): ?>
+                            <div class="mt-3 pt-3 border-t border-slate-100">
+                                <div class="flex items-center justify-between text-[11px] font-bold text-slate-500 mb-1">
+                                    <span>Reading Progress</span>
+                                    <span class="<?= $prog->isCompleted() ? 'text-emerald-700 font-extrabold' : 'text-sky-700' ?>">
+                                        <?= $prog->isCompleted() ? 'Completed ✓' : ((int)$prog->progressPercent . '% read') ?>
+                                    </span>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                    <div class="h-1.5 rounded-full transition-all duration-300 <?= $prog->isCompleted() ? 'bg-emerald-500' : 'bg-sky-500' ?>" style="width: <?= min(100, (int)$prog->progressPercent) ?>%"></div>
+                                </div>
+                            </div>
                         <?php endif; ?>
                     </div>
 
@@ -203,13 +218,31 @@
                         </a>
 
                         <?php if ($item->file): ?>
-                            <a href="/files/<?= (int)$item->file->id ?>/download" 
-                               class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition shadow-2xs">
-                                <svg class="w-3.5 h-3.5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                                </svg>
-                                <span><?= htmlspecialchars($item->file->getFormattedSize()) ?></span>
-                            </a>
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <?php 
+                                $isCardPdf = $item->file->mimeType === 'application/pdf' || str_ends_with(strtolower($item->file->originalName), '.pdf');
+                                $isCardDocx = $item->file->mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                                    || $item->file->mimeType === 'application/zip'
+                                    || $item->file->mimeType === 'application/msword'
+                                    || str_ends_with(strtolower($item->file->originalName), '.docx');
+                                ?>
+                                <?php if ($isCardPdf || $isCardDocx): ?>
+                                    <a href="/student/content/<?= (int)$item->id ?>/read" 
+                                       class="inline-flex items-center gap-1 px-2.5 py-1 <?= ($prog && $prog->isCompleted()) ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-emerald-50 text-emerald-700 border-emerald-200' ?> hover:bg-emerald-100 border rounded-xl text-xs font-bold transition">
+                                        <svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                                        </svg>
+                                        <span><?= ($prog && $prog->lastPage > 1 && !$prog->isCompleted()) ? ($isCardDocx ? 'Resume (s.' . (int)$prog->lastPage . ')' : 'Resume (p.' . (int)$prog->lastPage . ')') : ($prog && $prog->isCompleted() ? 'Read ✓' : 'Read') ?></span>
+                                    </a>
+                                <?php endif; ?>
+                                <a href="/files/<?= (int)$item->file->id ?>/download" 
+                                   class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition shadow-2xs">
+                                    <svg class="w-3.5 h-3.5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                    </svg>
+                                    <span><?= htmlspecialchars($item->file->getFormattedSize()) ?></span>
+                                </a>
+                            </div>
                         <?php elseif (!empty($item->externalUrl)): ?>
                             <a href="<?= htmlspecialchars($item->externalUrl) ?>" target="_blank" rel="noopener noreferrer"
                                class="inline-flex items-center gap-1 text-xs font-bold text-purple-600 hover:underline">

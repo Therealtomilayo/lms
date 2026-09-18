@@ -29,12 +29,15 @@ class AttendanceController extends Controller
     {
         $classes = $this->academicRepo->getAllClasses();
         $today = date('Y-m-d');
+        $policy = $this->attendanceService->getAttendancePolicySettings();
 
         return Response::html($this->render('admin/attendance/index', [
             'title' => 'Attendance Management — Admin Overview',
             'headerTitle' => 'Attendance Oversight',
             'classes' => $classes,
             'today' => $today,
+            'policy' => $policy,
+            'csrf_token' => $request->getSession()->get('_csrf_token', ''),
         ], 'layouts/admin'));
     }
 
@@ -120,5 +123,38 @@ class AttendanceController extends Controller
         } catch (AuthorizationException $e) {
             return Response::forbidden($e->getMessage());
         }
+    }
+
+    /**
+     * Update school attendance policy configuration (SRS §26).
+     */
+    public function updatePolicy(Request $request): Response
+    {
+        $user = $this->getUserContext($request);
+        if (!$user) {
+            return Response::redirect('/login');
+        }
+
+        $weightInput = $request->getBodyParam('late_weight');
+        if ($weightInput === null || !is_numeric($weightInput)) {
+            $this->setFlash($request, 'error', 'Please provide a valid numeric late attendance weight.');
+            return Response::redirect('/admin/attendance');
+        }
+
+        $weight = (float)$weightInput;
+        // If input as percentage (e.g. 60), convert to decimal
+        if ($weight > 1.0) {
+            $weight = $weight / 100.0;
+        }
+
+        try {
+            $this->attendanceService->updateAttendancePolicy($weight, $user);
+            $pct = round($weight * 100, 1);
+            $this->setFlash($request, 'success', "Attendance calculation policy updated successfully. Late arrival credit is now set to {$pct}%.");
+        } catch (\Throwable $e) {
+            $this->setFlash($request, 'error', $e->getMessage());
+        }
+
+        return Response::redirect('/admin/attendance');
     }
 }

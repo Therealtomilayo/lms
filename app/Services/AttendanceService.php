@@ -275,4 +275,44 @@ class AttendanceService
     {
         return $this->attendanceRepo->getStudentAttendanceHistory($studentId, $termId, $classSubjectId);
     }
+
+    /**
+     * Get configured attendance calculation policy parameters.
+     *
+     * @return array{late_weight: float, late_weight_percentage: float}
+     */
+    public function getAttendancePolicySettings(): array
+    {
+        $weight = $this->attendanceRepo->getLateWeight();
+        return [
+            'late_weight' => $weight,
+            'late_weight_percentage' => round($weight * 100, 1),
+        ];
+    }
+
+    /**
+     * Update school attendance policy configuration (SRS §26).
+     */
+    public function updateAttendancePolicy(float $lateWeight, UserContext $actor): array
+    {
+        if (!$actor->isAdmin()) {
+            throw new AuthorizationException('Only administrators can configure school attendance policy.');
+        }
+
+        if ($lateWeight < 0.0 || $lateWeight > 1.0) {
+            throw new ValidationException(['late_weight' => 'Late attendance weight must be between 0.0 (0%) and 1.0 (100%).']);
+        }
+
+        $this->attendanceRepo->updateAttendancePolicy($lateWeight, $actor->getUserId());
+
+        $this->auditService->log(
+            action: 'attendance_policy_updated',
+            entityType: 'system_settings',
+            entityId: 0,
+            actorUserId: $actor->getUserId(),
+            metadata: ['attendance_late_weight' => $lateWeight]
+        );
+
+        return $this->getAttendancePolicySettings();
+    }
 }

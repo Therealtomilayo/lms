@@ -380,7 +380,7 @@ foreach ($feed as $item) {
                 Official Claret Communication & Parent-School Partnership Policy
             </h4>
             <p class="text-xs text-slate-600 mt-1 leading-relaxed">
-                All bulletins published on this portal are official instruments of Claret Academy Secondary School. Urgent emergency notifications, terminal holiday releases, and examination dates are also broadcast via parent SMS.
+                All bulletins published on this portal are official instruments of Claret International School. Urgent emergency notifications, terminal holiday releases, and examination dates are also broadcast via parent SMS.
             </p>
             <div class="mt-2 text-xs text-brand-700 font-semibold flex flex-wrap gap-4">
                 <span>&bull; Contact the School Registry for inquiries: info@claret.edu</span>

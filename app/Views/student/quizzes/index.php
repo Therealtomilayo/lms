@@ -142,7 +142,15 @@
                                 <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-sky-50 text-sky-800 border border-sky-200">
                                     <?= htmlspecialchars($quiz->classSubject?->subjectName ?? $quiz->term?->name ?? 'Quiz') ?>
                                 </span>
-                                <?php if ($hasActive): ?>
+                                <?php 
+                                    $isLocked = !($item['is_unlocked'] ?? true);
+                                    $prereqStatus = $item['prerequisite_status'] ?? null;
+                                ?>
+                                <?php if ($isLocked): ?>
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                        <span>🔒 Locked</span>
+                                    </span>
+                                <?php elseif ($hasActive): ?>
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 animate-pulse">
                                         In Progress
                                     </span>
@@ -154,10 +162,23 @@
                             </div>
 
                             <h3 class="text-base font-bold text-slate-900 leading-snug">
-                                <a href="<?= $hasActive ? "/student/quiz-attempts/{$item['active_attempt_id']}" : "/student/quizzes/{$quiz->id}" ?>" class="hover:text-sky-600 transition">
+                                <a href="/student/quizzes/<?= (int)$quiz->id ?>" class="hover:text-sky-600 transition">
                                     <?= htmlspecialchars($quiz->title) ?>
                                 </a>
                             </h3>
+
+                            <?php if ($isLocked && !empty($prereqStatus['unmet'])): ?>
+                                <div class="mt-2.5 p-2.5 rounded-xl bg-amber-50/80 border border-amber-200/70 text-[11px] text-amber-800">
+                                    <div class="font-bold mb-1 flex items-center gap-1">
+                                        <span>Required Before Starting:</span>
+                                    </div>
+                                    <ul class="space-y-0.5 list-disc list-inside">
+                                        <?php foreach ($prereqStatus['unmet'] as $u): ?>
+                                            <li><?= htmlspecialchars($u['title']) ?></li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                </div>
+                            <?php endif; ?>
 
                             <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
                                 <span class="flex items-center gap-1">
@@ -169,7 +190,12 @@
                         </div>
 
                         <div class="pt-3 border-t border-slate-100">
-                            <?php if ($hasActive): ?>
+                            <?php if ($isLocked): ?>
+                                <a href="/student/quizzes/<?= (int)$quiz->id ?>" 
+                                   class="w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-4 bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold rounded-xl border border-amber-300 transition">
+                                    <span>🔒 Locked &bull; View Requirements</span>
+                                </a>
+                            <?php elseif ($hasActive): ?>
                                 <a href="/student/quiz-attempts/<?= (int)$item['active_attempt_id'] ?>" 
                                    class="w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-4 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-xs transition">
                                     <span>Resume Active Attempt</span>

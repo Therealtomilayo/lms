@@ -11,6 +11,9 @@ use App\Core\Exceptions\ResourceNotFoundException;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Session;
+use App\Repositories\AcademicRepository;
+use App\Services\BadgeService;
+use App\Services\DiscussionService;
 use App\Services\ParentService;
 
 /**
@@ -19,13 +22,22 @@ use App\Services\ParentService;
 class ChildController extends Controller
 {
     private ParentService $parentService;
+    private BadgeService $badgeService;
+    private DiscussionService $discussionService;
+    private AcademicRepository $academicRepo;
 
     public function __construct(
         ?AuthenticatorInterface $authenticator = null,
-        ?ParentService $parentService = null
+        ?ParentService $parentService = null,
+        ?BadgeService $badgeService = null,
+        ?DiscussionService $discussionService = null,
+        ?AcademicRepository $academicRepo = null
     ) {
         parent::__construct($authenticator);
         $this->parentService = $parentService ?? new ParentService();
+        $this->badgeService = $badgeService ?? new BadgeService();
+        $this->discussionService = $discussionService ?? new DiscussionService();
+        $this->academicRepo = $academicRepo ?? new AcademicRepository();
     }
 
     /**
@@ -101,6 +113,100 @@ class ChildController extends Controller
                 'user' => $userContext,
                 'csrf_token' => Session::get('_csrf_token', ''),
             ]), 'layouts/parent'));
+        } catch (AuthorizationException $e) {
+            return Response::html('<h1>403 Forbidden</h1><p>' . htmlspecialchars($e->getMessage()) . '</p>', 403);
+        } catch (ResourceNotFoundException $e) {
+            return Response::html('<h1>404 Not Found</h1><p>' . htmlspecialchars($e->getMessage()) . '</p>', 404);
+        }
+    }
+
+    /**
+     * View all achievement badges earned by a linked child.
+     * Route: GET /parent/children/{studentId}/badges
+     */
+    public function badges(Request $request, array|string|int $params = []): Response
+    {
+        $userContext = $this->getUserContext($request);
+        if (!$userContext) {
+            return Response::redirect('/login');
+        }
+
+        $studentId = is_array($params) ? (int)($params['studentId'] ?? 0) : (int)$params;
+        if ($studentId <= 0) {
+            $studentId = (int)($request->getAttribute('studentId') ?? $request->query('student_id', 0));
+        }
+
+        try {
+            $student = $this->parentService->validateChildAccess($userContext, $studentId);
+            $earnedBadges = $this->badgeService->getStudentBadges($studentId);
+            $children = $this->parentService->getLinkedChildren($userContext);
+            $activeSession = $this->academicRepo->getActiveSession();
+
+            return Response::html($this->render('parent/children/badges', [
+                'title' => "{$student->name} — Achievements & Badges",
+                'student' => $student,
+                'selectedChild' => $student,
+                'children' => $children,
+                'earnedBadges' => $earnedBadges,
+                'activeSession' => $activeSession,
+                'user' => $userContext,
+            ], 'layouts/parent'));
+        } catch (AuthorizationException $e) {
+            return Response::html('<h1>403 Forbidden</h1><p>' . htmlspecialchars($e->getMessage()) . '</p>', 403);
+        } catch (ResourceNotFoundException $e) {
+            return Response::html('<h1>404 Not Found</h1><p>' . htmlspecialchars($e->getMessage()) . '</p>', 404);
+        }
+    }
+
+    /**
+     * Read-only view of a child's class discussion feeds.
+     * Route: GET /parent/children/{studentId}/discussions
+     */
+    public function discussions(Request $request, array|string|int $params = []): Response
+    {
+        $userContext = $this->getUserContext($request);
+        if (!$userContext) {
+            return Response::redirect('/login');
+        }
+
+        $studentId = is_array($params) ? (int)($params['studentId'] ?? 0) : (int)$params;
+        if ($studentId <= 0) {
+            $studentId = (int)($request->getAttribute('studentId') ?? $request->query('student_id', 0));
+        }
+
+        try {
+            $student = $this->parentService->validateChildAccess($userContext, $studentId);
+            $subjects = $this->parentService->getChildSubjectEnrollments($userContext, $studentId);
+
+            $selectedCsId = (int)$request->query('class_subject_id', 0);
+            if ($selectedCsId <= 0 && !empty($subjects)) {
+                $selectedCsId = (int)$subjects[0]->classSubjectId;
+            }
+
+            $discussionData = null;
+            if ($selectedCsId > 0) {
+                try {
+                    $discussionData = $this->discussionService->getDiscussions($selectedCsId, $userContext);
+                } catch (\Throwable $t) {
+                    error_log('Parent child discussions retrieval error: ' . $t->getMessage());
+                    $discussionData = null;
+                }
+            }
+
+            $children = $this->parentService->getLinkedChildren($userContext);
+            $activeSession = $this->academicRepo->getActiveSession();
+
+            return Response::html($this->render('parent/children/discussions', [
+                'title' => "{$student->name} — Class Discussions Feed",
+                'student' => $student,
+                'selectedChild' => $student,
+                'children' => $children,
+                'subjects' => $subjects,
+                'selectedClassSubjectId' => $selectedCsId,
+                'discussionData' => $discussionData,
+                'activeSession' => $activeSession,
+                'user' => $userContext,
+            ], 'layouts/parent'));
         } catch (AuthorizationException $e) {
             return Response::html('<h1>403 Forbidden</h1><p>' . htmlspecialchars($e->getMessage()) . '</p>', 403);
         } catch (ResourceNotFoundException $e) {

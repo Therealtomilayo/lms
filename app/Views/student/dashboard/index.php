@@ -103,6 +103,75 @@
         </a>
     </div>
 
+    <!-- Honors & Achievement Badges Shelf (SRS §33, §57 Phase 3) -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-base font-bold text-slate-900">My Honors &amp; Badges Shelf</h2>
+                    <p class="text-xs text-slate-500">Commendations and verified achievements earned across your courses.</p>
+                </div>
+            </div>
+            <a href="/student/badges" class="text-xs font-bold text-brand-600 hover:text-brand-700 transition">
+                View All Honors (<?= count($earnedBadges ?? []) ?>) &rarr;
+            </a>
+        </div>
+
+        <?php if (empty($earnedBadges)): ?>
+            <div class="p-4 rounded-xl border border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+                <p class="text-xs text-slate-600">
+                    No badges earned yet this academic session. Complete course modules, score 90%+ on quizzes, and maintain exemplary attendance to receive digital badges!
+                </p>
+                <a href="/student/badges" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition flex-shrink-0">
+                    Explore Badge Catalog
+                </a>
+            </div>
+        <?php else: ?>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <?php 
+                $badgeCategoryStyles = [
+                    'academic' => 'bg-brand-50 text-brand-700 border-brand-200',
+                    'attendance' => 'bg-sky-50 text-sky-700 border-sky-200',
+                    'progression' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                    'citizenship' => 'bg-purple-50 text-purple-700 border-purple-200',
+                ];
+                $recentDisplay = array_slice($earnedBadges, 0, 3);
+                foreach ($recentDisplay as $eb): 
+                    $catStyle = $badgeCategoryStyles[$eb->badge?->category ?? 'academic'] ?? 'bg-slate-50 text-slate-700 border-slate-200';
+                ?>
+                    <div class="p-3.5 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-white hover:border-brand-300 transition flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-amber-100/70 border border-amber-200 text-amber-700 flex items-center justify-center flex-shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                            </svg>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center justify-between gap-1">
+                                <h4 class="text-xs font-extrabold text-slate-900 truncate">
+                                    <?= htmlspecialchars($eb->badge?->name ?? 'Achievement') ?>
+                                </h4>
+                                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase border <?= $catStyle ?>">
+                                    <?= htmlspecialchars($eb->badge?->category ?? 'Honor') ?>
+                                </span>
+                            </div>
+                            <p class="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
+                                <?= htmlspecialchars($eb->reason) ?>
+                            </p>
+                            <span class="text-[10px] text-slate-400 font-mono mt-1 block">
+                                <?= date('M j, Y', strtotime($eb->awardedAt)) ?>
+                            </span>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    </div>
+
     <!-- Live Online Classes Widget (SRS §31) -->
     <?php if (!empty($upcomingLiveClasses)): ?>
         <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">

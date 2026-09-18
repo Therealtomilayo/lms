@@ -610,7 +610,7 @@
                 <div class="logo-fallback" style="display:none;">CL</div>
             </div>
             <div class="titles">
-                <h1><?= strtoupper(htmlspecialchars($school['name'] ?? 'CLARET ACADEMY SECONDARY SCHOOL')) ?></h1>
+                <h1><?= strtoupper(htmlspecialchars($school['name'] ?? 'Claret International School')) ?></h1>
                 <div class="motto"><?= htmlspecialchars($school['motto'] ?? 'Motto: Discipline, Integrity & Ardour') ?></div>
                 <div class="address"><?= htmlspecialchars($school['address']) ?> <br> Phone: <?= htmlspecialchars($school['phone']) ?> &bull; Email: <?= htmlspecialchars($school['email']) ?></div>
             </div>

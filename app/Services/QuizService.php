@@ -12,10 +12,13 @@ use App\Core\UserContext;
 use App\DTO\ServiceResult;
 use App\Models\Question;
 use App\Models\Quiz;
+use App\Models\ActivityProgress;
 use App\Models\QuizAttempt;
 use App\Models\QuizQuestion;
 use App\Policies\QuizPolicy;
 use App\Repositories\AcademicRepository;
+use App\Repositories\ActivityPrerequisiteRepository;
+use App\Repositories\ActivityProgressRepository;
 use App\Repositories\EnrollmentRepository;
 use App\Repositories\ParentRepository;
 use App\Repositories\QuestionBankRepository;
@@ -36,6 +39,10 @@ class QuizService
     private StudentRepository $studentRepository;
     private EnrollmentRepository $enrollmentRepository;
     private ParentRepository $parentRepository;
+    private ActivityProgressRepository $activityProgressRepository;
+    private ActivityPrerequisiteRepository $prerequisiteRepository;
+    private \App\Repositories\ModuleRepository $moduleRepository;
+    private PDO $pdo;
 
     public function __construct(
         ?QuizRepository $quizRepository = null,
@@ -44,7 +51,10 @@ class QuizService
         ?TeacherRepository $teacherRepository = null,
         ?StudentRepository $studentRepository = null,
         ?EnrollmentRepository $enrollmentRepository = null,
-        ?ParentRepository $parentRepository = null
+        ?ParentRepository $parentRepository = null,
+        ?ActivityProgressRepository $activityProgressRepository = null,
+        ?ActivityPrerequisiteRepository $prerequisiteRepository = null,
+        ?\App\Repositories\ModuleRepository $moduleRepository = null
     ) {
         $this->quizRepository = $quizRepository ?? new QuizRepository();
         $this->questionBankRepository = $questionBankRepository ?? new QuestionBankRepository();
@@ -53,6 +63,10 @@ class QuizService
         $this->studentRepository = $studentRepository ?? new StudentRepository();
         $this->enrollmentRepository = $enrollmentRepository ?? new EnrollmentRepository();
         $this->parentRepository = $parentRepository ?? new ParentRepository();
+        $this->pdo = $this->quizRepository->getPdo();
+        $this->activityProgressRepository = $activityProgressRepository ?? new ActivityProgressRepository($this->pdo);
+        $this->prerequisiteRepository = $prerequisiteRepository ?? new ActivityPrerequisiteRepository($this->pdo);
+        $this->moduleRepository = $moduleRepository ?? new \App\Repositories\ModuleRepository($this->pdo);
     }
 
     // =========================================================================
@@ -228,8 +242,27 @@ class QuizService
             throw new DomainRuleException('Cannot delete a quiz that already has student attempts. Please unpublish it instead.');
         }
 
-        $this->quizRepository->delete($id);
-        return ServiceResult::success(null, 'Quiz deleted successfully.');
+        $this->pdo->beginTransaction();
+
+        try {
+            // Clean up any prerequisite records referencing this quiz (as target or prerequisite)
+            $this->prerequisiteRepository->deleteForActivity(ActivityProgress::TYPE_QUIZ, $id);
+
+            // Clean up module item links referencing this quiz
+            $this->moduleRepository->deleteItemsByActivity(\App\Models\ModuleItem::TYPE_QUIZ, $id);
+
+            // Clean up learning activity progress records for this quiz
+            $this->activityProgressRepository->deleteProgressForActivity(ActivityProgress::TYPE_QUIZ, $id);
+
+            $this->quizRepository->delete($id);
+
+            $this->pdo->commit();
+
+            return ServiceResult::success(null, 'Quiz deleted successfully.');
+        } catch (\Throwable $e) {
+            $this->pdo->rollBack();
+            throw new DomainRuleException('Failed to delete quiz: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -585,6 +618,14 @@ class QuizService
                 status: $status,
                 score: $totalScore,
                 submittedAt: $now
+            );
+
+            // Record authoritative quiz completion in learning_activity_progress
+            $this->activityProgressRepository->recordActivityCompletion(
+                studentId: $attempt->studentId,
+                activityType: ActivityProgress::TYPE_QUIZ,
+                activityId: $attempt->quizId,
+                progressPercent: 100.0
             );
 
             $pdo->commit();

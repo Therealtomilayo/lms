@@ -512,7 +512,7 @@ final class SkillAndRemarkIntegrationTest extends TestCase
         $this->gradebookRepo->batchUpdateRemarks($this->termId, $this->classId, [
             $this->studentId => [
                 'teacher_remark' => 'Chinedu has maintained top rank in every academic evaluation.',
-                'principal_remark' => 'An exemplary ambassador for Claret Academy.',
+                'principal_remark' => 'An exemplary ambassador for Claret International School.',
             ]
         ]);
 
@@ -532,7 +532,7 @@ final class SkillAndRemarkIntegrationTest extends TestCase
         $this->assertSame(4, $reportData['affective_ratings'][0]['rating']);
 
         $this->assertSame('Chinedu has maintained top rank in every academic evaluation.', $reportData['summary']->classTeacherRemark);
-        $this->assertSame('An exemplary ambassador for Claret Academy.', $reportData['summary']->principalRemark);
+        $this->assertSame('An exemplary ambassador for Claret International School.', $reportData['summary']->principalRemark);
     }
 
     public function testAdminSkillControllerEndpoints(): void

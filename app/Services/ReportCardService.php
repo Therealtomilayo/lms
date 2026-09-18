@@ -79,7 +79,7 @@ class ReportCardService
         }
 
         $school = [
-            'name' => $settings['school_name'] ?? 'Claret Academy Secondary School',
+            'name' => $settings['school_name'] ?? 'Claret International School',
             'motto' => $settings['school_motto'] ?? 'Discipline, Integrity & Ardour',
             'address' => $settings['school_address'] ?? 'Plot 700, Gitto Street, Mabushi, Mabushi, Abuja, Federal Capital Territory, 900104, Nigeria',
             'phone' => $settings['school_phone'] ?? '+234 803 788 1737',
@@ -207,7 +207,7 @@ class ReportCardService
                 $status = $existingPromo->decision;
                 if ($existingPromo->isGraduated()) {
                     $badgeText = 'GRADUATED';
-                    $note = 'Commendable completion of academic curriculum. Officially graduated as alumnus of Claret Academy.';
+                    $note = 'Commendable completion of academic curriculum. Officially graduated as alumnus of Claret International School.';
                 } elseif ($existingPromo->isRepeating()) {
                     $badgeText = 'REPEATING';
                     $note = 'Cumulative average did not meet the advancement threshold. Required to repeat academic session.';

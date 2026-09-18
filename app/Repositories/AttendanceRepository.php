@@ -215,9 +215,60 @@ class AttendanceRepository
     }
 
     /**
-     * Aggregate attendance summary metrics for a student in a term.
+     * Get configured late attendance weight from system_settings (default: 0.60 = 60%).
+     */
+    public function getLateWeight(): float
+    {
+        try {
+            $stmt = $this->db->prepare("SELECT setting_value FROM system_settings WHERE setting_key = 'attendance_late_weight' LIMIT 1");
+            $stmt->execute();
+            $val = $stmt->fetchColumn();
+            if ($val !== false && is_numeric($val)) {
+                $floatVal = (float)$val;
+                // If stored as percentage (e.g. 60 or 50), normalize to decimal
+                if ($floatVal > 1.0) {
+                    $floatVal = $floatVal / 100.0;
+                }
+                return max(0.0, min(1.0, round($floatVal, 4)));
+            }
+        } catch (\Throwable) {
+            // Fallback to default
+        }
+        return 0.60;
+    }
+
+    /**
+     * Update attendance late weight in system_settings.
+     */
+    public function updateAttendancePolicy(float $lateWeight, ?int $adminId = null): void
+    {
+        $normalized = max(0.0, min(1.0, $lateWeight));
+        $valStr = (string)$normalized;
+
+        $checkStmt = $this->db->prepare("SELECT 1 FROM system_settings WHERE setting_key = 'attendance_late_weight' LIMIT 1");
+        $checkStmt->execute();
+        if ($checkStmt->fetchColumn()) {
+            $stmt = $this->db->prepare("
+                UPDATE system_settings 
+                SET setting_value = :val, updated_by = :admin_id, updated_at = CURRENT_TIMESTAMP 
+                WHERE setting_key = 'attendance_late_weight'
+            ");
+        } else {
+            $stmt = $this->db->prepare("
+                INSERT INTO system_settings (setting_key, setting_value, updated_by, updated_at) 
+                VALUES ('attendance_late_weight', :val, :admin_id, CURRENT_TIMESTAMP)
+            ");
+        }
+        $stmt->execute([
+            ':val' => $valStr,
+            ':admin_id' => $adminId,
+        ]);
+    }
+
+    /**
+     * Calculate student attendance metrics.
      *
-     * @return array{total_days: int, present_days: int, absent_days: int, late_days: int, excused_days: int, attendance_rate: float}
+     * @return array{total_days: int, present_days: int, absent_days: int, late_days: int, excused_days: int, attendance_rate: float, weighted_rate: float, unweighted_rate: float, late_weight: float}
      */
     public function getStudentAttendanceSummary(int $studentId, int $termId, ?int $classSubjectId = null): array
     {
@@ -253,6 +304,12 @@ class AttendanceRepository
         $attended = $present + $late;
         $rate = $total > 0 ? round(($attended / $total) * 100, 2) : 100.00;
 
+        // SRS §26: Configurable Weighted Late Attendance Calculation Formula:
+        // Attendance Rate = (Present + (Late * LateWeight)) / Total * 100
+        $lateWeight = $this->getLateWeight();
+        $effectiveAttended = (float)$present + ((float)$late * $lateWeight);
+        $weightedRate = $total > 0 ? round(($effectiveAttended / $total) * 100, 2) : 100.00;
+
         return [
             'total_days' => $total,
             'present_days' => $present,
@@ -260,6 +317,17 @@ class AttendanceRepository
             'late_days' => $late,
             'excused_days' => $excused,
             'attendance_rate' => $rate,
+            'weighted_rate' => $weightedRate,
+            'unweighted_rate' => $rate,
+            'late_weight' => $lateWeight,
+            'effective_attended' => $effectiveAttended,
+            // Aliases for view compatibility
+            'percentage' => $weightedRate,
+            'present' => $present,
+            'absent' => $absent,
+            'late' => $late,
+            'excused' => $excused,
+            'total' => $total,
         ];
     }
 
@@ -361,8 +429,20 @@ class AttendanceRepository
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $lateWeight = $this->getLateWeight();
+        foreach ($rows as &$row) {
+            $tot = (int)($row['total_students'] ?? 0);
+            $pres = (int)($row['present_count'] ?? 0);
+            $lt = (int)($row['late_count'] ?? 0);
+            $row['unweighted_rate'] = $tot > 0 ? round((($pres + $lt) / $tot) * 100, 1) : 0.0;
+            $row['weighted_rate'] = $tot > 0 ? round((($pres + ($lt * $lateWeight)) / $tot) * 100, 1) : 0.0;
+            $row['late_weight'] = $lateWeight;
+        }
+        unset($row);
+
+        return $rows;
     }
 
     /**

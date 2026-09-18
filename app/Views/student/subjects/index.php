@@ -144,6 +144,23 @@
                                 <?= htmlspecialchars($tName) ?>
                             </span>
                         </div>
+
+                        <?php 
+                            $pInfo = $subjectProgressMap[(int)($cs?->id ?? 0)] ?? null;
+                        ?>
+                        <?php if ($pInfo && !empty($pInfo['has_modules'])): ?>
+                            <div class="mt-3 pt-3 border-t border-slate-100 space-y-1">
+                                <div class="flex items-center justify-between text-[11px] font-bold">
+                                    <span class="text-slate-500">Course Progress</span>
+                                    <span class="<?= !empty($pInfo['is_completed']) ? 'text-emerald-600' : 'text-slate-700' ?>">
+                                        <?= number_format((float)$pInfo['progress_percent'], 1) ?>%
+                                    </span>
+                                </div>
+                                <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                                    <div class="h-full <?= !empty($pInfo['is_completed']) ? 'bg-emerald-500' : 'bg-sky-500' ?> rounded-full" style="width: <?= min(100.0, max(0.0, (float)$pInfo['progress_percent'])) ?>%;"></div>
+                                </div>
+                            </div>
+                        <?php endif; ?>
                     </div>
 
                     <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">

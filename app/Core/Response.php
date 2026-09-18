@@ -12,6 +12,9 @@ class Response
     private int $statusCode;
     private array $headers = [];
     private string $content;
+    private ?string $streamFilePath = null;
+    private int $streamStart = 0;
+    private int $streamLength = 0;
 
     public function __construct(string $content = '', int $statusCode = 200, array $headers = [])
     {
@@ -42,6 +45,11 @@ class Response
         return new self('', $statusCode, $headers);
     }
 
+    public static function notFound(string $message = 'Not Found'): self
+    {
+        return self::html("<h1>404 Not Found</h1><p>{$message}</p>", 404);
+    }
+
     public static function download(
         string $filePath,
         string $fileName,
@@ -63,6 +71,103 @@ class Response
         $content = file_get_contents($filePath) ?: '';
 
         return new self($content, 200, $headers);
+    }
+
+    /**
+     * Stream an inline file with full HTTP Range (Accept-Ranges: bytes) support.
+     * Supports HTTP 206 Partial Content for smooth streaming in PDF.js / mobile browsers.
+     */
+    public static function streamFile(
+        string $filePath,
+        string $fileName,
+        string $mimeType = 'application/pdf',
+        ?string $rangeHeader = null
+    ): self {
+        if (!file_exists($filePath) || !is_file($filePath)) {
+            return self::json(['error' => 'File not found'], 404);
+        }
+
+        $fileSize = (int)filesize($filePath);
+        $headers = [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => 'inline; filename="' . addslashes(basename($fileName)) . '"',
+            'Accept-Ranges' => 'bytes',
+            'Cache-Control' => 'private, max-age=3600, must-revalidate',
+            'X-Content-Type-Options' => 'nosniff',
+        ];
+
+        // Parse byte range request if present
+        if ($rangeHeader !== null && preg_match('/bytes=\s*(\d*)\s*-\s*(\d*)/i', $rangeHeader, $matches)) {
+            $rawStart = $matches[1];
+            $rawEnd = $matches[2];
+
+            if ($rawStart === '' && $rawEnd === '') {
+                return new self('', 416, [
+                    'Content-Range' => "bytes */{$fileSize}",
+                    'Accept-Ranges' => 'bytes',
+                ]);
+            }
+
+            if ($rawStart === '') {
+                $suffixLength = (int)$rawEnd;
+                if ($suffixLength <= 0) {
+                    return new self('', 416, [
+                        'Content-Range' => "bytes */{$fileSize}",
+                        'Accept-Ranges' => 'bytes',
+                    ]);
+                }
+                $start = max(0, $fileSize - $suffixLength);
+                $end = $fileSize - 1;
+            } elseif ($rawEnd === '') {
+                $start = (int)$rawStart;
+                $end = $fileSize - 1;
+            } else {
+                $start = (int)$rawStart;
+                $end = (int)$rawEnd;
+            }
+
+            if ($start > $end || $start >= $fileSize || $end >= $fileSize || $start < 0) {
+                return new self('', 416, [
+                    'Content-Range' => "bytes */{$fileSize}",
+                    'Accept-Ranges' => 'bytes',
+                ]);
+            }
+
+            $length = $end - $start + 1;
+            $headers['Content-Range'] = "bytes {$start}-{$end}/{$fileSize}";
+            $headers['Content-Length'] = (string)$length;
+
+            $response = new self('', 206, $headers);
+            $response->streamFilePath = $filePath;
+            $response->streamStart = $start;
+            $response->streamLength = $length;
+
+            return $response;
+        }
+
+        // Full content response (200 OK)
+        $headers['Content-Length'] = (string)$fileSize;
+        $response = new self('', 200, $headers);
+        $response->streamFilePath = $filePath;
+        $response->streamStart = 0;
+        $response->streamLength = $fileSize;
+
+        return $response;
+    }
+
+    public function getStreamFilePath(): ?string
+    {
+        return $this->streamFilePath;
+    }
+
+    public function getStreamStart(): int
+    {
+        return $this->streamStart;
+    }
+
+    public function getStreamLength(): int
+    {
+        return $this->streamLength;
     }
 
     public function setStatusCode(int $statusCode): self
@@ -111,6 +216,11 @@ class Response
         return $this->content;
     }
 
+    public function getBody(): string
+    {
+        return $this->content;
+    }
+
     public function send(): void
     {
         if (!headers_sent()) {
@@ -119,6 +229,29 @@ class Response
             foreach ($this->headers as $name => $value) {
                 header(sprintf('%s: %s', $name, $value));
             }
+        }
+
+        if ($this->streamFilePath !== null && file_exists($this->streamFilePath)) {
+            $fp = @fopen($this->streamFilePath, 'rb');
+            if ($fp !== false) {
+                if ($this->streamStart > 0) {
+                    fseek($fp, $this->streamStart);
+                }
+                $bytesRemaining = $this->streamLength;
+                $chunkSize = 64 * 1024; // 64 KB buffer per chunk
+                while (!feof($fp) && $bytesRemaining > 0 && connection_status() === CONNECTION_NORMAL) {
+                    $readSize = min($chunkSize, $bytesRemaining);
+                    $chunk = fread($fp, $readSize);
+                    if ($chunk === false || $chunk === '') {
+                        break;
+                    }
+                    echo $chunk;
+                    flush();
+                    $bytesRemaining -= strlen($chunk);
+                }
+                fclose($fp);
+            }
+            return;
         }
 
         echo $this->content;

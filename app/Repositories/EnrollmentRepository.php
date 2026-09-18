@@ -393,6 +393,56 @@ class EnrollmentRepository
         }, $rows);
     }
 
+    /**
+     * Get all enrolled students for a specific class subject offering.
+     *
+     * @return Student[]
+     */
+    public function getEnrolledStudentsForClassSubject(int $classSubjectId, string $status = 'active'): array
+    {
+        $sql = "SELECT DISTINCT s.*, u.name as user_name, u.email as user_email, u.phone as user_phone, u.status as user_status
+                FROM `student_subject_enrollments` sse
+                JOIN `students` s ON s.id = sse.student_id
+                JOIN `users` u ON u.id = s.user_id
+                WHERE sse.class_subject_id = :class_subject_id
+                  AND sse.status = :status
+                ORDER BY u.name ASC, s.admission_number ASC";
+
+        $stmt = $this->pdo->prepare($sql);
+        try {
+            $stmt->execute([
+                ':class_subject_id' => $classSubjectId,
+                ':status' => $status,
+            ]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $e) {
+            $rows = [];
+        }
+
+        if (!empty($rows)) {
+            return array_map(function ($row) {
+                $user = \App\Models\User::fromArray([
+                    'id' => $row['user_id'] ?? 0,
+                    'name' => $row['user_name'] ?? '',
+                    'email' => $row['user_email'] ?? '',
+                    'phone' => $row['user_phone'] ?? null,
+                    'status' => $row['user_status'] ?? 'active',
+                ]);
+                return Student::fromArray($row, $user);
+            }, $rows);
+        }
+
+        // Fallback: If no explicit subject enrollments exist, check class enrollments for this class subject
+        $stmtCs = $this->pdo->prepare('SELECT class_id, session_id FROM `class_subjects` WHERE id = :id LIMIT 1');
+        $stmtCs->execute([':id' => $classSubjectId]);
+        $cs = $stmtCs->fetch(PDO::FETCH_ASSOC);
+        if ($cs && !empty($cs['class_id']) && !empty($cs['session_id'])) {
+            return $this->getStudentsByClassAndSession((int)$cs['class_id'], (int)$cs['session_id'], $status);
+        }
+
+        return [];
+    }
+
     private function hydrateClassEnrollment(array $row): ClassEnrollment
     {
         $student = Student::fromArray([

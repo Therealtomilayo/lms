@@ -12,6 +12,7 @@ use App\Repositories\AcademicRepository;
 use App\Repositories\AnnouncementRepository;
 use App\Repositories\AttendanceRepository;
 use App\Repositories\EnrollmentRepository;
+use App\Repositories\BadgeRepository;
 use App\Repositories\LiveClassRepository;
 use App\Repositories\StudentRepository;
 use App\Repositories\TimetableRepository;
@@ -32,6 +33,7 @@ class DashboardController extends Controller
     private TimetableRepository $timetableRepo;
     private AnnouncementRepository $announcementRepo;
     private LiveClassRepository $liveClassRepo;
+    private BadgeRepository $badgeRepo;
 
     public function __construct(
         ?AuthenticatorInterface $authenticator = null,
@@ -43,7 +45,8 @@ class DashboardController extends Controller
         ?AttendanceRepository $attendanceRepo = null,
         ?TimetableRepository $timetableRepo = null,
         ?AnnouncementRepository $announcementRepo = null,
-        ?LiveClassRepository $liveClassRepo = null
+        ?LiveClassRepository $liveClassRepo = null,
+        ?BadgeRepository $badgeRepo = null
     ) {
         parent::__construct($authenticator);
         $this->studentRepo = $studentRepo ?? new StudentRepository();
@@ -55,6 +58,7 @@ class DashboardController extends Controller
         $this->timetableRepo = $timetableRepo ?? new TimetableRepository();
         $this->announcementRepo = $announcementRepo ?? new AnnouncementRepository();
         $this->liveClassRepo = $liveClassRepo ?? new LiveClassRepository();
+        $this->badgeRepo = $badgeRepo ?? new BadgeRepository();
     }
 
     /**
@@ -132,11 +136,18 @@ class DashboardController extends Controller
 
         // Upcoming and Live Online Classes (SRS §31)
         $upcomingLiveClasses = [];
+        $earnedBadges = [];
         if ($student) {
             try {
                 $upcomingLiveClasses = $this->liveClassRepo->getUpcomingForStudent($student->id, 3);
             } catch (\Throwable) {
                 $upcomingLiveClasses = [];
+            }
+
+            try {
+                $earnedBadges = $this->badgeRepo->getStudentBadges($student->id);
+            } catch (\Throwable) {
+                $earnedBadges = [];
             }
         }
 
@@ -156,6 +167,7 @@ class DashboardController extends Controller
             'todayDayName' => date('l'),
             'announcements' => $announcements,
             'upcomingLiveClasses' => $upcomingLiveClasses,
+            'earnedBadges' => $earnedBadges,
         ], 'layouts/student'));
     }
 }

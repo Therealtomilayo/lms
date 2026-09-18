@@ -13,7 +13,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Print Result Scratch Cards — Claret Academy</title>
+    <title>Print Result Scratch Cards — Claret International School</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @page {
@@ -79,7 +79,7 @@
                             <div class="flex items-center gap-2">
                                 <img src="/assets/img/logo.png" alt="Logo" class="w-8 h-8 object-contain" onerror="this.src='/favicon.ico'; this.onerror=null;">
                                 <div>
-                                    <h2 class="text-xs font-black tracking-tight uppercase text-slate-900 leading-tight">Claret Academy</h2>
+                                    <h2 class="text-xs font-black tracking-tight uppercase text-slate-900 leading-tight">Claret International School</h2>
                                     <p class="text-[9px] uppercase tracking-wider font-bold text-emerald-700">Official Result Scratch-Card</p>
                                 </div>
                             </div>

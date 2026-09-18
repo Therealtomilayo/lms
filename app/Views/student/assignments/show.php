@@ -220,7 +220,16 @@
     <?php endif; ?>
 
     <!-- Submit / Update Submission Form -->
-    <?php if (!$submission || !$submission->isGraded()): ?>
+    <?php if (!empty($isUnlocked) === false && !empty($prerequisiteStatus)): ?>
+        <div class="pt-2">
+            <?php $this->include('components/locked_activity', [
+                'title' => $assignment->title,
+                'allPrerequisites' => $prerequisiteStatus['prerequisites'] ?? [],
+                'unmet' => $prerequisiteStatus['unmet'] ?? [],
+                'backUrl' => '/student/assignments',
+            ]); ?>
+        </div>
+    <?php elseif (!$submission || !$submission->isGraded()): ?>
         <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 sm:p-8 space-y-6">
             <h2 class="text-base font-bold text-slate-900">
                 <?= $submission ? 'Update Your Homework Submission' : 'Submit Assignment Response' ?>

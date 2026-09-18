@@ -47,6 +47,9 @@ foreach ($reportData as $row) {
 
 $overallAttended = $presentSum + $lateSum;
 $overallRate = $totalStudentsSum > 0 ? round(($overallAttended / $totalStudentsSum) * 100, 1) : 0;
+$lateWeight = !empty($reportData) ? (float)($reportData[0]['late_weight'] ?? 0.6) : 0.6;
+$effectiveAttended = (float)$presentSum + ((float)$lateSum * $lateWeight);
+$overallWeightedRate = $totalStudentsSum > 0 ? round(($effectiveAttended / $totalStudentsSum) * 100, 1) : 0;
 ?>
 <div class="space-y-6">
 
@@ -150,18 +153,20 @@ $overallRate = $totalStudentsSum > 0 ? round(($overallAttended / $totalStudentsS
     <!-- KPI Aggregate Stats -->
     <?php if (!empty($reportData)): ?>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <!-- Overall Rate Card -->
+            <!-- Overall Rate Card (Weighted SRS §26) -->
             <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Attendance Rate</span>
-                    <?php $this->include('components/badge', [
-                        'label'   => $overallRate >= 80 ? 'Good' : ($overallRate >= 60 ? 'Moderate' : 'Low'),
-                        'variant' => $overallRate >= 80 ? 'success' : ($overallRate >= 60 ? 'warning' : 'danger'),
-                    ]); ?>
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Weighted Rate</span>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-extrabold bg-sky-50 text-sky-700 border border-sky-200">
+                        Late: <?= round($lateWeight * 100) ?>% Credit
+                    </span>
                 </div>
                 <div class="mt-3">
-                    <span class="text-3xl font-bold font-mono text-slate-900"><?= $overallRate ?>%</span>
-                    <p class="text-xs text-slate-400 mt-1"><?= number_format($overallAttended) ?> of <?= number_format($totalStudentsSum) ?> student days</p>
+                    <span class="text-3xl font-bold font-mono text-slate-900"><?= $overallWeightedRate ?>%</span>
+                    <div class="flex items-center justify-between text-xs text-slate-400 mt-1">
+                        <span>Unweighted: <?= $overallRate ?>%</span>
+                        <span><?= number_format($totalStudentsSum) ?> student days</span>
+                    </div>
                 </div>
             </div>
 

@@ -285,4 +285,18 @@ class ParentService
             'announcements' => array_slice($announcements, 0, 5),
         ];
     }
+
+    /**
+     * Get subject enrollments for an authorized child.
+     *
+     * @return array
+     */
+    public function getChildSubjectEnrollments(UserContext $actor, int $studentId): array
+    {
+        $student = $this->validateChildAccess($actor, $studentId);
+        $currentSession = $this->academicRepo->getActiveSession();
+        $sessionId = $currentSession ? $currentSession->id : 0;
+
+        return $sessionId > 0 ? $this->enrollmentRepo->getStudentSubjectEnrollments($student->id, $sessionId) : [];
+    }
 }

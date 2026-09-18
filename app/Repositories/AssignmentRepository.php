@@ -181,6 +181,53 @@ class AssignmentRepository
     }
 
     /**
+     * Bulk fetch assignments by IDs in a single query.
+     *
+     * @param int[] $ids
+     * @return array<int, Assignment>
+     */
+    public function findByIds(array $ids): array
+    {
+        $cleanIds = array_values(array_unique(array_filter(array_map('intval', $ids), fn($id) => $id > 0)));
+        if (empty($cleanIds)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($cleanIds), '?'));
+        $sql = "SELECT a.*, 
+                       cs.session_id, cs.class_id, cs.subject_id,
+                       s.name as subject_name, s.code as subject_code,
+                       c.name as class_name, c.section_arm,
+                       t.user_id as teacher_user_id, t.staff_id as teacher_staff_id,
+                       u.name as teacher_name, u.email as teacher_email,
+                       tm.name as term_name, tm.start_date as term_start_date, tm.end_date as term_end_date,
+                       tm.status as term_status, tm.session_id as term_session_id,
+                       f.uuid as file_uuid, f.storage_key as file_storage_key, f.original_name as file_original_name,
+                       f.mime_type as file_mime_type, f.size_bytes as file_size_bytes, f.sha256 as file_sha256,
+                       f.uploaded_by as file_uploaded_by, f.owner_type as file_owner_type, f.owner_id as file_owner_id,
+                       f.created_at as file_created_at, f.deleted_at as file_deleted_at
+                FROM `assignments` a
+                JOIN `class_subjects` cs ON cs.id = a.class_subject_id
+                JOIN `subjects` s ON s.id = cs.subject_id
+                JOIN `classes` c ON c.id = cs.class_id
+                JOIN `terms` tm ON tm.id = a.term_id
+                JOIN `teachers` t ON t.id = a.teacher_id
+                JOIN `users` u ON u.id = t.user_id
+                LEFT JOIN `files` f ON f.id = a.file_id AND f.deleted_at IS NULL
+                WHERE a.id IN ({$placeholders})";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($cleanIds);
+
+        $map = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $map[(int)$row['id']] = Assignment::fromArray($row);
+        }
+
+        return $map;
+    }
+
+    /**
      * @return Assignment[]
      */
     public function findByClassSubjectAndTerm(int $classSubjectId, int $termId): array
@@ -249,6 +296,50 @@ class AssignmentRepository
                 LEFT JOIN `files` f ON f.id = a.file_id AND f.deleted_at IS NULL
                 WHERE a.teacher_id = :teacher_id {$whereSession}
                 ORDER BY a.due_at DESC, a.created_at DESC";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return array_map(fn(array $row) => Assignment::fromArray($row), $rows);
+    }
+
+    /**
+     * Get assignments for a class_subject.
+     *
+     * @return Assignment[]
+     */
+    public function findByClassSubject(int $classSubjectId, ?string $status = null): array
+    {
+        $sql = 'SELECT a.*, 
+                       cs.session_id, cs.class_id, cs.subject_id,
+                       s.name as subject_name, s.code as subject_code,
+                       c.name as class_name, c.section_arm,
+                       t.user_id as teacher_user_id, t.staff_id as teacher_staff_id,
+                       u.name as teacher_name, u.email as teacher_email,
+                       tm.name as term_name, tm.start_date as term_start_date, tm.end_date as term_end_date,
+                       tm.status as term_status, tm.session_id as term_session_id,
+                       f.uuid as file_uuid, f.storage_key as file_storage_key, f.original_name as file_original_name,
+                       f.mime_type as file_mime_type, f.size_bytes as file_size_bytes, f.sha256 as file_sha256,
+                       f.uploaded_by as file_uploaded_by, f.owner_type as file_owner_type, f.owner_id as file_owner_id,
+                       f.created_at as file_created_at, f.deleted_at as file_deleted_at
+                FROM `assignments` a
+                JOIN `class_subjects` cs ON cs.id = a.class_subject_id
+                JOIN `subjects` s ON s.id = cs.subject_id
+                JOIN `classes` c ON c.id = cs.class_id
+                JOIN `terms` tm ON tm.id = a.term_id
+                JOIN `teachers` t ON t.id = a.teacher_id
+                JOIN `users` u ON u.id = t.user_id
+                LEFT JOIN `files` f ON f.id = a.file_id AND f.deleted_at IS NULL
+                WHERE a.class_subject_id = :class_subject_id';
+        $params = [':class_subject_id' => $classSubjectId];
+
+        if ($status !== null) {
+            $sql .= ' AND a.status = :status';
+            $params[':status'] = $status;
+        }
+
+        $sql .= ' ORDER BY a.due_at DESC, a.created_at DESC';
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);

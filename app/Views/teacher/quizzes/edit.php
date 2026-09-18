@@ -135,4 +135,159 @@
             </div>
         </form>
     </div>
+
+    <!-- Learning Activity Prerequisites (Phase 4) -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 sm:p-8 space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+            <div class="flex items-center gap-2">
+                <span class="p-2 rounded-lg bg-amber-50 text-amber-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                </span>
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900 tracking-tight">Required Prerequisites</h2>
+                    <p class="text-xs text-slate-500">Students must complete these activities before this quiz unlocks.</p>
+                </div>
+            </div>
+
+            <button type="button" onclick="openAddQuizPrereqModal()" 
+                    class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-xs transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                </svg>
+                <span>Add Prerequisite</span>
+            </button>
+        </div>
+
+        <?php if (empty($configuredPrerequisites)): ?>
+            <div class="text-center py-8 px-4 bg-slate-50/70 rounded-xl border border-dashed border-slate-200">
+                <p class="text-xs font-semibold text-slate-600">No prerequisites configured.</p>
+                <p class="text-[11px] text-slate-400 mt-0.5">This quiz is unlocked for all enrolled students according to standard quiz availability rules.</p>
+            </div>
+        <?php else: ?>
+            <div class="divide-y divide-slate-100 rounded-xl border border-slate-200 overflow-hidden text-xs">
+                <?php foreach ($configuredPrerequisites as $p): ?>
+                    <div class="p-4 bg-white flex items-center justify-between gap-4 hover:bg-slate-50/50 transition">
+                        <div class="flex items-center gap-3">
+                            <span class="p-1.5 rounded-lg bg-amber-50 text-amber-700 font-bold">🔒</span>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-bold text-slate-900"><?= htmlspecialchars($p['title']) ?></h4>
+                                    <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                                        (<?= htmlspecialchars(ucfirst(str_replace('_', ' ', $p['type']))) ?>)
+                                    </span>
+                                </div>
+                                <p class="text-[11px] text-slate-500 mt-0.5">Condition: Must reach 100% / full completion</p>
+                            </div>
+                        </div>
+
+                        <form action="/teacher/quizzes/<?= (int)$quiz->id ?>/prerequisites/<?= (int)$p['id'] ?>/delete" 
+                              method="POST" 
+                              onsubmit="return confirm('Remove prerequisite &quot;<?= htmlspecialchars(addslashes($p['title']), ENT_QUOTES) ?>&quot;?');">
+                            <?= csrf_field() ?>
+                            <button type="submit" class="text-xs font-semibold text-rose-600 hover:text-rose-700 transition">
+                                Remove
+                            </button>
+                        </form>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    </div>
+
+    <!-- Add Prerequisite Modal -->
+    <div id="quizPrereqModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden">
+            <div class="flex items-center justify-between p-5 border-b border-slate-100 bg-slate-50/50">
+                <div>
+                    <h3 class="text-sm font-bold text-slate-900">Require Prerequisite Activity</h3>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Select a prior activity from this class-subject</p>
+                </div>
+                <button type="button" onclick="closeAddQuizPrereqModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <form action="/teacher/quizzes/<?= (int)$quiz->id ?>/prerequisites" method="POST" class="p-6 space-y-4">
+                <?= csrf_field() ?>
+                <input type="hidden" name="requirement_type" value="completion">
+
+                <div>
+                    <label for="quiz_prereq_type" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                        Prerequisite Type <span class="text-rose-500">*</span>
+                    </label>
+                    <select name="prerequisite_type" id="quiz_prereq_type" required onchange="onQuizPrereqTypeChange()"
+                            class="w-full rounded-xl border border-slate-300 text-xs focus:border-emerald-500 focus:ring-emerald-500 bg-slate-50 py-2.5 px-3 font-medium text-slate-900 transition">
+                        <option value="document_section">Document Section</option>
+                        <option value="quiz">Another Quiz</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="quiz_prereq_id" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                        Select Activity <span class="text-rose-500">*</span>
+                    </label>
+                    <select name="prerequisite_id" id="quiz_prereq_id" required
+                            class="w-full rounded-xl border border-slate-300 text-xs focus:border-emerald-500 focus:ring-emerald-500 bg-slate-50 py-2.5 px-3 font-medium text-slate-900 transition">
+                        <!-- Populated dynamically via JS -->
+                    </select>
+                </div>
+
+                <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-800 space-y-1 leading-relaxed">
+                    <p class="font-bold">Rule Note:</p>
+                    <p>Students will be blocked from starting this quiz until all required activities are fully completed. Circular dependency loops are strictly prevented.</p>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeAddQuizPrereqModal()" 
+                            class="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 rounded-xl transition">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            class="px-4 py-2 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-xs transition">
+                        Save Prerequisite
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    const availableSections = <?= json_encode($availableSections ?? []) ?>;
+    const availableQuizzes = <?= json_encode($availableQuizzes ?? []) ?>;
+
+    function onQuizPrereqTypeChange() {
+        const type = document.getElementById('quiz_prereq_type').value;
+        const select = document.getElementById('quiz_prereq_id');
+        select.innerHTML = '';
+
+        const list = (type === 'document_section') ? availableSections : availableQuizzes;
+        if (list.length === 0) {
+            select.innerHTML = '<option value="">No available ' + (type === 'document_section' ? 'sections' : 'quizzes') + ' found</option>';
+        } else {
+            list.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.id;
+                opt.innerHTML = item.title;
+                select.appendChild(opt);
+            });
+        }
+    }
+
+    function openAddQuizPrereqModal() {
+        onQuizPrereqTypeChange();
+        document.getElementById('quizPrereqModal').classList.remove('hidden');
+    }
+
+    function closeAddQuizPrereqModal() {
+        document.getElementById('quizPrereqModal').classList.add('hidden');
+    }
+
+    document.getElementById('quizPrereqModal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeAddQuizPrereqModal();
+        }
+    });
+    </script>
 </div>
