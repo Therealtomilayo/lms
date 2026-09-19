@@ -43,7 +43,7 @@ class FeeController extends Controller
 
         $sessions = $this->academicRepo->getAllSessions();
         $terms = $this->academicRepo->getAllTerms();
-        $academicLevels = $this->academicRepo->getAllAcademicLevels();
+        $academicLevels = $this->academicRepo->getAllLevels();
         $classes = $this->academicRepo->getAllClasses();
         $categories = $this->feeRepo->getAllCategories(true);
 
@@ -162,7 +162,7 @@ class FeeController extends Controller
         $sessions = $this->academicRepo->getAllSessions();
         $terms = $this->academicRepo->getAllTerms();
         $classes = $this->academicRepo->getAllClasses();
-        $academicLevels = $this->academicRepo->getAllAcademicLevels();
+        $academicLevels = $this->academicRepo->getAllLevels();
 
         return $this->view('admin/fees/invoices', [
             'invoices' => $invoices,

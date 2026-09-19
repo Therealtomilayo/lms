@@ -391,6 +391,14 @@ class AcademicRepository
         return array_map(fn(array $row) => AcademicLevel::fromArray($row), $rows);
     }
 
+    /**
+     * @return AcademicLevel[]
+     */
+    public function getAllAcademicLevels(): array
+    {
+        return $this->getAllLevels();
+    }
+
     public function createLevel(array $data): AcademicLevel
     {
         $now = date('Y-m-d H:i:s');
