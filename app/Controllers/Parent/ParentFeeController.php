@@ -73,11 +73,16 @@ class ParentFeeController extends Controller
         return $this->view('parent/fees/index', [
             'parent' => $parent,
             'linkedStudents' => $linkedStudents,
+            'children' => $linkedStudents,
+            'selectedChild' => !empty($linkedStudents) ? $linkedStudents[0] : null,
             'invoices' => $invoices,
             'selectedStudentId' => $selectedStudentId,
             'totalOutstanding' => $totalOutstanding,
             'totalPaid' => $totalPaid,
-        ], 200, 'layouts/parent');
+            'title' => 'School Fees & Invoices — Claret Parent Portal',
+            'headerTitle' => 'School Fees & Invoices',
+            'headerSubtitle' => 'Review termly tuition dockets, pay in installments via Paystack, and download official receipts.',
+        ]);
     }
 
     /**
@@ -105,10 +110,17 @@ class ParentFeeController extends Controller
             return $this->forbidden('Access denied. You do not have permission to view this invoice.');
         }
 
+        $linkedStudents = $this->parentRepo->getLinkedStudents($parent->id);
+
         return $this->view('parent/fees/show', [
             'invoice' => $invoice,
             'parent' => $parent,
-        ], 200, 'layouts/parent');
+            'children' => $linkedStudents,
+            'selectedChild' => !empty($linkedStudents) ? $linkedStudents[0] : null,
+            'title' => 'Invoice ' . $invoice->invoiceNumber . ' — Claret School Fees',
+            'headerTitle' => 'Invoice ' . $invoice->invoiceNumber,
+            'headerSubtitle' => 'Fee docket and online payment gateway',
+        ]);
     }
 
     /**
