@@ -24,6 +24,7 @@ final class Payment
         public readonly ?int $studentId = null,
         public readonly ?int $sessionId = null,
         public readonly ?int $termId = null,
+        public readonly ?int $invoiceId = null,
         public readonly string $purpose = self::PURPOSE_RESULT_PIN,
         public readonly float $amount = 0.0,
         public readonly string $currency = 'NGN',
@@ -58,6 +59,8 @@ final class Payment
                 $metadata['item_description'] = 'Admission Application Fee — ' . $ward . $target;
             } elseif ($purpose === self::PURPOSE_RESULT_PIN) {
                 $metadata['item_description'] = 'Result Access Scratch-Card PIN';
+            } elseif ($purpose === self::PURPOSE_SCHOOL_FEES) {
+                $metadata['item_description'] = 'School Fees & Tuition Payment';
             }
         }
 
@@ -68,6 +71,7 @@ final class Payment
             studentId: isset($data['student_id']) && $data['student_id'] !== null && $data['student_id'] !== '' ? (int)$data['student_id'] : null,
             sessionId: isset($data['session_id']) && $data['session_id'] !== null && $data['session_id'] !== '' ? (int)$data['session_id'] : null,
             termId: isset($data['term_id']) && $data['term_id'] !== null && $data['term_id'] !== '' ? (int)$data['term_id'] : null,
+            invoiceId: isset($data['invoice_id']) && $data['invoice_id'] !== null && $data['invoice_id'] !== '' ? (int)$data['invoice_id'] : null,
             purpose: $purpose,
             amount: (float)($data['amount'] ?? 0.0),
             currency: (string)($data['currency'] ?? 'NGN'),

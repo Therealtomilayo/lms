@@ -246,6 +246,16 @@ try {
     // Admin Payments & Financial Ledger
     $router->get('/admin/payments', [\App\Controllers\PaymentController::class, 'adminLedger'], $adminAuth);
 
+    // Admin Fee Schedules, Structures & Student Invoicing (SRS §39, §57 Phase 4)
+    $router->get('/admin/fees/structures', [\App\Controllers\Admin\FeeController::class, 'structures'], $adminAuth);
+    $router->post('/admin/fees/structures', [\App\Controllers\Admin\FeeController::class, 'storeStructure'], $adminFormAuth);
+    $router->post('/admin/fees/structures/{id}/toggle', [\App\Controllers\Admin\FeeController::class, 'toggleStructure'], $adminFormAuth);
+    $router->get('/admin/fees/invoices', [\App\Controllers\Admin\FeeController::class, 'invoices'], $adminAuth);
+    $router->post('/admin/fees/invoices/generate', [\App\Controllers\Admin\FeeController::class, 'generateInvoices'], $adminFormAuth);
+    $router->get('/admin/fees/invoices/{id}', [\App\Controllers\Admin\FeeController::class, 'showInvoice'], $adminAuth);
+    $router->post('/admin/fees/invoices/{id}/record-payment', [\App\Controllers\Admin\FeeController::class, 'recordPayment'], $adminFormAuth);
+    $router->get('/admin/fees/invoices/{id}/print', [\App\Controllers\Admin\FeeController::class, 'printInvoice'], $adminAuth);
+
     // Super Admin Two-Tier Approval Queue Routes (ADMIN-30, §6, §58.1-§58.3)
     $superAdminAuth = [AuthMiddleware::class, RoleMiddleware::allow(['super_admin'])];
     $superAdminFormAuth = [AuthMiddleware::class, RoleMiddleware::allow(['super_admin']), CsrfMiddleware::class];
@@ -490,6 +500,10 @@ try {
     $router->get('/student/subjects/{classSubjectId}/discussions/{discussionId}', [\App\Controllers\Student\DiscussionController::class, 'show'], $studentAuth);
     $router->post('/student/subjects/{classSubjectId}/discussions/{discussionId}/replies', [\App\Controllers\Student\DiscussionController::class, 'reply'], $studentFormAuth);
 
+    // Student School Fees Invoices
+    $router->get('/student/fees', [\App\Controllers\Student\StudentFeeController::class, 'index'], $studentAuth);
+    $router->get('/student/fees/invoices/{id}', [\App\Controllers\Student\StudentFeeController::class, 'show'], $studentAuth);
+
     // Parent Portal Routes
     $parentAuth = [AuthMiddleware::class, RoleMiddleware::allow(['parent', 'admin', 'super_admin'])];
     $parentFormAuth = [AuthMiddleware::class, RoleMiddleware::allow(['parent', 'admin', 'super_admin']), CsrfMiddleware::class];
@@ -502,6 +516,13 @@ try {
     $router->get('/parent/children/{studentId}/grades/report-card', [\App\Controllers\Parent\ReportCardController::class, 'show'], $parentAuth);
     $router->get('/parent/children/{studentId}/grades/report-card.pdf', [\App\Controllers\Parent\ReportCardController::class, 'pdf'], $parentAuth);
     $router->post('/parent/children/{studentId}/grades/unlock', [\App\Controllers\Parent\ReportCardController::class, 'unlock'], $parentFormAuth);
+
+    // Parent School Fees & Invoices (SRS §39, §57 Phase 4)
+    $router->get('/parent/fees', [\App\Controllers\Parent\ParentFeeController::class, 'index'], $parentAuth);
+    $router->get('/parent/fees/invoices/{id}', [\App\Controllers\Parent\ParentFeeController::class, 'show'], $parentAuth);
+    $router->post('/parent/fees/invoices/{id}/checkout', [\App\Controllers\Parent\ParentFeeController::class, 'checkout'], $parentFormAuth);
+    $router->get('/parent/fees/verify', [\App\Controllers\Parent\ParentFeeController::class, 'verify'], $parentAuth);
+    $router->get('/parent/children/{studentId}/fees', [\App\Controllers\Parent\ParentFeeController::class, 'index'], $parentAuth);
 
     // Parent Attendance & Announcements Routes
     $router->get('/parent/attendance', [\App\Controllers\Parent\AttendanceController::class, 'index'], $parentAuth);
@@ -529,6 +550,7 @@ try {
     $router->get('/payments/callback', [\App\Controllers\PaymentController::class, 'callback'], $paymentAuth);
     $router->get('/payments/history', [\App\Controllers\PaymentController::class, 'history'], $personalPaymentAuth);
     $router->get('/payments/{reference}/receipt', [\App\Controllers\PaymentController::class, 'receipt'], $paymentAuth);
+    $router->get('/payments/receipt/{reference}', [\App\Controllers\PaymentController::class, 'receipt'], $paymentAuth);
 
     // Role-Guarded Dashboards
     $router->get('/admin/dashboard', [\App\Controllers\Admin\DashboardController::class, 'index'], $adminAuth);

@@ -26,8 +26,8 @@ class PaymentRepository
         $metadataJson = isset($data['metadata']) ? (is_string($data['metadata']) ? $data['metadata'] : json_encode($data['metadata'], JSON_UNESCAPED_UNICODE)) : null;
 
         $sql = 'INSERT INTO `payments` 
-                (`reference`, `user_id`, `student_id`, `session_id`, `term_id`, `purpose`, `amount`, `currency`, `channel`, `status`, `gateway_reference`, `metadata`, `paid_at`, `created_at`, `updated_at`)
-                VALUES (:reference, :user_id, :student_id, :session_id, :term_id, :purpose, :amount, :currency, :channel, :status, :gateway_reference, :metadata, :paid_at, :created_at, :updated_at)';
+                (`reference`, `user_id`, `student_id`, `session_id`, `term_id`, `invoice_id`, `purpose`, `amount`, `currency`, `channel`, `status`, `gateway_reference`, `metadata`, `paid_at`, `created_at`, `updated_at`)
+                VALUES (:reference, :user_id, :student_id, :session_id, :term_id, :invoice_id, :purpose, :amount, :currency, :channel, :status, :gateway_reference, :metadata, :paid_at, :created_at, :updated_at)';
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
@@ -36,6 +36,7 @@ class PaymentRepository
             ':student_id' => $data['student_id'],
             ':session_id' => $data['session_id'],
             ':term_id' => $data['term_id'],
+            ':invoice_id' => !empty($data['invoice_id']) ? (int)$data['invoice_id'] : null,
             ':purpose' => $data['purpose'] ?? Payment::PURPOSE_RESULT_PIN,
             ':amount' => $data['amount'],
             ':currency' => $data['currency'] ?? 'NGN',
@@ -276,7 +277,7 @@ class PaymentRepository
             ? "TRIM(COALESCE(w.first_name, '') || ' ' || COALESCE(w.last_name, ''))"
             : "TRIM(CONCAT(COALESCE(w.first_name, ''), ' ', COALESCE(w.last_name, '')))";
 
-        $generalQuery = 'SELECT p.id, p.reference, p.user_id, p.student_id, p.session_id, p.term_id,
+        $generalQuery = 'SELECT p.id, p.reference, p.user_id, p.student_id, p.session_id, p.term_id, p.invoice_id,
                                p.purpose, p.amount, p.currency, p.channel, p.status,
                                p.gateway_reference, p.metadata, p.paid_at, p.created_at, p.updated_at,
                                pu.name as payer_name, pu.email as payer_email,
@@ -298,6 +299,7 @@ class PaymentRepository
                                  w.converted_student_id as student_id,
                                  ase.academic_session_id as session_id,
                                  NULL as term_id,
+                                 NULL as invoice_id,
                                  'admission' as purpose,
                                  ap.amount, ap.currency, ap.channel, ap.status,
                                  ap.gateway_reference, ap.metadata, ap.paid_at, ap.created_at, ap.updated_at,

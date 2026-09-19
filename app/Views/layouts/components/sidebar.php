@@ -196,7 +196,9 @@ $navConfig = [
         ['label' => 'Class Discussions', 'route' => '/admin/discussions', 'icon' => 'announcement'],
         ['label' => 'Announcements', 'route' => '/admin/announcements', 'icon' => 'announcement'],
         ['category' => 'Finance & Payments'],
-        ['label' => 'Payments & Revenue', 'route' => '/admin/payments', 'icon' => 'document-text'],
+        ['label' => 'Fee Schedules', 'route' => '/admin/fees/structures', 'icon' => 'scale'],
+        ['label' => 'Student Invoices', 'route' => '/admin/fees/invoices', 'icon' => 'document-text'],
+        ['label' => 'Payments & Revenue', 'route' => '/admin/payments', 'icon' => 'chart'],
         ['category' => 'System & Security'],
         ['label' => 'System Health', 'route' => '/admin/health', 'icon' => 'shield'],
         ['label' => 'Database Backups', 'route' => '/admin/backups', 'icon' => 'database'],
@@ -229,6 +231,7 @@ $navConfig = [
         ['label' => 'Assignments', 'route' => '/student/assignments', 'icon' => 'clipboard'],
         ['label' => 'Online Quizzes', 'route' => '/student/quizzes', 'icon' => 'quiz'],
         ['label' => 'Academic Grades', 'route' => '/student/grades', 'icon' => 'document-text'],
+        ['label' => 'School Fees', 'route' => '/student/fees', 'icon' => 'scale'],
         ['label' => 'Payment History', 'route' => '/payments/history', 'icon' => 'document-text'],
         ['label' => 'My Attendance', 'route' => '/student/attendance', 'icon' => 'calendar'],
         ['label' => 'Announcements', 'route' => '/student/announcements', 'icon' => 'announcement'],
@@ -236,6 +239,7 @@ $navConfig = [
     ],
     'parent' => [
         ['label' => 'Overview Dashboard', 'route' => '/parent/dashboard', 'icon' => 'home'],
+        ['label' => 'School Fees & Invoices', 'route' => '/parent/fees', 'icon' => 'scale'],
         ['label' => 'Live Online Classes', 'route' => '/parent/live-classes', 'icon' => 'video'],
         ['label' => 'Payment History', 'route' => '/payments/history', 'icon' => 'document-text'],
     ]

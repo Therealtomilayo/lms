@@ -292,7 +292,10 @@ class PaymentService
      */
     public function getReceiptData(string $reference): ?array
     {
-        $payment = $this->paymentRepository->findByReference($reference);
+        $payment = is_numeric($reference) 
+            ? ($this->paymentRepository->findById((int)$reference) ?? $this->paymentRepository->findByReference($reference))
+            : $this->paymentRepository->findByReference($reference);
+
         if (!$payment) {
             return null;
         }
@@ -300,9 +303,11 @@ class PaymentService
         $student = ($payment->studentId !== null && $payment->studentId > 0) ? $this->studentRepository->findById($payment->studentId) : null;
         $pin = ($payment->purpose === Payment::PURPOSE_RESULT_PIN) ? $this->pinRepository->findByPaymentId($payment->id) : null;
 
-        $defaultTitle = $payment->purpose === Payment::PURPOSE_ADMISSION
-            ? ('Admission Application Fee — ' . ($payment->studentName ?? 'Prospective Ward'))
-            : 'Result Access Scratch-Card PIN';
+        $defaultTitle = match ($payment->purpose) {
+            Payment::PURPOSE_ADMISSION => ('Admission Application Fee — ' . ($payment->studentName ?? 'Prospective Ward')),
+            Payment::PURPOSE_SCHOOL_FEES => 'School Fees & Tuition Payment',
+            default => 'Result Access Scratch-Card PIN',
+        };
 
         return [
             'payment' => $payment,

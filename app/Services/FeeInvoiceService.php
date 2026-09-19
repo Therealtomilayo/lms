@@ -1,0 +1,371 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services;
+
+use App\Core\Config;
+use App\Core\Database;
+use App\Core\UserContext;
+use App\DTO\ServiceResult;
+use App\Models\FeeInvoice;
+use App\Models\FeeStructure;
+use App\Models\Payment;
+use App\Repositories\AcademicRepository;
+use App\Repositories\FeeRepository;
+use App\Repositories\ParentRepository;
+use App\Repositories\PaymentRepository;
+use App\Repositories\StudentRepository;
+use PDO;
+
+class FeeInvoiceService
+{
+    private FeeRepository $feeRepo;
+    private PaymentRepository $paymentRepo;
+    private StudentRepository $studentRepo;
+    private AcademicRepository $academicRepo;
+    private ParentRepository $parentRepo;
+    private PaymentService $paymentService;
+    private PDO $pdo;
+
+    public function __construct(
+        ?FeeRepository $feeRepo = null,
+        ?PaymentRepository $paymentRepo = null,
+        ?StudentRepository $studentRepo = null,
+        ?AcademicRepository $academicRepo = null,
+        ?ParentRepository $parentRepo = null,
+        ?PaymentService $paymentService = null,
+        ?PDO $pdo = null
+    ) {
+        $this->feeRepo = $feeRepo ?? new FeeRepository();
+        $this->paymentRepo = $paymentRepo ?? new PaymentRepository();
+        $this->studentRepo = $studentRepo ?? new StudentRepository();
+        $this->academicRepo = $academicRepo ?? new AcademicRepository();
+        $this->parentRepo = $parentRepo ?? new ParentRepository();
+        $this->paymentService = $paymentService ?? new PaymentService($this->paymentRepo);
+        $this->pdo = $pdo ?? Database::getConnection();
+    }
+
+    public function getFeeRepository(): FeeRepository
+    {
+        return $this->feeRepo;
+    }
+
+    /**
+     * Configure or update a fee schedule with line items.
+     */
+    public function configureFeeStructure(array $data, array $items, int $userId): ServiceResult
+    {
+        $sessionId = (int)($data['session_id'] ?? 0);
+        $termId = (int)($data['term_id'] ?? 0);
+        $title = trim((string)($data['title'] ?? ''));
+
+        if ($sessionId <= 0 || $termId <= 0 || empty($title)) {
+            return ServiceResult::error('Session, Term, and Fee Structure Title are required.');
+        }
+
+        if (empty($items)) {
+            return ServiceResult::error('A fee structure must contain at least one fee component.');
+        }
+
+        $data['created_by'] = $userId;
+        $structure = $this->feeRepo->createStructure($data, $items);
+
+        return ServiceResult::success($structure);
+    }
+
+    /**
+     * Batch generate invoices for all enrolled students in a class or academic level.
+     * Guaranteed IDEMPOTENT: skips students already billed for the session & term.
+     */
+    public function batchGenerateInvoices(
+        int $sessionId,
+        int $termId,
+        ?int $levelId = null,
+        ?int $classId = null,
+        int $userId = 0
+    ): ServiceResult {
+        $session = $this->academicRepo->findSessionById($sessionId);
+        $term = $this->academicRepo->findTermById($termId);
+
+        if (!$session || !$term) {
+            return ServiceResult::error('Invalid Academic Session or Term.');
+        }
+
+        // Fetch target enrolled students
+        $sql = 'SELECT ce.student_id, ce.class_id, c.academic_level_id, s.user_id as student_user_id
+                FROM `class_enrollments` ce
+                JOIN `classes` c ON c.id = ce.class_id
+                JOIN `students` s ON s.id = ce.student_id
+                WHERE ce.session_id = :session_id AND ce.status = "active"';
+
+        $params = [':session_id' => $sessionId];
+
+        if ($classId !== null) {
+            $sql .= ' AND ce.class_id = :class_id';
+            $params[':class_id'] = $classId;
+        } elseif ($levelId !== null) {
+            $sql .= ' AND c.academic_level_id = :level_id';
+            $params[':level_id'] = $levelId;
+        }
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $enrollments = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        if (empty($enrollments)) {
+            return ServiceResult::error('No active student enrollments found matching the criteria.');
+        }
+
+        $createdCount = 0;
+        $skippedCount = 0;
+        $failedCount = 0;
+
+        foreach ($enrollments as $enr) {
+            $studentId = (int)$enr['student_id'];
+            $stClassId = (int)$enr['class_id'];
+            $stLevelId = (int)$enr['academic_level_id'];
+
+            // 1. Idempotency check: verify if already billed
+            $existing = $this->feeRepo->findInvoiceForStudentTerm($studentId, $sessionId, $termId);
+            if ($existing !== null) {
+                $skippedCount++;
+                continue;
+            }
+
+            // 2. Resolve matching fee structure
+            $structure = $this->feeRepo->findMatchingStructure($sessionId, $termId, $stLevelId, $stClassId);
+            if (!$structure || empty($structure->items)) {
+                $failedCount++;
+                continue;
+            }
+
+            // 3. Resolve primary parent/guardian if linked
+            $parentStmt = $this->pdo->prepare('SELECT parent_id FROM `parent_student` WHERE student_id = :s LIMIT 1');
+            $parentStmt->execute([':s' => $studentId]);
+            $parentId = $parentStmt->fetchColumn();
+            $resolvedParentId = $parentId ? (int)$parentId : null;
+
+            // 4. Generate unique invoice number
+            $invoiceNumber = $this->feeRepo->generateInvoiceNumber($sessionId);
+
+            // 5. Build snapshot line items
+            $itemsData = [];
+            foreach ($structure->items as $fsi) {
+                $itemsData[] = [
+                    'fee_category_id' => $fsi->feeCategoryId,
+                    'name' => $fsi->name,
+                    'amount' => $fsi->amount,
+                ];
+            }
+
+            $invoiceData = [
+                'invoice_number' => $invoiceNumber,
+                'student_id' => $studentId,
+                'parent_id' => $resolvedParentId,
+                'class_id' => $stClassId,
+                'session_id' => $sessionId,
+                'term_id' => $termId,
+                'discount_amount' => 0.00,
+                'amount_paid' => 0.00,
+                'due_date' => $structure->dueDate,
+                'notes' => "Termly Tuition & Levies — {$structure->title}",
+                'created_by' => $userId,
+            ];
+
+            try {
+                $this->feeRepo->createInvoice($invoiceData, $itemsData);
+                $createdCount++;
+            } catch (\Throwable) {
+                $failedCount++;
+            }
+        }
+
+        return ServiceResult::success([
+            'created_count' => $createdCount,
+            'skipped_count' => $skippedCount,
+            'failed_count' => $failedCount,
+            'total_processed' => count($enrollments),
+        ]);
+    }
+
+    /**
+     * Initiate online Paystack checkout for a student fee invoice.
+     * Supports either full payment or custom installment amounts.
+     */
+    public function initiateInvoicePayment(
+        FeeInvoice $invoice,
+        float $amount,
+        UserContext $actor,
+        string $callbackUrl
+    ): ServiceResult {
+        if ($invoice->isPaid()) {
+            return ServiceResult::error('This invoice is already fully paid.');
+        }
+
+        $amount = round($amount, 2);
+        if ($amount < 100.0) {
+            return ServiceResult::error('Minimum payment amount is ₦100.00.');
+        }
+
+        if ($amount > $invoice->balanceDue) {
+            return ServiceResult::error(sprintf('Payment amount (₦%s) exceeds outstanding balance (₦%s).', number_format($amount, 2), number_format($invoice->balanceDue, 2)));
+        }
+
+        $reference = 'SCH-' . date('Ym') . '-' . strtoupper(bin2hex(random_bytes(4)));
+
+        $payment = $this->paymentRepo->create([
+            'reference' => $reference,
+            'user_id' => $actor->getUserId(),
+            'student_id' => $invoice->studentId,
+            'session_id' => $invoice->sessionId,
+            'term_id' => $invoice->termId,
+            'invoice_id' => $invoice->id,
+            'purpose' => Payment::PURPOSE_SCHOOL_FEES,
+            'amount' => $amount,
+            'currency' => 'NGN',
+            'channel' => 'paystack_simulated',
+            'status' => Payment::STATUS_PENDING,
+            'metadata' => [
+                'payer_name' => $actor->name,
+                'payer_email' => $actor->email,
+                'student_name' => $invoice->studentName,
+                'admission_number' => $invoice->admissionNumber,
+                'invoice_number' => $invoice->invoiceNumber,
+                'session_name' => $invoice->sessionName,
+                'term_name' => $invoice->termName,
+                'class_name' => $invoice->className,
+                'item_description' => "School Fees Payment ({$invoice->invoiceNumber} — {$invoice->studentName})",
+                'is_partial' => ($amount < $invoice->balanceDue),
+            ],
+        ]);
+
+        return ServiceResult::success($payment);
+    }
+
+    /**
+     * Confirm / verify successful payment for school fees and update invoice financials.
+     */
+    public function verifyInvoicePayment(string $reference): ServiceResult
+    {
+        $payment = $this->paymentRepo->findByReference($reference);
+        if (!$payment) {
+            return ServiceResult::error("Payment transaction {$reference} not found.");
+        }
+
+        if ($payment->isSuccessful()) {
+            $invoice = $payment->invoiceId ? $this->feeRepo->findInvoiceById($payment->invoiceId) : null;
+            return ServiceResult::success([
+                'payment' => $payment,
+                'invoice' => $invoice,
+                'already_processed' => true,
+            ]);
+        }
+
+        $invoice = $payment->invoiceId ? $this->feeRepo->findInvoiceById($payment->invoiceId) : null;
+        if (!$invoice) {
+            return ServiceResult::error('Associated fee invoice not found.');
+        }
+
+        $now = date('Y-m-d H:i:s');
+        $gatewayRef = 'MOCK_PSTK_' . strtoupper(bin2hex(random_bytes(6)));
+
+        // 1. Mark payment as successful
+        $this->paymentRepo->updateStatus($payment->id, Payment::STATUS_SUCCESSFUL, $gatewayRef, $now);
+
+        // 2. Re-calculate invoice financials
+        $newAmountPaid = $invoice->amountPaid + $payment->amount;
+        $newBalance = max(0.0, $invoice->totalAmount - $newAmountPaid);
+
+        $newStatus = FeeInvoice::STATUS_PARTIALLY_PAID;
+        if ($newBalance <= 0.0) {
+            $newStatus = FeeInvoice::STATUS_PAID;
+        }
+
+        $this->feeRepo->updateInvoiceFinancials($invoice->id, $newAmountPaid, $newBalance, $newStatus);
+
+        $refreshedPayment = $this->paymentRepo->findById($payment->id);
+        $refreshedInvoice = $this->feeRepo->findInvoiceById($invoice->id);
+
+        return ServiceResult::success([
+            'payment' => $refreshedPayment,
+            'invoice' => $refreshedInvoice,
+            'already_processed' => false,
+        ]);
+    }
+
+    /**
+     * Record a manual payment logged by the Bursar (Cash, Bank Transfer, or POS).
+     */
+    public function recordManualPayment(
+        int $invoiceId,
+        float $amount,
+        string $channel,
+        ?string $referenceNumber,
+        ?string $notes,
+        UserContext $actor
+    ): ServiceResult {
+        $invoice = $this->feeRepo->findInvoiceById($invoiceId);
+        if (!$invoice) {
+            return ServiceResult::error('Fee invoice not found.');
+        }
+
+        if ($invoice->isPaid()) {
+            return ServiceResult::error('This invoice is already fully paid.');
+        }
+
+        $amount = round($amount, 2);
+        if ($amount <= 0.0) {
+            return ServiceResult::error('Amount must be greater than zero.');
+        }
+
+        if ($amount > $invoice->balanceDue) {
+            return ServiceResult::error(sprintf('Payment amount (₦%s) exceeds balance due (₦%s).', number_format($amount, 2), number_format($invoice->balanceDue, 2)));
+        }
+
+        $now = date('Y-m-d H:i:s');
+        $systemRef = 'BUR-' . date('Ym') . '-' . strtoupper(bin2hex(random_bytes(4)));
+        $channel = in_array($channel, ['bank_transfer', 'pos', 'cash'], true) ? $channel : 'bank_transfer';
+
+        // 1. Create successful payment record
+        $payment = $this->paymentRepo->create([
+            'reference' => $systemRef,
+            'user_id' => $actor->getUserId(),
+            'student_id' => $invoice->studentId,
+            'session_id' => $invoice->sessionId,
+            'term_id' => $invoice->termId,
+            'invoice_id' => $invoice->id,
+            'purpose' => Payment::PURPOSE_SCHOOL_FEES,
+            'amount' => $amount,
+            'currency' => 'NGN',
+            'channel' => $channel,
+            'status' => Payment::STATUS_SUCCESSFUL,
+            'gateway_reference' => $referenceNumber ? trim($referenceNumber) : 'MANUAL_BURSARY_' . date('YmdHis'),
+            'paid_at' => $now,
+            'metadata' => [
+                'recorded_by' => $actor->name,
+                'recorder_id' => $actor->getUserId(),
+                'student_name' => $invoice->studentName,
+                'admission_number' => $invoice->admissionNumber,
+                'invoice_number' => $invoice->invoiceNumber,
+                'channel_label' => strtoupper(str_replace('_', ' ', $channel)),
+                'bursary_notes' => $notes ? trim($notes) : null,
+                'item_description' => "Bursary Payment ({$invoice->invoiceNumber} — {$invoice->studentName})",
+            ],
+        ]);
+
+        // 2. Update invoice balance and status
+        $newAmountPaid = $invoice->amountPaid + $amount;
+        $newBalance = max(0.0, $invoice->totalAmount - $newAmountPaid);
+        $newStatus = ($newBalance <= 0.0) ? FeeInvoice::STATUS_PAID : FeeInvoice::STATUS_PARTIALLY_PAID;
+
+        $this->feeRepo->updateInvoiceFinancials($invoice->id, $newAmountPaid, $newBalance, $newStatus);
+
+        $refreshedInvoice = $this->feeRepo->findInvoiceById($invoice->id);
+
+        return ServiceResult::success([
+            'payment' => $payment,
+            'invoice' => $refreshedInvoice,
+        ]);
+    }
+}
