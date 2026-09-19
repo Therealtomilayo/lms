@@ -83,7 +83,7 @@ $allRequiredUploaded = $hasBirthCert && $hasPassport;
                 </div>
 
                 <?php if ($hasBirthCert): ?>
-                    <a href="/files/<?= $ward->birthCertificateFileId ?>/download" target="_blank" 
+                    <a href="/files/<?= $ward->birthCertificateFileId ?>/stream" target="_blank" 
                        class="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:underline shrink-0">
                         <i data-lucide="eye" class="w-3.5 h-3.5" style="width:14px;height:14px;"></i>
                         <span>Preview Uploaded File</span>
@@ -132,7 +132,7 @@ $allRequiredUploaded = $hasBirthCert && $hasPassport;
                 </div>
 
                 <?php if ($hasPassport): ?>
-                    <a href="/files/<?= $ward->passportPhotoFileId ?>/download" target="_blank" 
+                    <a href="/files/<?= $ward->passportPhotoFileId ?>/stream" target="_blank" 
                        class="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:underline shrink-0">
                         <i data-lucide="eye" class="w-3.5 h-3.5" style="width:14px;height:14px;"></i>
                         <span>Preview Uploaded Photo</span>
@@ -181,7 +181,7 @@ $allRequiredUploaded = $hasBirthCert && $hasPassport;
                 </div>
 
                 <?php if ($hasPrevReport): ?>
-                    <a href="/files/<?= $ward->previousReportFileId ?>/download" target="_blank" 
+                    <a href="/files/<?= $ward->previousReportFileId ?>/stream" target="_blank" 
                        class="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:underline shrink-0">
                         <i data-lucide="eye" class="w-3.5 h-3.5" style="width:14px;height:14px;"></i>
                         <span>Preview Uploaded Report</span>

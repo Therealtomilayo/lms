@@ -11,7 +11,6 @@ $this->layout('layouts/admin', [
     'title' => 'Admission Sessions — Claret LMS',
     'headerTitle' => 'Admissions'
 ]);
-$csrfToken = \App\Core\Session::get('csrf_token', '');
 ?>
 
 <div class="space-y-6">
@@ -112,7 +111,7 @@ $csrfToken = \App\Core\Session::get('csrf_token', '');
                                 </td>
                                 <td class="py-4 px-5 text-right">
                                     <form method="POST" action="/admin/admissions/sessions/<?= $s->id ?>" class="inline">
-                                        <input type="hidden" name="_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
+                                        <?= \App\Core\Csrf::field() ?>
                                         <input type="hidden" name="is_active" value="<?= $s->isActive ? '0' : '1' ?>">
                                         <button type="submit" class="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-xs transition">
                                             <?= $s->isActive ? 'Deactivate' : 'Activate' ?>
@@ -139,7 +138,7 @@ $csrfToken = \App\Core\Session::get('csrf_token', '');
         </div>
 
         <form method="POST" action="/admin/admissions/sessions" class="space-y-4 text-xs">
-            <input type="hidden" name="_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
+            <?= \App\Core\Csrf::field() ?>
 
             <div>
                 <label class="block font-bold text-slate-700 mb-1">Academic Session Year <span class="text-rose-500">*</span></label>
