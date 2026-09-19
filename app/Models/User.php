@@ -102,6 +102,11 @@ final class User
         return $this->hasRole('parent');
     }
 
+    public function isApplicant(): bool
+    {
+        return $this->hasRole('applicant');
+    }
+
     public function toArray(): array
     {
         return [

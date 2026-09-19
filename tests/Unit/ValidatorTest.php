@@ -43,6 +43,15 @@ final class ValidatorTest extends TestCase
         $v2 = Validator::make(['pwd' => 'short'], ['pwd' => 'min:8']);
         $this->assertTrue($v2->fails());
         $this->assertStringContainsString('at least 8 characters', $v2->firstError('pwd'));
+
+        // Test phone string containing digits is not evaluated as float > max
+        $vPhone = Validator::make(['phone' => '08031234567'], ['phone' => 'max:30']);
+        $this->assertTrue($vPhone->passes(), 'Phone number with 11 digits should pass max:30');
+
+        // Test numeric rule actually evaluates numerically
+        $vNumeric = Validator::make(['score' => '150'], ['score' => 'numeric|max:100']);
+        $this->assertTrue($vNumeric->fails(), 'Score 150 should fail numeric|max:100');
+        $this->assertStringContainsString('must not exceed 100.', $vNumeric->firstError('score'));
     }
 
     public function testConfirmedRule(): void

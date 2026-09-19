@@ -74,6 +74,9 @@ try {
         if ($user->isParent()) {
             return Response::redirect('/parent/dashboard');
         }
+        if ($user->isApplicant()) {
+            return Response::redirect('/applicant/dashboard');
+        }
 
         return Response::redirect('/dashboard');
     });
@@ -96,6 +99,11 @@ try {
     $router->get('/results/check', [\App\Controllers\PublicResultCheckerController::class, 'show']);
     $router->post('/results/check', [\App\Controllers\PublicResultCheckerController::class, 'verify'], [CsrfMiddleware::class]);
     $router->get('/results/view', [\App\Controllers\PublicResultCheckerController::class, 'viewReport']);
+
+    // Online Admission & Prospective Student Gateway (SRS §10, §57 Phase 4)
+    $router->get('/apply', [\App\Controllers\AdmissionController::class, 'showApply']);
+    $router->get('/apply/register', [\App\Controllers\AdmissionController::class, 'showRegister']);
+    $router->post('/apply/register', [\App\Controllers\AdmissionController::class, 'register'], [$loginThrottle, CsrfMiddleware::class]);
 
     // Developer Showcase Route (Environment-restricted inside the controller)
     $router->get('/dev/showcase', [\App\Controllers\Dev\ShowcaseController::class, 'index']);
@@ -123,6 +131,16 @@ try {
     $router->post('/admin/sessions/{id}', [\App\Controllers\Admin\SessionController::class, 'update'], $adminFormAuth);
     $router->post('/admin/sessions/{id}/make-current', [\App\Controllers\Admin\SessionController::class, 'makeCurrent'], $adminFormAuth);
     $router->post('/admin/sessions/{id}/archive', [\App\Controllers\Admin\SessionController::class, 'archive'], $adminFormAuth);
+
+    // Admissions & Prospective Student Application Management
+    $router->get('/admin/admissions/sessions', [\App\Controllers\Admin\AdmissionController::class, 'sessions'], $adminAuth);
+    $router->post('/admin/admissions/sessions', [\App\Controllers\Admin\AdmissionController::class, 'storeSession'], $adminFormAuth);
+    $router->post('/admin/admissions/sessions/{id}', [\App\Controllers\Admin\AdmissionController::class, 'updateSession'], $adminFormAuth);
+    $router->get('/admin/admissions/applications', [\App\Controllers\Admin\AdmissionController::class, 'index'], $adminAuth);
+    $router->get('/admin/admissions/applications/{id}', [\App\Controllers\Admin\AdmissionController::class, 'show'], $adminAuth);
+    $router->post('/admin/admissions/applications/{id}/review', [\App\Controllers\Admin\AdmissionController::class, 'review'], $adminFormAuth);
+    $router->post('/admin/admissions/applications/{id}/approve', [\App\Controllers\Admin\AdmissionController::class, 'approve'], $adminFormAuth);
+    $router->post('/admin/admissions/applications/{id}/reject', [\App\Controllers\Admin\AdmissionController::class, 'reject'], $adminFormAuth);
 
     // Terms
     $router->get('/admin/terms', [\App\Controllers\Admin\TermController::class, 'index'], $adminAuth);
@@ -518,6 +536,35 @@ try {
     $router->get('/teacher/dashboard', [\App\Controllers\Teacher\DashboardController::class, 'index'], $teacherAuth);
 
     $router->get('/student/dashboard', [\App\Controllers\Student\DashboardController::class, 'index'], $studentAuth);
+
+    // Applicant Portal Routes (SRS §10, §57 Phase 4)
+    $applicantAuth = [AuthMiddleware::class, RoleMiddleware::allow(['applicant', 'admin', 'super_admin'])];
+    $applicantFormAuth = [AuthMiddleware::class, RoleMiddleware::allow(['applicant', 'admin', 'super_admin']), CsrfMiddleware::class];
+
+    // Dashboard & Overview
+    $router->get('/applicant/dashboard', [\App\Controllers\Applicant\DashboardController::class, 'index'], $applicantAuth);
+
+    // Application & Ward Management
+    $router->get('/applicant/application', [\App\Controllers\Applicant\ApplicationController::class, 'index'], $applicantAuth);
+    $router->get('/applicant/wards/create', [\App\Controllers\Applicant\ApplicationController::class, 'createWard'], $applicantAuth);
+    $router->post('/applicant/wards', [\App\Controllers\Applicant\ApplicationController::class, 'storeWard'], $applicantFormAuth);
+    $router->get('/applicant/wards/{id}/edit', [\App\Controllers\Applicant\ApplicationController::class, 'editWard'], $applicantAuth);
+    $router->post('/applicant/wards/{id}', [\App\Controllers\Applicant\ApplicationController::class, 'updateWard'], $applicantFormAuth);
+    $router->post('/applicant/wards/{id}/delete', [\App\Controllers\Applicant\ApplicationController::class, 'deleteWard'], $applicantFormAuth);
+
+    // Document Management
+    $router->get('/applicant/wards/{id}/documents', [\App\Controllers\Applicant\ApplicationController::class, 'showDocuments'], $applicantAuth);
+    $router->post('/applicant/wards/{id}/documents', [\App\Controllers\Applicant\ApplicationController::class, 'uploadDocument'], $applicantFormAuth);
+
+    // Application Submission & Milestone Progress
+    $router->post('/applicant/applications/{id}/submit', [\App\Controllers\Applicant\ApplicationController::class, 'submitApplication'], $applicantFormAuth);
+    $router->get('/applicant/progress', [\App\Controllers\Applicant\ApplicationController::class, 'progress'], $applicantAuth);
+
+    // Per-Ward Application Fee Payment Gate
+    $router->get('/applicant/payment/callback', [\App\Controllers\Applicant\PaymentController::class, 'callback'], $applicantAuth);
+    $router->post('/applicant/payment/simulate', [\App\Controllers\Applicant\PaymentController::class, 'simulate'], $applicantFormAuth);
+    $router->get('/applicant/payment/{wardId}', [\App\Controllers\Applicant\PaymentController::class, 'showCheckout'], $applicantAuth);
+    $router->post('/applicant/payment/{wardId}/checkout', [\App\Controllers\Applicant\PaymentController::class, 'checkout'], $applicantFormAuth);
 
     $router->get('/dashboard', function (Request $req): Response {
         $authenticator = new WebAuthenticator();

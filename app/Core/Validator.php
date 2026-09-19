@@ -88,23 +88,35 @@ class Validator
 
             case 'min':
                 $min = (int)($parameters[0] ?? 0);
-                if (is_string($value) && mb_strlen($value) < $min) {
-                    $this->addError($field, 'min', 'The ' . $this->humanize($field) . ' must be at least ' . $min . ' characters.');
-                } elseif (is_numeric($value) && (float)$value < $min) {
-                    $this->addError($field, 'min', 'The ' . $this->humanize($field) . ' must be at least ' . $min . '.');
-                } elseif (is_array($value) && count($value) < $min) {
-                    $this->addError($field, 'min', 'The ' . $this->humanize($field) . ' must have at least ' . $min . ' items.');
+                if ($this->isNumericField($field, $value)) {
+                    if (is_numeric($value) && (float)$value < $min) {
+                        $this->addError($field, 'min', 'The ' . $this->humanize($field) . ' must be at least ' . $min . '.');
+                    }
+                } elseif (is_array($value)) {
+                    if (count($value) < $min) {
+                        $this->addError($field, 'min', 'The ' . $this->humanize($field) . ' must have at least ' . $min . ' items.');
+                    }
+                } else {
+                    if (mb_strlen((string)$value) < $min) {
+                        $this->addError($field, 'min', 'The ' . $this->humanize($field) . ' must be at least ' . $min . ' characters.');
+                    }
                 }
                 break;
 
             case 'max':
                 $max = (int)($parameters[0] ?? 0);
-                if (is_string($value) && mb_strlen($value) > $max) {
-                    $this->addError($field, 'max', 'The ' . $this->humanize($field) . ' must not exceed ' . $max . ' characters.');
-                } elseif (is_numeric($value) && (float)$value > $max) {
-                    $this->addError($field, 'max', 'The ' . $this->humanize($field) . ' must not exceed ' . $max . '.');
-                } elseif (is_array($value) && count($value) > $max) {
-                    $this->addError($field, 'max', 'The ' . $this->humanize($field) . ' must not have more than ' . $max . ' items.');
+                if ($this->isNumericField($field, $value)) {
+                    if (is_numeric($value) && (float)$value > $max) {
+                        $this->addError($field, 'max', 'The ' . $this->humanize($field) . ' must not exceed ' . $max . '.');
+                    }
+                } elseif (is_array($value)) {
+                    if (count($value) > $max) {
+                        $this->addError($field, 'max', 'The ' . $this->humanize($field) . ' must not have more than ' . $max . ' items.');
+                    }
+                } else {
+                    if (mb_strlen((string)$value) > $max) {
+                        $this->addError($field, 'max', 'The ' . $this->humanize($field) . ' must not exceed ' . $max . ' characters.');
+                    }
                 }
                 break;
 
@@ -150,6 +162,24 @@ class Validator
                 }
                 break;
         }
+    }
+
+    private function isNumericField(string $field, mixed $value): bool
+    {
+        if (is_int($value) || is_float($value)) {
+            return true;
+        }
+
+        $ruleDefinition = $this->rules[$field] ?? [];
+        $rulesList = is_string($ruleDefinition) ? explode('|', $ruleDefinition) : $ruleDefinition;
+        foreach ($rulesList as $r) {
+            $name = explode(':', $r, 2)[0];
+            if ($name === 'numeric' || $name === 'integer') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function getValue(string $field): mixed

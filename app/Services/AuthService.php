@@ -219,6 +219,9 @@ class AuthService
         if (in_array('parent', $roles, true)) {
             return '/parent/dashboard';
         }
+        if (in_array('applicant', $roles, true)) {
+            return '/applicant/dashboard';
+        }
 
         return '/dashboard';
     }

@@ -62,6 +62,7 @@ final class UserContext
         if ($this->hasRole('teacher')) return 'teacher';
         if ($this->hasRole('parent')) return 'parent';
         if ($this->hasRole('student')) return 'student';
+        if ($this->hasRole('applicant')) return 'applicant';
         return $this->roles[0] ?? 'user';
     }
 
@@ -73,6 +74,7 @@ final class UserContext
             'teacher' => 'Teacher',
             'parent' => 'Parent / Guardian',
             'student' => 'Student',
+            'applicant' => 'Applicant / Prospective Parent',
             default => 'User',
         };
     }
@@ -147,5 +149,10 @@ final class UserContext
     public function isParent(): bool
     {
         return $this->hasRole('parent');
+    }
+
+    public function isApplicant(): bool
+    {
+        return $this->hasRole('applicant');
     }
 }

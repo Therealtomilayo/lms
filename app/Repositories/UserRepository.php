@@ -318,6 +318,15 @@ class UserRepository
         }
     }
 
+    public function addRole(int $userId, string $role): void
+    {
+        $roles = $this->getRolesForUser($userId);
+        if (!in_array($role, $roles, true)) {
+            $roles[] = $role;
+            $this->syncRoles($userId, $roles);
+        }
+    }
+
     /**
      * @return User[]
      */

@@ -10,6 +10,8 @@
 # AI & Prompt Specifications
 /.ai/
 /ui-ux-pro-max-skill-main/
+/claret-international-school-public/
+/claret-public-website/
 
 # Testing & Cache
 /.phpunit.result.cache
