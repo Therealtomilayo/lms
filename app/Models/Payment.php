@@ -21,9 +21,9 @@ final class Payment
         public readonly int $id,
         public readonly string $reference,
         public readonly int $userId,
-        public readonly int $studentId,
-        public readonly int $sessionId,
-        public readonly int $termId,
+        public readonly ?int $studentId = null,
+        public readonly ?int $sessionId = null,
+        public readonly ?int $termId = null,
         public readonly string $purpose = self::PURPOSE_RESULT_PIN,
         public readonly float $amount = 0.0,
         public readonly string $currency = 'NGN',
@@ -50,14 +50,25 @@ final class Payment
             $metadata = is_string($data['metadata']) ? json_decode($data['metadata'], true) : (array)$data['metadata'];
         }
 
+        $purpose = (string)($data['purpose'] ?? self::PURPOSE_RESULT_PIN);
+        if (empty($metadata['item_description'])) {
+            if ($purpose === self::PURPOSE_ADMISSION) {
+                $ward = $data['student_name'] ?? ($metadata['ward_name'] ?? 'Prospective Ward');
+                $target = !empty($metadata['class_grade']) ? ' (' . $metadata['class_grade'] . ')' : '';
+                $metadata['item_description'] = 'Admission Application Fee — ' . $ward . $target;
+            } elseif ($purpose === self::PURPOSE_RESULT_PIN) {
+                $metadata['item_description'] = 'Result Access Scratch-Card PIN';
+            }
+        }
+
         return new self(
             id: (int)$data['id'],
             reference: (string)$data['reference'],
             userId: (int)$data['user_id'],
-            studentId: (int)$data['student_id'],
-            sessionId: (int)$data['session_id'],
-            termId: (int)$data['term_id'],
-            purpose: (string)($data['purpose'] ?? self::PURPOSE_RESULT_PIN),
+            studentId: isset($data['student_id']) && $data['student_id'] !== null && $data['student_id'] !== '' ? (int)$data['student_id'] : null,
+            sessionId: isset($data['session_id']) && $data['session_id'] !== null && $data['session_id'] !== '' ? (int)$data['session_id'] : null,
+            termId: isset($data['term_id']) && $data['term_id'] !== null && $data['term_id'] !== '' ? (int)$data['term_id'] : null,
+            purpose: $purpose,
             amount: (float)($data['amount'] ?? 0.0),
             currency: (string)($data['currency'] ?? 'NGN'),
             channel: (string)($data['channel'] ?? 'simulated'),

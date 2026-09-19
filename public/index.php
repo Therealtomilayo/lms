@@ -522,7 +522,7 @@ try {
 
     // Payments & Paystack-Ready Commerce Routes
     $paymentAuth = [AuthMiddleware::class];
-    $personalPaymentAuth = [AuthMiddleware::class, RoleMiddleware::allow(['parent', 'student'])];
+    $personalPaymentAuth = [AuthMiddleware::class, RoleMiddleware::allow(['parent', 'student', 'applicant', 'admin', 'super_admin'])];
     $paymentFormAuth = [AuthMiddleware::class, CsrfMiddleware::class];
     $router->post('/payments/checkout/pin', [\App\Controllers\PaymentController::class, 'checkoutPin'], $paymentFormAuth);
     $router->post('/payments/simulate/{reference}', [\App\Controllers\PaymentController::class, 'simulate'], $paymentFormAuth);

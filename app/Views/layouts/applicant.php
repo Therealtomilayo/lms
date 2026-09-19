@@ -52,6 +52,12 @@ $currentUri = $_SERVER['REQUEST_URI'] ?? '';
                     <i data-lucide="clock" class="w-4 h-4 shrink-0" style="width:16px;height:16px;"></i>
                     <span>Milestone Progress</span>
                 </a>
+
+                <a href="/payments/history" 
+                   class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all <?= str_starts_with($currentUri, '/payments/history') ? 'bg-[#7B3046] text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' ?>">
+                    <i data-lucide="receipt" class="w-4 h-4 shrink-0" style="width:16px;height:16px;"></i>
+                    <span>Payment History</span>
+                </a>
             </nav>
         </div>
 

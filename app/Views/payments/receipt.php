@@ -82,10 +82,10 @@
                     <p class="text-slate-500">Channel: <strong class="uppercase"><?= e($payment->channel) ?></strong></p>
                 </div>
                 <div class="space-y-1">
-                    <span class="text-[10px] uppercase tracking-wider font-bold text-slate-400">Beneficiary Student</span>
+                    <span class="text-[10px] uppercase tracking-wider font-bold text-slate-400">Beneficiary <?= $payment->purpose === 'admission' ? 'Ward / Applicant' : 'Student' ?></span>
                     <p class="font-bold text-slate-900 text-sm"><?= e($payment->studentName ?? ($student ? $student->name : 'N/A')) ?></p>
-                    <p class="text-slate-600">ID / Adm No: <strong><?= e($payment->studentAdmissionNumber ?? ($student ? $student->admissionNumber : 'N/A')) ?></strong></p>
-                    <p class="text-slate-500">Academic Term: <?= e($payment->sessionName ?? '') ?> &bull; <?= e($payment->termName ?? '') ?></p>
+                    <p class="text-slate-600"><?= $payment->purpose === 'admission' ? 'App / Reg No:' : 'ID / Adm No:' ?> <strong><?= e($payment->studentAdmissionNumber ?? ($student ? $student->admissionNumber : 'N/A')) ?></strong></p>
+                    <p class="text-slate-500"><?= $payment->purpose === 'admission' ? 'Academic Session:' : 'Academic Term:' ?> <?= e($payment->sessionName ?? '') ?><?= !empty($payment->termName) && $payment->termName !== 'Admission Application' ? ' &bull; ' . e($payment->termName) : '' ?></p>
                 </div>
             </div>
 
@@ -95,7 +95,7 @@
                     <thead class="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500 font-bold border-b border-slate-200">
                         <tr>
                             <th class="py-3 px-4">Item Description</th>
-                            <th class="py-3 px-4">Term</th>
+                            <th class="py-3 px-4"><?= $payment->purpose === 'admission' ? 'Session' : 'Term' ?></th>
                             <th class="py-3 px-4 text-right">Amount</th>
                         </tr>
                     </thead>
@@ -105,7 +105,7 @@
                                 <?= e($item_title) ?>
                             </td>
                             <td class="py-3.5 px-4 text-slate-600">
-                                <?= e($payment->termName ?? 'Current Term') ?>
+                                <?= e($payment->purpose === 'admission' ? ($payment->sessionName ?? 'Current Session') : ($payment->termName ?? 'Current Term')) ?>
                             </td>
                             <td class="py-3.5 px-4 text-right font-black text-slate-900 text-sm">
                                 <?= e($payment->getFormattedAmount()) ?>
@@ -120,6 +120,19 @@
                     </tfoot>
                 </table>
             </div>
+
+            <!-- Admission Fee Confirmation Banner -->
+            <?php if ($payment->purpose === 'admission' && $payment->isSuccessful()): ?>
+                <div class="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-5 border border-slate-700 shadow-md space-y-2">
+                    <div class="flex items-center justify-between border-b border-white/10 pb-2">
+                        <span class="text-[10px] uppercase font-bold tracking-widest text-emerald-400">Application Fee Status: Confirmed</span>
+                        <span class="text-xs text-slate-400 font-mono"><?= e($payment->studentAdmissionNumber ?? '') ?></span>
+                    </div>
+                    <p class="text-xs text-slate-300">
+                        Payment for prospective student <strong><?= e($payment->studentName ?? 'Ward') ?></strong> has been verified. The application dossier is now cleared for credential verification and admission assessment.
+                    </p>
+                </div>
+            <?php endif; ?>
 
             <!-- Result Access Scratch-Card PIN Box (Mandatory & Prominent) -->
             <?php if ($pin): ?>

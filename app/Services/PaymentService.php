@@ -297,17 +297,21 @@ class PaymentService
             return null;
         }
 
-        $student = $this->studentRepository->findById($payment->studentId);
-        $pin = $this->pinRepository->findByPaymentId($payment->id);
+        $student = ($payment->studentId !== null && $payment->studentId > 0) ? $this->studentRepository->findById($payment->studentId) : null;
+        $pin = ($payment->purpose === Payment::PURPOSE_RESULT_PIN) ? $this->pinRepository->findByPaymentId($payment->id) : null;
+
+        $defaultTitle = $payment->purpose === Payment::PURPOSE_ADMISSION
+            ? ('Admission Application Fee — ' . ($payment->studentName ?? 'Prospective Ward'))
+            : 'Result Access Scratch-Card PIN';
 
         return [
             'payment' => $payment,
             'student' => $student,
             'pin' => $pin,
             'receipt_number' => $payment->getReceiptNumber(),
-            'item_title' => $payment->metadata['item_description'] ?? 'Result Access Scratch-Card PIN',
-            'attempts_remaining' => $pin ? $pin->getRemainingUses() : 5,
-            'max_attempts' => $pin ? $pin->maxUses : 5,
+            'item_title' => $payment->metadata['item_description'] ?? $defaultTitle,
+            'attempts_remaining' => $pin ? $pin->getRemainingUses() : 0,
+            'max_attempts' => $pin ? $pin->maxUses : 0,
         ];
     }
 }

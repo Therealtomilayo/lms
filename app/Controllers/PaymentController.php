@@ -179,7 +179,7 @@ class PaymentController extends Controller
     }
 
     /**
-     * User payment history (accessible to parents and students).
+     * User payment history (accessible to parents, students, and applicants).
      */
     public function history(Request $request): Response
     {
@@ -188,11 +188,12 @@ class PaymentController extends Controller
             return Response::redirect('/login');
         }
 
-        if (!$userContext->hasAnyRole(['parent', 'student'])) {
-            return $this->forbidden('Only parents and students can access personal transaction history. Administrators can view the financial ledger at /admin/payments.');
+        if (!$userContext->hasAnyRole(['parent', 'student', 'applicant', 'admin', 'super_admin'])) {
+            return $this->forbidden('Only parents, students, and applicants can access personal transaction history. Administrators can view the financial ledger at /admin/payments.');
         }
 
-        $payments = $this->paymentRepository->getPaymentsForUser($userContext->getUserId(), limit: 100);
+        $studentId = $userContext->isStudent() ? $userContext->getStudentId() : null;
+        $payments = $this->paymentRepository->getPaymentsForUser($userContext->getUserId(), limit: 100, studentId: $studentId);
 
         $children = [];
         $selectedChild = null;
@@ -257,14 +258,16 @@ class PaymentController extends Controller
 
         $rawStatus = $request->query('status');
         $status = ($rawStatus !== null && trim($rawStatus) !== '') ? trim($rawStatus) : null;
+        $rawPurpose = $request->query('purpose');
+        $purpose = ($rawPurpose !== null && trim($rawPurpose) !== '') ? trim($rawPurpose) : null;
         $rawSearch = $request->query('q');
         $search = ($rawSearch !== null && trim($rawSearch) !== '') ? trim($rawSearch) : null;
         $page = max(1, (int)$request->query('page', 1));
         $limit = 25;
         $offset = ($page - 1) * $limit;
 
-        $payments = $this->paymentRepository->getAllPayments($limit, $offset, $status, $search);
-        $total = $this->paymentRepository->countPayments($status, $search);
+        $payments = $this->paymentRepository->getAllPayments($limit, $offset, $status, $search, $purpose);
+        $total = $this->paymentRepository->countPayments($status, $search, $purpose);
         $stats = $this->paymentRepository->getSummaryStats();
 
         return $this->view('admin/payments/index', [
@@ -274,11 +277,12 @@ class PaymentController extends Controller
             'limit' => $limit,
             'stats' => $stats,
             'status' => $status,
+            'purpose' => $purpose,
             'search' => $search,
             'role' => 'admin',
             'roleLabel' => $userContext->getPrimaryRoleLabel(),
             'headerTitle' => 'Payments & Revenue Ledger',
-            'headerSubtitle' => 'Track all online card transactions, PIN purchases, and payment clearances.',
+            'headerSubtitle' => 'Track all online card transactions, PIN purchases, application fees, and payment clearances.',
         ]);
     }
 }
