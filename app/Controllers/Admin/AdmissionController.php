@@ -75,7 +75,7 @@ class AdmissionController extends Controller
             'counts' => $counts,
             'success' => Session::getFlash('success'),
             'error' => Session::getFlash('error'),
-        ], 'layouts/admin');
+        ]);
     }
 
     /**
@@ -105,7 +105,7 @@ class AdmissionController extends Controller
             'classes' => $dossier['classes'],
             'success' => Session::getFlash('success'),
             'error' => Session::getFlash('error'),
-        ], 'layouts/admin');
+        ]);
     }
 
     /**
@@ -221,7 +221,7 @@ class AdmissionController extends Controller
             'academicSessions' => $academicSessions,
             'success' => Session::getFlash('success'),
             'error' => Session::getFlash('error'),
-        ], 'layouts/admin');
+        ]);
     }
 
     /**

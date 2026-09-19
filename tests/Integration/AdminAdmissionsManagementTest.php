@@ -254,4 +254,45 @@ class AdminAdmissionsManagementTest extends TestCase
         // Clean up files
         $this->db->prepare("DELETE FROM files WHERE id IN (?, ?)")->execute([$birthCert->id, $passport->id]);
     }
+
+    public function testAdminAdmissionControllerViewsRender(): void
+    {
+        $adminActor = new \App\Core\UserContext(
+            id: $this->adminUserId,
+            uuid: 'admin-uuid',
+            name: 'Admin Officer',
+            email: 'admin@claret.edu.ng',
+            roles: ['admin'],
+            mustChangePassword: false
+        );
+
+        $controller = new \App\Controllers\Admin\AdmissionController(
+            $this->admissionService,
+            $this->admissionRepo,
+            new AcademicRepository($this->db)
+        );
+
+        // 1. Applications Index View
+        $req1 = new \App\Core\Request([], [], ['REQUEST_METHOD' => 'GET', 'REQUEST_URI' => '/admin/admissions/applications']);
+        $req1->setAttribute('user_context', $adminActor);
+        $res1 = $controller->index($req1);
+        $this->assertSame(200, $res1->getStatusCode());
+        $this->assertStringContainsString('Admissions Portal', $res1->getContent());
+
+        // 2. Admission Sessions View
+        $req2 = new \App\Core\Request([], [], ['REQUEST_METHOD' => 'GET', 'REQUEST_URI' => '/admin/admissions/sessions']);
+        $req2->setAttribute('user_context', $adminActor);
+        $res2 = $controller->sessions($req2);
+        $this->assertSame(200, $res2->getStatusCode());
+        $this->assertStringContainsString('Admission Sessions', $res2->getContent());
+
+        // 3. Application Show View
+        $app = $this->admissionService->getApplicantActiveApplication($this->applicantUserId);
+        $this->assertNotNull($app);
+        $req3 = new \App\Core\Request([], [], ['REQUEST_METHOD' => 'GET', 'REQUEST_URI' => '/admin/admissions/applications/' . $app->id]);
+        $req3->setAttribute('user_context', $adminActor);
+        $res3 = $controller->show($req3, (string)$app->id);
+        $this->assertSame(200, $res3->getStatusCode());
+        $this->assertStringContainsString($app->applicationNumber, $res3->getContent());
+    }
 }

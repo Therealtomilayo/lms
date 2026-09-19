@@ -11,6 +11,10 @@
  * @var string|null $success
  * @var string|null $error
  */
+$this->layout('layouts/admin', [
+    'title' => 'Admissions Applications — Claret LMS',
+    'headerTitle' => 'Admissions'
+]);
 ?>
 
 <div class="space-y-6">

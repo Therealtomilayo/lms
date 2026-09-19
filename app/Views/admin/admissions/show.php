@@ -12,6 +12,10 @@
  * @var string|null $success
  * @var string|null $error
  */
+$this->layout('layouts/admin', [
+    'title' => 'Application Dossier ' . $application->applicationNumber . ' — Claret LMS',
+    'headerTitle' => 'Admissions'
+]);
 $csrfToken = \App\Core\Session::get('csrf_token', '');
 ?>
 
