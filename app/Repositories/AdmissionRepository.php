@@ -30,14 +30,18 @@ class AdmissionRepository
 
     public function getActiveAdmissionSession(): ?AdmissionSession
     {
+        $now = date('Y-m-d H:i:s');
         $sql = 'SELECT a.*, s.name as academic_session_name
                 FROM `admission_sessions` a
                 JOIN `sessions` s ON s.id = a.academic_session_id
                 WHERE a.is_active = 1
-                ORDER BY a.opens_at DESC
+                ORDER BY 
+                    CASE WHEN :now BETWEEN a.opens_at AND a.closes_at THEN 0 ELSE 1 END ASC,
+                    a.opens_at DESC
                 LIMIT 1';
 
-        $stmt = $this->pdo->query($sql);
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':now' => $now]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$row) {
@@ -45,6 +49,24 @@ class AdmissionRepository
         }
 
         return AdmissionSession::fromArray($row);
+    }
+
+    public function getAllAdmissionSessions(): array
+    {
+        $sql = 'SELECT a.*, s.name as academic_session_name
+                FROM `admission_sessions` a
+                JOIN `sessions` s ON s.id = a.academic_session_id
+                ORDER BY a.created_at DESC';
+
+        $stmt = $this->pdo->query($sql);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $sessions = [];
+        foreach ($rows as $row) {
+            $sessions[] = AdmissionSession::fromArray($row);
+        }
+
+        return $sessions;
     }
 
     public function findSessionById(int $id): ?AdmissionSession
@@ -65,9 +87,14 @@ class AdmissionRepository
         return AdmissionSession::fromArray($row);
     }
 
-    public function createSession(array $data): AdmissionSession
+    public function createSession(array $data): ?AdmissionSession
     {
         $now = date('Y-m-d H:i:s');
+        $isActive = !empty($data['is_active']) ? 1 : 0;
+        if ($isActive === 1) {
+            $this->pdo->exec('UPDATE `admission_sessions` SET `is_active` = 0');
+        }
+
         $sql = 'INSERT INTO `admission_sessions` (
                     `academic_session_id`, `title`, `application_fee`, `currency`, 
                     `opens_at`, `closes_at`, `is_active`, `required_documents_json`, 
@@ -86,7 +113,7 @@ class AdmissionRepository
             ':currency' => (string)($data['currency'] ?? 'NGN'),
             ':opens_at' => (string)$data['opens_at'],
             ':closes_at' => (string)$data['closes_at'],
-            ':is_active' => !empty($data['is_active']) ? 1 : 0,
+            ':is_active' => $isActive,
             ':required_documents_json' => !empty($data['required_documents_json'])
                 ? (is_string($data['required_documents_json']) ? $data['required_documents_json'] : json_encode($data['required_documents_json']))
                 : null,
@@ -112,6 +139,10 @@ class AdmissionRepository
                 $fields[] = "`{$field}` = :{$field}";
                 $params[":{$field}"] = $data[$field];
             }
+        }
+
+        if (isset($data['is_active']) && (int)$data['is_active'] === 1) {
+            $this->pdo->prepare('UPDATE `admission_sessions` SET `is_active` = 0 WHERE `id` != ?')->execute([$id]);
         }
 
         $sql = 'UPDATE `admission_sessions` SET ' . implode(', ', $fields) . ' WHERE `id` = :id';

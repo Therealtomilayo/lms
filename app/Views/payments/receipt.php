@@ -50,8 +50,8 @@
                     <img src="/assets/img/logo.png" alt="School Logo" class="w-16 h-16 object-contain" onerror="this.src='/favicon.ico'; this.onerror=null;">
                     <div>
                         <h1 class="text-xl font-black tracking-tight text-slate-900 uppercase">Claret International School</h1>
-                        <p class="text-xs text-slate-500">Motto: Excellence, Integrity & Faith</p>
-                        <p class="text-[11px] text-slate-400">P.O. Box 1234, School Campus &bull; bursary@claret.edu</p>
+                        <p class="text-xs text-slate-500">Motto: Discipline, Integrity & Ardour</p>
+                        <p class="text-[11px] text-slate-400">Plot 700, Gitto Street, Mabushi, Mabushi, Abuja, Federal Capital Territory, 900104, Nigeria &bull; bursary@claret.edu</p>
                     </div>
                 </div>
                 <div class="sm:text-right">

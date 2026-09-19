@@ -145,6 +145,22 @@ class Request
         return $default;
     }
 
+    public function has(string $key): bool
+    {
+        $json = $this->json();
+        if ($json !== null && array_key_exists($key, $json)) {
+            return true;
+        }
+
+        return array_key_exists($key, $this->postParams) || array_key_exists($key, $this->queryParams);
+    }
+
+    public function filled(string $key): bool
+    {
+        $val = $this->input($key);
+        return $val !== null && $val !== '' && (!is_array($val) || !empty($val));
+    }
+
     public function all(): array
     {
         $json = $this->json();
@@ -291,6 +307,13 @@ class Request
     public function setAttribute(string $key, mixed $value): void
     {
         $this->attributes[$key] = $value;
+    }
+
+    public function withAttribute(string $key, mixed $value): self
+    {
+        $clone = clone $this;
+        $clone->attributes[$key] = $value;
+        return $clone;
     }
 
     public function getAttribute(string $key, mixed $default = null): mixed

@@ -261,7 +261,7 @@ class AdmissionController extends Controller
      */
     public function updateSession(Request $request, string $id): Response
     {
-        $userContext = $request->getAttribute('user_context');
+        $userContext = $request->getAttribute('user_context') ?? $this->getUserContext($request);
         if (!$userContext instanceof UserContext || !$userContext->hasAnyRole(['admin', 'super_admin'])) {
             return $this->forbidden('Access denied.');
         }
@@ -288,7 +288,8 @@ class AdmissionController extends Controller
             $data['instructions'] = trim((string)$request->input('instructions'));
         }
         if ($request->has('is_active')) {
-            $data['is_active'] = $request->input('is_active') ? 1 : 0;
+            $val = $request->input('is_active');
+            $data['is_active'] = ($val === '1' || $val === 1 || $val === true || $val === 'true' || $val === 'on') ? 1 : 0;
         }
 
         $result = $this->admissionService->updateSession($sessionId, $data);
