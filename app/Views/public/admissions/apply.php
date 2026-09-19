@@ -25,7 +25,7 @@ $this->layout('layouts/auth', [
         <!-- Top Brand Crest -->
         <div class="relative z-10">
             <a href="/" class="inline-flex items-center gap-3.5 group">
-                <div class="size-14 rounded-2xl bg-white/10 backdrop-blur-md p-2 ring-1 ring-white/20 shadow-lg flex items-center justify-center transition-transform group-hover:scale-105">
+                <div class="size-14 rounded-2xl bg-white/80 backdrop-blur-md p-2 ring-1 ring-white/20 shadow-lg flex items-center justify-center transition-transform group-hover:scale-105">
                     <img src="/assets/img/logo.png" alt="Claret Crest" class="h-full w-full object-contain">
                 </div>
                 <div>

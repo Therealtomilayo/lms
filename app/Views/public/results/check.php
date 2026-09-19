@@ -51,7 +51,7 @@ $csrfToken = \App\Core\Csrf::getToken();
     <!-- Top Navigation / Brand Bar -->
     <header class="max-w-4xl w-full mx-auto flex items-center justify-between py-4">
         <div class="flex items-center gap-3">
-            <img src="/assets/img/logo.png" alt="Logo" class="w-11 h-11 object-contain drop-shadow" onerror="this.src='/favicon.ico'; this.onerror=null;">
+            <img src="/assets/img/logo.png" alt="Logo" class="w-11 bg-white/80 rounded-2xl h-11 object-contain drop-shadow" onerror="this.src='/favicon.ico'; this.onerror=null;">
             <div>
                 <span class="text-sm font-black tracking-tight text-white uppercase block leading-none">Claret International School</span>
                 <span class="text-[10px] tracking-wider text-sky-400 font-semibold uppercase">Official Result Portal</span>
