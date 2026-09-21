@@ -27,7 +27,7 @@ $this->layout('layouts/admin', [
                 <span class="text-xs text-slate-500">&bull; Tuition &amp; Levies</span>
             </div>
             <h1 class="text-2xl font-black tracking-tight text-slate-900 mt-1">Fee Schedules &amp; Structures</h1>
-            <p class="text-xs text-slate-500 mt-0.5">Configure termly fee categories, tuition rates, and development levies per academic level.</p>
+            <p class="text-xs text-slate-500 mt-0.5">Configure termly fee categories, tuition rates, and result clearance rules per academic level.</p>
         </div>
         <div class="flex items-center gap-3">
             <a href="/admin/fees/invoices" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-xs">
@@ -103,12 +103,17 @@ $this->layout('layouts/admin', [
                                 </div>
                                 <h3 class="text-base font-black text-slate-900 mt-1"><?= htmlspecialchars($st->title, ENT_QUOTES, 'UTF-8') ?></h3>
                             </div>
-                            <form method="POST" action="/admin/fees/structures/<?= $st->id ?>/toggle">
-                                <?= \App\Core\Csrf::field() ?>
-                                <button type="submit" title="<?= $st->isActive ? 'Deactivate' : 'Activate' ?>" class="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition">
-                                    <i data-lucide="<?= $st->isActive ? 'toggle-right' : 'toggle-left' ?>" class="w-4 h-4 <?= $st->isActive ? 'text-emerald-600' : 'text-slate-400' ?>"></i>
+                            <div class="flex items-center gap-1.5 flex-shrink-0">
+                                <button type="button" onclick="openEditStructureModal(<?= $st->id ?>)" title="Edit Schedule" class="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-brand-700 transition">
+                                    <i data-lucide="edit-3" class="w-4 h-4"></i>
                                 </button>
-                            </form>
+                                <form method="POST" action="/admin/fees/structures/<?= $st->id ?>/toggle">
+                                    <?= \App\Core\Csrf::field() ?>
+                                    <button type="submit" title="<?= $st->isActive ? 'Deactivate' : 'Activate' ?>" class="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition">
+                                        <i data-lucide="<?= $st->isActive ? 'toggle-right' : 'toggle-left' ?>" class="w-4 h-4 <?= $st->isActive ? 'text-emerald-600' : 'text-slate-400' ?>"></i>
+                                    </button>
+                                </form>
+                            </div>
                         </div>
 
                         <div class="flex flex-wrap gap-2 text-[11px] text-slate-600">
@@ -123,15 +128,22 @@ $this->layout('layouts/admin', [
                             </span>
                         </div>
 
-                        <!-- Itemized breakdown -->
+                        <!-- Itemized breakdown with Result-Lock Badges -->
                         <div class="border-t border-slate-100 pt-3 space-y-1.5">
                             <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Fee Components</div>
                             <div class="space-y-1 max-h-36 overflow-y-auto pr-1">
                                 <?php foreach ($st->items as $item): ?>
                                     <div class="flex items-center justify-between text-xs py-0.5">
-                                        <span class="text-slate-700 font-medium truncate pr-2">
-                                            <?= htmlspecialchars($item->name, ENT_QUOTES, 'UTF-8') ?>
-                                        </span>
+                                        <div class="flex items-center gap-1.5 truncate pr-2">
+                                            <span class="text-slate-700 font-medium truncate">
+                                                <?= htmlspecialchars($item->name, ENT_QUOTES, 'UTF-8') ?>
+                                            </span>
+                                            <?php if ($item->isRequiredForResult): ?>
+                                                <span class="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[9px] font-bold bg-rose-50 text-rose-700 border border-rose-200" title="Mandatory for Academic Report Card Clearance">
+                                                    <i data-lucide="lock" class="w-2.5 h-2.5"></i> Lock Result
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
                                         <span class="font-bold text-slate-900 font-mono flex-shrink-0">
                                             ₦<?= number_format($item->amount, 2) ?>
                                         </span>
@@ -175,7 +187,7 @@ $this->layout('layouts/admin', [
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
             <div>
                 <h3 class="text-base font-black text-slate-900">Configure Termly Fee Schedule</h3>
-                <p class="text-xs text-slate-500">Define academic fees and component levies for students.</p>
+                <p class="text-xs text-slate-500">Define academic fees, component levies, and result lock gates.</p>
             </div>
             <button onclick="document.getElementById('new-structure-modal').classList.add('hidden')" class="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100">
                 <i data-lucide="x" class="w-5 h-5"></i>
@@ -228,30 +240,39 @@ $this->layout('layouts/admin', [
                 </div>
             </div>
 
-            <!-- Dynamic Fee Items Repeater -->
+            <!-- Dynamic Fee Items Repeater with Lock Result selector -->
             <div class="border-t border-slate-100 pt-3 space-y-2">
                 <div class="flex items-center justify-between">
-                    <span class="font-bold text-slate-800 text-xs">Fee Breakdown Components</span>
-                    <button type="button" onclick="addFeeItemRow()" class="text-brand-600 hover:text-brand-800 font-bold text-xs flex items-center gap-1">
+                    <div>
+                        <span class="font-bold text-slate-800 text-xs">Fee Breakdown Components</span>
+                        <p class="text-[10px] text-slate-400">Check "Lock Result" to require settlement before students/parents can access term report cards.</p>
+                    </div>
+                    <button type="button" onclick="addFeeItemRow('fee-items-container')" class="text-brand-600 hover:text-brand-800 font-bold text-xs flex items-center gap-1">
                         <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Component
                     </button>
                 </div>
 
                 <div id="fee-items-container" class="space-y-2">
-                    <!-- Default Initial Rows -->
                     <div class="grid grid-cols-12 gap-2 items-center fee-row">
-                        <div class="col-span-4">
-                            <select name="category_id[]" required class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white text-slate-700">
+                        <div class="col-span-3">
+                            <select name="category_id[]" required class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs bg-white text-slate-700">
                                 <?php foreach ($categories as $cat): ?>
                                     <option value="<?= $cat->id ?>"><?= htmlspecialchars($cat->name, ENT_QUOTES, 'UTF-8') ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-span-4">
-                            <input type="text" name="item_name[]" value="Tuition Fee" required placeholder="Component Name" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-800">
+                        <div class="col-span-3">
+                            <input type="text" name="item_name[]" value="Tuition Fee" required placeholder="Component Name" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs text-slate-800">
                         </div>
                         <div class="col-span-3">
-                            <input type="number" step="0.01" min="0" name="item_amount[]" value="75000.00" required placeholder="Amount (₦)" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono text-slate-800">
+                            <input type="number" step="0.01" min="0" name="item_amount[]" value="75000.00" required placeholder="Amount (₦)" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs font-mono text-slate-800">
+                        </div>
+                        <div class="col-span-2 text-center">
+                            <input type="hidden" name="is_required_for_result[]" value="1" class="req-result-hidden">
+                            <label class="inline-flex items-center gap-1 cursor-pointer font-bold text-slate-700" title="Result is locked until this fee is settled">
+                                <input type="checkbox" checked onchange="this.previousElementSibling.value = this.checked ? '1' : '0'" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                                <span class="text-[10px]">Lock Result</span>
+                            </label>
                         </div>
                         <div class="col-span-1 text-center">
                             <button type="button" onclick="removeFeeRow(this)" class="p-1 rounded text-slate-400 hover:text-rose-600">
@@ -261,18 +282,25 @@ $this->layout('layouts/admin', [
                     </div>
 
                     <div class="grid grid-cols-12 gap-2 items-center fee-row">
-                        <div class="col-span-4">
-                            <select name="category_id[]" required class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white text-slate-700">
+                        <div class="col-span-3">
+                            <select name="category_id[]" required class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs bg-white text-slate-700">
                                 <?php foreach ($categories as $cat): ?>
                                     <option value="<?= $cat->id ?>" <?= $cat->id === 3 ? 'selected' : '' ?>><?= htmlspecialchars($cat->name, ENT_QUOTES, 'UTF-8') ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-span-4">
-                            <input type="text" name="item_name[]" value="ICT & E-Learning Levy" required placeholder="Component Name" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-800">
+                        <div class="col-span-3">
+                            <input type="text" name="item_name[]" value="ICT & E-Learning Levy" required placeholder="Component Name" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs text-slate-800">
                         </div>
                         <div class="col-span-3">
-                            <input type="number" step="0.01" min="0" name="item_amount[]" value="15000.00" required placeholder="Amount (₦)" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono text-slate-800">
+                            <input type="number" step="0.01" min="0" name="item_amount[]" value="15000.00" required placeholder="Amount (₦)" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs font-mono text-slate-800">
+                        </div>
+                        <div class="col-span-2 text-center">
+                            <input type="hidden" name="is_required_for_result[]" value="1" class="req-result-hidden">
+                            <label class="inline-flex items-center gap-1 cursor-pointer font-bold text-slate-700" title="Result is locked until this fee is settled">
+                                <input type="checkbox" checked onchange="this.previousElementSibling.value = this.checked ? '1' : '0'" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                                <span class="text-[10px]">Lock Result</span>
+                            </label>
                         </div>
                         <div class="col-span-1 text-center">
                             <button type="button" onclick="removeFeeRow(this)" class="p-1 rounded text-slate-400 hover:text-rose-600">
@@ -296,7 +324,7 @@ $this->layout('layouts/admin', [
             <div class="flex items-center justify-between border-t border-slate-100 pt-4">
                 <label class="flex items-center gap-2 cursor-pointer font-bold text-slate-700">
                     <input type="checkbox" name="is_active" value="1" checked class="rounded border-slate-300 text-brand-600 focus:ring-brand-500">
-                    Active immediately
+                    Active schedule
                 </label>
                 <div class="flex items-center gap-2">
                     <button type="button" onclick="document.getElementById('new-structure-modal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition">
@@ -311,26 +339,194 @@ $this->layout('layouts/admin', [
     </div>
 </div>
 
-<script>
-function addFeeItemRow() {
-    const container = document.getElementById('fee-items-container');
-    const firstRow = container.querySelector('.fee-row');
-    if (!firstRow) return;
+<!-- Modal: Edit Fee Structure -->
+<div id="edit-structure-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl border border-slate-200 max-w-2xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+                <h3 class="text-base font-black text-slate-900">Edit Fee Schedule</h3>
+                <p class="text-xs text-slate-500">Update tuition items and result clearance requirements.</p>
+            </div>
+            <button onclick="document.getElementById('edit-structure-modal').classList.add('hidden')" class="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
 
-    const newRow = firstRow.cloneNode(true);
-    newRow.querySelectorAll('input').forEach(input => {
-        if (input.type === 'text') input.value = '';
-        if (input.type === 'number') input.value = '0.00';
-    });
-    container.appendChild(newRow);
+        <form id="edit-structure-form" method="POST" action="" class="space-y-4 text-xs">
+            <?= \App\Core\Csrf::field() ?>
+
+            <div>
+                <label class="block font-bold text-slate-700 mb-1">Schedule Title <span class="text-rose-500">*</span></label>
+                <input type="text" id="edit-title" name="title" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition">
+            </div>
+
+            <div class="grid sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Academic Session <span class="text-rose-500">*</span></label>
+                    <select id="edit-session-id" name="session_id" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
+                        <option value="">-- Select Session --</option>
+                        <?php foreach ($sessions as $s): ?>
+                            <option value="<?= $s->id ?>"><?= htmlspecialchars($s->name, ENT_QUOTES, 'UTF-8') ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Term <span class="text-rose-500">*</span></label>
+                    <select id="edit-term-id" name="term_id" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
+                        <option value="">-- Select Term --</option>
+                        <?php foreach ($terms as $t): ?>
+                            <option value="<?= $t->id ?>"><?= htmlspecialchars($t->name, ENT_QUOTES, 'UTF-8') ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Target Academic Level</label>
+                    <select id="edit-level-id" name="academic_level_id" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
+                        <option value="">-- School-Wide (All Levels) --</option>
+                        <?php foreach ($academicLevels as $al): ?>
+                            <option value="<?= $al->id ?>"><?= htmlspecialchars($al->name, ENT_QUOTES, 'UTF-8') ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Payment Due Date</label>
+                    <input type="date" id="edit-due-date" name="due_date" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
+                </div>
+            </div>
+
+            <!-- Dynamic Fee Items Repeater -->
+            <div class="border-t border-slate-100 pt-3 space-y-2">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="font-bold text-slate-800 text-xs">Fee Breakdown Components</span>
+                        <p class="text-[10px] text-slate-400">Select which fees are mandatory for report card result clearance.</p>
+                    </div>
+                    <button type="button" onclick="addFeeItemRow('edit-fee-items-container')" class="text-brand-600 hover:text-brand-800 font-bold text-xs flex items-center gap-1">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Component
+                    </button>
+                </div>
+
+                <div id="edit-fee-items-container" class="space-y-2">
+                    <!-- Injected dynamically via openEditStructureModal -->
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between border-t border-slate-100 pt-4">
+                <label class="flex items-center gap-2 cursor-pointer font-bold text-slate-700">
+                    <input type="checkbox" id="edit-is-active" name="is_active" value="1" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                    Active schedule
+                </label>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="document.getElementById('edit-structure-modal').classList.add('hidden')" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold transition shadow-xs">
+                        Update Fee Schedule
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<template id="fee-row-template">
+    <div class="grid grid-cols-12 gap-2 items-center fee-row">
+        <div class="col-span-3">
+            <select name="category_id[]" required class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs bg-white text-slate-700 cat-select">
+                <?php foreach ($categories as $cat): ?>
+                    <option value="<?= $cat->id ?>"><?= htmlspecialchars($cat->name, ENT_QUOTES, 'UTF-8') ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="col-span-3">
+            <input type="text" name="item_name[]" required placeholder="Component Name" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs text-slate-800 name-input">
+        </div>
+        <div class="col-span-3">
+            <input type="number" step="0.01" min="0" name="item_amount[]" required placeholder="Amount (₦)" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs font-mono text-slate-800 amt-input">
+        </div>
+        <div class="col-span-2 text-center">
+            <input type="hidden" name="is_required_for_result[]" value="1" class="req-result-hidden">
+            <label class="inline-flex items-center gap-1 cursor-pointer font-bold text-slate-700" title="Result is locked until this fee is settled">
+                <input type="checkbox" checked onchange="this.previousElementSibling.value = this.checked ? '1' : '0'" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500 req-checkbox">
+                <span class="text-[10px]">Lock Result</span>
+            </label>
+        </div>
+        <div class="col-span-1 text-center">
+            <button type="button" onclick="removeFeeRow(this)" class="p-1 rounded text-slate-400 hover:text-rose-600">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </div>
+</template>
+
+<script>
+function addFeeItemRow(containerId) {
+    const container = document.getElementById(containerId);
+    const template = document.getElementById('fee-row-template');
+    if (!container || !template) return;
+
+    const clone = template.content.cloneNode(true);
+    container.appendChild(clone);
     if (window.lucide) lucide.createIcons();
 }
 
 function removeFeeRow(btn) {
-    const container = document.getElementById('fee-items-container');
+    const container = btn.closest('#fee-items-container') || btn.closest('#edit-fee-items-container');
     const rows = container.querySelectorAll('.fee-row');
     if (rows.length > 1) {
         btn.closest('.fee-row').remove();
+    }
+}
+
+async function openEditStructureModal(structureId) {
+    const modal = document.getElementById('edit-structure-modal');
+    const form = document.getElementById('edit-structure-form');
+    const container = document.getElementById('edit-fee-items-container');
+    const template = document.getElementById('fee-row-template');
+
+    container.innerHTML = '<div class="text-slate-400 text-center py-4">Loading structure details...</div>';
+    modal.classList.remove('hidden');
+
+    try {
+        const res = await fetch(`/admin/fees/structures/${structureId}/data`);
+        if (!res.ok) throw new Error('Failed to load schedule data');
+        const data = await res.json();
+
+        form.action = `/admin/fees/structures/${structureId}/update`;
+        document.getElementById('edit-title').value = data.title || '';
+        document.getElementById('edit-session-id').value = data.session_id || '';
+        document.getElementById('edit-term-id').value = data.term_id || '';
+        document.getElementById('edit-level-id').value = data.academic_level_id || '';
+        document.getElementById('edit-due-date').value = data.due_date || '';
+        document.getElementById('edit-is-active').checked = !!data.is_active;
+
+        container.innerHTML = '';
+        if (data.items && data.items.length > 0) {
+            data.items.forEach(it => {
+                const clone = template.content.cloneNode(true);
+                clone.querySelector('.cat-select').value = it.fee_category_id;
+                clone.querySelector('.name-input').value = it.name;
+                clone.querySelector('.amt-input').value = parseFloat(it.amount).toFixed(2);
+                
+                const hiddenReq = clone.querySelector('.req-result-hidden');
+                const checkReq = clone.querySelector('.req-checkbox');
+                const isReq = it.is_required_for_result !== false && it.is_required_for_result !== 0;
+                hiddenReq.value = isReq ? '1' : '0';
+                checkReq.checked = isReq;
+
+                container.appendChild(clone);
+            });
+        } else {
+            addFeeItemRow('edit-fee-items-container');
+        }
+
+        if (window.lucide) lucide.createIcons();
+    } catch (err) {
+        alert('Could not fetch fee structure details: ' + err.message);
+        modal.classList.add('hidden');
     }
 }
 </script>

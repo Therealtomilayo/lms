@@ -249,6 +249,8 @@ try {
     // Admin Fee Schedules, Structures & Student Invoicing (SRS §39, §57 Phase 4)
     $router->get('/admin/fees/structures', [\App\Controllers\Admin\FeeController::class, 'structures'], $adminAuth);
     $router->post('/admin/fees/structures', [\App\Controllers\Admin\FeeController::class, 'storeStructure'], $adminFormAuth);
+    $router->get('/admin/fees/structures/{id}/data', [\App\Controllers\Admin\FeeController::class, 'getStructureJson'], $adminAuth);
+    $router->post('/admin/fees/structures/{id}/update', [\App\Controllers\Admin\FeeController::class, 'updateStructure'], $adminFormAuth);
     $router->post('/admin/fees/structures/{id}/toggle', [\App\Controllers\Admin\FeeController::class, 'toggleStructure'], $adminFormAuth);
     $router->get('/admin/fees/invoices', [\App\Controllers\Admin\FeeController::class, 'invoices'], $adminAuth);
     $router->post('/admin/fees/invoices/generate', [\App\Controllers\Admin\FeeController::class, 'generateInvoices'], $adminFormAuth);

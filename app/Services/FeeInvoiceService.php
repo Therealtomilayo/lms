@@ -93,31 +93,24 @@ class FeeInvoiceService
         }
 
         // Fetch target enrolled students (from active class_enrollments or active students with current_class_id)
-        $sql = 'SELECT DISTINCT s.id as student_id, 
+        $sessionIdInt = (int)$sessionId;
+        $sql = "SELECT DISTINCT s.id as student_id, 
                        COALESCE(ce.class_id, s.current_class_id) as class_id, 
                        c.academic_level_id, 
                        s.user_id as student_user_id
                 FROM `students` s
-                JOIN `users` u ON u.id = s.user_id AND u.status = "active"
-                LEFT JOIN `class_enrollments` ce ON ce.student_id = s.id AND ce.session_id = :session_id AND ce.status = "active"
+                JOIN `users` u ON u.id = s.user_id AND u.status = 'active'
+                LEFT JOIN `class_enrollments` ce ON ce.student_id = s.id AND ce.status = 'active'
                 JOIN `classes` c ON c.id = COALESCE(ce.class_id, s.current_class_id)
-                WHERE (ce.session_id = :session_id_where OR (ce.id IS NULL AND s.current_class_id IS NOT NULL))';
-
-        $params = [
-            ':session_id' => $sessionId,
-            ':session_id_where' => $sessionId,
-        ];
+                WHERE (ce.session_id = {$sessionIdInt} OR (ce.id IS NULL AND s.current_class_id IS NOT NULL))";
 
         if ($classId !== null) {
-            $sql .= ' AND COALESCE(ce.class_id, s.current_class_id) = :class_id';
-            $params[':class_id'] = $classId;
+            $sql .= ' AND COALESCE(ce.class_id, s.current_class_id) = ' . (int)$classId;
         } elseif ($levelId !== null) {
-            $sql .= ' AND c.academic_level_id = :level_id';
-            $params[':level_id'] = $levelId;
+            $sql .= ' AND c.academic_level_id = ' . (int)$levelId;
         }
 
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
+        $stmt = $this->pdo->query($sql);
         $enrollments = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
         if (empty($enrollments)) {
@@ -134,10 +127,25 @@ class FeeInvoiceService
             $stLevelId = (int)$enr['academic_level_id'];
 
             // Ensure active enrollment row exists in class_enrollments
-            $this->pdo->prepare('INSERT INTO `class_enrollments` (`student_id`, `class_id`, `session_id`, `status`, `enrolled_at`, `created_at`, `updated_at`)
-                VALUES (?, ?, ?, "active", NOW(), NOW(), NOW())
-                ON DUPLICATE KEY UPDATE `class_id` = VALUES(`class_id`), `status` = "active"')
-                ->execute([$studentId, $stClassId, $sessionId]);
+            $now = date('Y-m-d H:i:s');
+            $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+            if ($driver === 'mysql') {
+                $this->pdo->prepare('INSERT INTO `class_enrollments` (`student_id`, `class_id`, `session_id`, `status`, `enrolled_at`, `created_at`, `updated_at`)
+                    VALUES (?, ?, ?, "active", ?, ?, ?)
+                    ON DUPLICATE KEY UPDATE `class_id` = VALUES(`class_id`), `status` = "active"')
+                    ->execute([$studentId, $stClassId, $sessionId, $now, $now, $now]);
+            } else {
+                $check = $this->pdo->prepare('SELECT id FROM `class_enrollments` WHERE `student_id` = ? AND `session_id` = ?');
+                $check->execute([$studentId, $sessionId]);
+                if ($existingEnrId = $check->fetchColumn()) {
+                    $this->pdo->prepare('UPDATE `class_enrollments` SET `class_id` = ?, `status` = "active", `updated_at` = ? WHERE `id` = ?')
+                        ->execute([$stClassId, $now, $existingEnrId]);
+                } else {
+                    $this->pdo->prepare('INSERT INTO `class_enrollments` (`student_id`, `class_id`, `session_id`, `status`, `enrolled_at`, `created_at`, `updated_at`)
+                        VALUES (?, ?, ?, "active", ?, ?, ?)')
+                        ->execute([$studentId, $stClassId, $sessionId, $now, $now, $now]);
+                }
+            }
 
             // 1. Idempotency check: verify if already billed
             $existing = $this->feeRepo->findInvoiceForStudentTerm($studentId, $sessionId, $termId);
@@ -169,6 +177,8 @@ class FeeInvoiceService
                     'fee_category_id' => $fsi->feeCategoryId,
                     'name' => $fsi->name,
                     'amount' => $fsi->amount,
+                    'is_compulsory' => $fsi->isCompulsory ? 1 : 0,
+                    'is_required_for_result' => $fsi->isRequiredForResult ? 1 : 0,
                 ];
             }
 
@@ -210,7 +220,8 @@ class FeeInvoiceService
         FeeInvoice $invoice,
         float $amount,
         UserContext $actor,
-        string $callbackUrl
+        string $callbackUrl,
+        array $selectedItemIds = []
     ): ServiceResult {
         if ($invoice->isPaid()) {
             return ServiceResult::error('This invoice is already fully paid.');
@@ -250,6 +261,7 @@ class FeeInvoiceService
                 'class_name' => $invoice->className,
                 'item_description' => "School Fees Payment ({$invoice->invoiceNumber} — {$invoice->studentName})",
                 'is_partial' => ($amount < $invoice->balanceDue),
+                'selected_item_ids' => array_values(array_filter(array_map('intval', $selectedItemIds))),
             ],
         ]);
 
@@ -296,6 +308,17 @@ class FeeInvoiceService
         }
 
         $this->feeRepo->updateInvoiceFinancials($invoice->id, $newAmountPaid, $newBalance, $newStatus);
+
+        // 3. Mark selected line items as paid if specified
+        $selectedItemIds = $payment->metadata['selected_item_ids'] ?? [];
+        if (!empty($selectedItemIds) && is_array($selectedItemIds)) {
+            $this->feeRepo->markInvoiceItemsPaid($invoice->id, $selectedItemIds);
+        }
+
+        // If invoice is fully paid, ensure all items are marked paid
+        if ($newStatus === FeeInvoice::STATUS_PAID) {
+            $this->feeRepo->markAllInvoiceItemsPaid($invoice->id);
+        }
 
         $refreshedPayment = $this->paymentRepo->findById($payment->id);
         $refreshedInvoice = $this->feeRepo->findInvoiceById($invoice->id);
@@ -373,6 +396,11 @@ class FeeInvoiceService
         $newStatus = ($newBalance <= 0.0) ? FeeInvoice::STATUS_PAID : FeeInvoice::STATUS_PARTIALLY_PAID;
 
         $this->feeRepo->updateInvoiceFinancials($invoice->id, $newAmountPaid, $newBalance, $newStatus);
+
+        // If invoice is fully paid, mark all line items as paid
+        if ($newStatus === FeeInvoice::STATUS_PAID) {
+            $this->feeRepo->markAllInvoiceItemsPaid($invoice->id);
+        }
 
         $refreshedInvoice = $this->feeRepo->findInvoiceById($invoice->id);
 

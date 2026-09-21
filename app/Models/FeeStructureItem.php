@@ -13,6 +13,7 @@ final class FeeStructureItem
         public readonly string $name,
         public readonly float $amount,
         public readonly bool $isCompulsory = true,
+        public readonly bool $isRequiredForResult = true,
         public readonly ?string $createdAt = null,
         public readonly ?string $categoryName = null
     ) {
@@ -27,6 +28,7 @@ final class FeeStructureItem
             name: (string)$data['name'],
             amount: (float)$data['amount'],
             isCompulsory: (bool)($data['is_compulsory'] ?? true),
+            isRequiredForResult: (bool)($data['is_required_for_result'] ?? true),
             createdAt: $data['created_at'] ?? null,
             categoryName: $data['category_name'] ?? null
         );

@@ -89,6 +89,7 @@ class FeeController extends Controller
         $itemNames = (array)$request->input('item_name', []);
         $itemAmounts = (array)$request->input('item_amount', []);
         $isCompulsory = (array)$request->input('is_compulsory', []);
+        $isRequiredForResult = (array)$request->input('is_required_for_result', []);
 
         $items = [];
         foreach ($itemNames as $i => $name) {
@@ -99,6 +100,7 @@ class FeeController extends Controller
                     'name' => trim((string)$name),
                     'amount' => $amt,
                     'is_compulsory' => !empty($isCompulsory[$i]) ? 1 : 0,
+                    'is_required_for_result' => !empty($isRequiredForResult[$i]) ? 1 : 0,
                 ];
             }
         }
@@ -130,6 +132,102 @@ class FeeController extends Controller
         }
 
         return $this->redirectWithFlash('/admin/fees/structures', 'success', 'Fee schedule successfully created and activated.' . $billedMsg);
+    }
+
+    /**
+     * Fetch fee structure details for edit modal via JSON
+     */
+    public function getStructureJson(Request $request, string $id): Response
+    {
+        $userContext = $request->getAttribute('user_context') ?? $this->getUserContext($request);
+        if (!$userContext instanceof UserContext || !$userContext->hasAnyRole(['admin', 'super_admin'])) {
+            return Response::json(['error' => 'Access denied.'], 403);
+        }
+
+        $structure = $this->feeRepo->findStructureById((int)$id);
+        if (!$structure) {
+            return Response::json(['error' => 'Structure not found.'], 404);
+        }
+
+        $items = [];
+        foreach ($structure->items as $it) {
+            $items[] = [
+                'id' => $it->id,
+                'fee_category_id' => $it->feeCategoryId,
+                'name' => $it->name,
+                'amount' => $it->amount,
+                'is_compulsory' => $it->isCompulsory,
+                'is_required_for_result' => $it->isRequiredForResult,
+            ];
+        }
+
+        return Response::json([
+            'id' => $structure->id,
+            'title' => $structure->title,
+            'session_id' => $structure->sessionId,
+            'term_id' => $structure->termId,
+            'academic_level_id' => $structure->academicLevelId,
+            'class_id' => $structure->classId,
+            'due_date' => $structure->dueDate,
+            'is_active' => $structure->isActive,
+            'items' => $items,
+        ]);
+    }
+
+    /**
+     * Update an existing fee structure and its component items
+     */
+    public function updateStructure(Request $request, string $id): Response
+    {
+        $userContext = $request->getAttribute('user_context') ?? $this->getUserContext($request);
+        if (!$userContext instanceof UserContext || !$userContext->hasAnyRole(['admin', 'super_admin'])) {
+            return $this->forbidden('Access denied.');
+        }
+
+        $structureId = (int)$id;
+        $existing = $this->feeRepo->findStructureById($structureId);
+        if (!$existing) {
+            return $this->redirectWithFlash('/admin/fees/structures', 'error', 'Fee schedule not found.');
+        }
+
+        $data = [
+            'session_id' => (int)$request->input('session_id'),
+            'term_id' => (int)$request->input('term_id'),
+            'academic_level_id' => $request->input('academic_level_id') !== '' ? (int)$request->input('academic_level_id') : null,
+            'class_id' => $request->input('class_id') !== '' ? (int)$request->input('class_id') : null,
+            'title' => trim((string)$request->input('title')),
+            'due_date' => $request->input('due_date') ?: null,
+            'is_active' => $request->has('is_active') ? 1 : 0,
+        ];
+
+        // Process dynamic item rows
+        $categoryIds = (array)$request->input('category_id', []);
+        $itemNames = (array)$request->input('item_name', []);
+        $itemAmounts = (array)$request->input('item_amount', []);
+        $isCompulsory = (array)$request->input('is_compulsory', []);
+        $isRequiredForResult = (array)$request->input('is_required_for_result', []);
+
+        $items = [];
+        foreach ($itemNames as $i => $name) {
+            $amt = (float)($itemAmounts[$i] ?? 0.0);
+            if ($amt > 0 || !empty($name)) {
+                $items[] = [
+                    'fee_category_id' => (int)($categoryIds[$i] ?? 1),
+                    'name' => trim((string)$name),
+                    'amount' => $amt,
+                    'is_compulsory' => !empty($isCompulsory[$i]) ? 1 : 0,
+                    'is_required_for_result' => !empty($isRequiredForResult[$i]) ? 1 : 0,
+                ];
+            }
+        }
+
+        if (empty($items)) {
+            return $this->redirectWithFlash('/admin/fees/structures', 'error', 'At least one fee breakdown component is required.');
+        }
+
+        $this->feeRepo->updateStructure($structureId, $data, $items);
+
+        return $this->redirectWithFlash('/admin/fees/structures', 'success', 'Fee schedule successfully updated.');
     }
 
     /**

@@ -156,7 +156,7 @@ $this->layout('layouts/admin', [
     </div>
 
     <!-- Invoices Data Table -->
-    <div class="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
+    <div id="invoices-table-container" class="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden transition-opacity duration-150">
         <?php if (empty($invoices)): ?>
             <div class="p-12 text-center">
                 <div class="size-16 rounded-3xl bg-slate-100 flex items-center justify-center mx-auto text-slate-400 mb-4">
@@ -246,10 +246,10 @@ $this->layout('layouts/admin', [
                     <div>Showing page <?= $page ?> of <?= $totalPages ?> (<?= $totalCount ?> total records)</div>
                     <div class="flex items-center gap-1">
                         <?php if ($page > 1): ?>
-                            <a href="?page=<?= $page - 1 ?>&<?= http_build_query(array_filter($filters)) ?>" class="px-3 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 font-bold">&larr; Prev</a>
+                            <a href="?page=<?= $page - 1 ?>&<?= http_build_query(array_filter($filters)) ?>" class="pagination-link px-3 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 font-bold">&larr; Prev</a>
                         <?php endif; ?>
                         <?php if ($page < $totalPages): ?>
-                            <a href="?page=<?= $page + 1 ?>&<?= http_build_query(array_filter($filters)) ?>" class="px-3 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 font-bold">Next &rarr;</a>
+                            <a href="?page=<?= $page + 1 ?>&<?= http_build_query(array_filter($filters)) ?>" class="pagination-link px-3 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 font-bold">Next &rarr;</a>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -330,3 +330,84 @@ $this->layout('layouts/admin', [
         </form>
     </div>
 </div>
+
+<script>
+// Progressive Enhancement: AJAX filter & pagination with history pushState
+document.addEventListener('DOMContentLoaded', () => {
+    const filterForm = document.querySelector('form[action="/admin/fees/invoices"]');
+    const tableContainer = document.getElementById('invoices-table-container');
+
+    async function fetchInvoicesTable(url, pushState = true) {
+        if (!tableContainer) return;
+        tableContainer.style.opacity = '0.4';
+        tableContainer.style.pointerEvents = 'none';
+
+        try {
+            const response = await fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            if (!response.ok) throw new Error('Network response not ok');
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const newContainer = doc.getElementById('invoices-table-container');
+
+            if (newContainer) {
+                tableContainer.innerHTML = newContainer.innerHTML;
+                if (pushState) {
+                    window.history.pushState({}, '', url);
+                }
+                if (window.lucide) lucide.createIcons();
+                attachPaginationListeners();
+            } else {
+                window.location.href = url;
+            }
+        } catch (err) {
+            window.location.href = url;
+        } finally {
+            tableContainer.style.opacity = '1';
+            tableContainer.style.pointerEvents = 'auto';
+        }
+    }
+
+    function attachPaginationListeners() {
+        if (!tableContainer) return;
+        tableContainer.querySelectorAll('.pagination-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                fetchInvoicesTable(link.href, true);
+            });
+        });
+    }
+
+    if (filterForm) {
+        filterForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(filterForm);
+            const params = new URLSearchParams();
+            for (const [key, value] of formData.entries()) {
+                if (value.trim() !== '') {
+                    params.append(key, value.trim());
+                }
+            }
+            const url = filterForm.action + (params.toString() ? '?' + params.toString() : '');
+            fetchInvoicesTable(url, true);
+        });
+
+        filterForm.querySelectorAll('select').forEach(select => {
+            select.addEventListener('change', () => {
+                filterForm.dispatchEvent(new Event('submit', { cancelable: true }));
+            });
+        });
+    }
+
+    window.addEventListener('popstate', () => {
+        fetchInvoicesTable(window.location.href, false);
+    });
+
+    attachPaginationListeners();
+});
+</script>
+

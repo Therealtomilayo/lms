@@ -12,6 +12,7 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Policies\ResultPolicy;
 use App\Repositories\AcademicRepository;
+use App\Repositories\FeeRepository;
 use App\Repositories\GradebookRepository;
 use App\Repositories\ResultPublicationRepository;
 use App\Repositories\StudentRepository;
@@ -29,6 +30,7 @@ class ReportCardController extends Controller
     private AcademicRepository $academicRepo;
     private StudentRepository $studentRepo;
     private ResultPinService $pinService;
+    private FeeRepository $feeRepo;
 
     public function __construct(
         ?AuthenticatorInterface $authenticator = null,
@@ -37,7 +39,8 @@ class ReportCardController extends Controller
         ?ResultPublicationRepository $publicationRepo = null,
         ?AcademicRepository $academicRepo = null,
         ?StudentRepository $studentRepo = null,
-        ?ResultPinService $pinService = null
+        ?ResultPinService $pinService = null,
+        ?FeeRepository $feeRepo = null
     ) {
         parent::__construct($authenticator);
         $this->reportCardService = $reportCardService ?? new ReportCardService();
@@ -46,6 +49,7 @@ class ReportCardController extends Controller
         $this->academicRepo = $academicRepo ?? new AcademicRepository();
         $this->studentRepo = $studentRepo ?? new StudentRepository();
         $this->pinService = $pinService ?? new ResultPinService();
+        $this->feeRepo = $feeRepo ?? new FeeRepository();
     }
 
     /**
@@ -115,6 +119,21 @@ class ReportCardController extends Controller
         }
 
         $activeSession = $this->academicRepo->findCurrentSession();
+        $targetTerm = $this->academicRepo->findTermById($tId);
+        $targetSessionId = $targetTerm ? $targetTerm->sessionId : ($activeSession?->id ?? 0);
+
+        // Term-Scoped Bursary Clearance Gate:
+        if (!$this->feeRepo->isStudentClearedForResult($studentId, $targetSessionId, $tId)) {
+            $unpaidItems = $this->feeRepo->getUnpaidRequiredFeeItems($studentId, $targetSessionId, $tId);
+            return Response::html($this->render('student/grades/fee_locked', [
+                'student' => $student,
+                'term' => $targetTerm,
+                'session' => $this->academicRepo->findSessionById($targetSessionId),
+                'unpaidItems' => $unpaidItems,
+                'backUrl' => '/student/grades',
+            ], 'layouts/student'));
+        }
+
         \App\Core\Session::start();
         $sessionKey = "_unlocked_pin_student_{$studentId}_{$tId}";
         $unlockedPinId = \App\Core\Session::get($sessionKey);

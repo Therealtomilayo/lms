@@ -147,13 +147,44 @@ class ParentFeeController extends Controller
             return $this->forbidden('Access denied.');
         }
 
-        $mode = (string)$request->input('payment_mode', 'full');
-        $amount = ($mode === 'full') ? $invoice->balanceDue : (float)$request->input('custom_amount', 0.0);
+        // Checkbox-based itemized payment selection
+        $selectedItemIds = (array)$request->input('selected_items', []);
+        $selectAll = $request->input('select_all') === '1';
+
+        $amount = 0.0;
+        $validItemIds = [];
+
+        $unpaidItemsMap = [];
+        foreach ($invoice->items as $it) {
+            if (!$it->isPaid) {
+                $unpaidItemsMap[$it->id] = $it;
+            }
+        }
+
+        if ($selectAll || empty($selectedItemIds)) {
+            $amount = $invoice->balanceDue;
+            $validItemIds = array_keys($unpaidItemsMap);
+        } else {
+            foreach ($selectedItemIds as $itemId) {
+                $itemId = (int)$itemId;
+                if (isset($unpaidItemsMap[$itemId])) {
+                    $item = $unpaidItemsMap[$itemId];
+                    $amount += $item->amount;
+                    $validItemIds[] = $item->id;
+                }
+            }
+
+            if (empty($validItemIds) || $amount <= 0.0) {
+                return $this->redirectWithFlash("/parent/fees/invoices/{$invoice->id}", 'error', 'Please select at least one fee component to pay.');
+            }
+        }
+
+        $amount = min($amount, $invoice->balanceDue);
 
         $baseUrl = $request->getBaseUrl();
         $callbackUrl = $baseUrl . '/parent/fees/verify';
 
-        $res = $this->feeService->initiateInvoicePayment($invoice, $amount, $userContext, $callbackUrl);
+        $res = $this->feeService->initiateInvoicePayment($invoice, $amount, $userContext, $callbackUrl, $validItemIds);
 
         if (!$res->isSuccess()) {
             return $this->redirectWithFlash("/parent/fees/invoices/{$invoice->id}", 'error', $res->getError() ?? 'Unable to initiate payment.');

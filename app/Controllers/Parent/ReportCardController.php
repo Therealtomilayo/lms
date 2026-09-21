@@ -12,6 +12,7 @@ use App\Core\Response;
 use App\Core\Session;
 use App\Policies\ParentPolicy;
 use App\Repositories\AcademicRepository;
+use App\Repositories\FeeRepository;
 use App\Repositories\GradebookRepository;
 use App\Repositories\ParentRepository;
 use App\Repositories\ResultPublicationRepository;
@@ -31,6 +32,7 @@ class ReportCardController extends Controller
     private StudentRepository $studentRepo;
     private AcademicRepository $academicRepo;
     private ResultPinService $pinService;
+    private FeeRepository $feeRepo;
 
     public function __construct(
         ?AuthenticatorInterface $authenticator = null,
@@ -40,7 +42,8 @@ class ReportCardController extends Controller
         ?ParentRepository $parentRepo = null,
         ?StudentRepository $studentRepo = null,
         ?AcademicRepository $academicRepo = null,
-        ?ResultPinService $pinService = null
+        ?ResultPinService $pinService = null,
+        ?FeeRepository $feeRepo = null
     ) {
         parent::__construct($authenticator);
         $this->reportCardService = $reportCardService ?? new ReportCardService();
@@ -50,6 +53,7 @@ class ReportCardController extends Controller
         $this->studentRepo = $studentRepo ?? new StudentRepository();
         $this->academicRepo = $academicRepo ?? new AcademicRepository();
         $this->pinService = $pinService ?? new ResultPinService();
+        $this->feeRepo = $feeRepo ?? new FeeRepository();
     }
 
     public function index(Request $request, array|string|int $studentId = 0): Response
@@ -128,6 +132,25 @@ class ReportCardController extends Controller
 
         $student = $this->studentRepo->findById($sId);
         $activeSession = $this->academicRepo->getCurrentSession();
+        $targetTerm = $this->academicRepo->findTermById($tId);
+        $targetSessionId = $targetTerm ? $targetTerm->sessionId : ($activeSession ? $activeSession->id : 0);
+
+        // Term-Scoped Bursary Clearance Gate:
+        // A parent who paid Term 1 can view Term 1 results indefinitely,
+        // even if Term 2 is currently unpaid. Only the unpaid term is locked.
+        if (!$this->feeRepo->isStudentClearedForResult($sId, $targetSessionId, $tId)) {
+            $unpaidItems = $this->feeRepo->getUnpaidRequiredFeeItems($sId, $targetSessionId, $tId);
+            $invoice = $this->feeRepo->findInvoiceForStudentTerm($sId, $targetSessionId, $tId);
+
+            return Response::html($this->render('parent/grades/fee_locked', [
+                'student' => $student,
+                'term' => $targetTerm,
+                'session' => $this->academicRepo->findSessionById($targetSessionId),
+                'unpaidItems' => $unpaidItems,
+                'invoice' => $invoice,
+                'backUrl' => "/parent/children/{$sId}/grades",
+            ], 'layouts/parent'));
+        }
 
         // Check Session-Based PIN Clearance (1 view count consumed per login session)
         Session::start();
@@ -184,6 +207,14 @@ class ReportCardController extends Controller
 
         if (!ParentPolicy::canViewReportCard($userContext, $sId, $tId, $this->parentRepo, $this->publicationRepo)) {
             throw new AuthorizationException('You are not authorized to view these results or they are not yet published.');
+        }
+
+        $targetTerm = $this->academicRepo->findTermById($tId);
+        $activeSession = $this->academicRepo->getCurrentSession();
+        $targetSessionId = $targetTerm ? $targetTerm->sessionId : ($activeSession ? $activeSession->id : 0);
+
+        if (!$this->feeRepo->isStudentClearedForResult($sId, $targetSessionId, $tId)) {
+            return Response::redirect("/parent/children/{$sId}/grades/report-card?term_id={$tId}");
         }
 
         Session::start();

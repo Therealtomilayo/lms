@@ -150,6 +150,7 @@ class ParentPortalLifecycleIntegrationTest extends TestCase
                 student_id INTEGER,
                 session_id INTEGER,
                 term_id INTEGER,
+                invoice_id INTEGER,
                 purpose TEXT,
                 amount REAL,
                 currency TEXT DEFAULT 'NGN',

@@ -108,6 +108,7 @@ class ResultPinAndPaymentIntegrationTest extends TestCase
                 student_id INTEGER NOT NULL,
                 session_id INTEGER NOT NULL,
                 term_id INTEGER NOT NULL,
+                invoice_id INTEGER NULL,
                 purpose TEXT NOT NULL,
                 amount REAL NOT NULL,
                 currency TEXT DEFAULT 'NGN',
