@@ -50,6 +50,38 @@ class UserRepository
         return User::fromArray($row, $roles);
     }
 
+    public function findByEmailOrAdmissionNumber(string $identifier): ?User
+    {
+        $trimmed = trim($identifier);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        // 1. Try finding by email
+        $user = $this->findByEmail($trimmed);
+        if ($user !== null) {
+            return $user;
+        }
+
+        // 2. Try finding by student admission number
+        $stmt = $this->pdo->prepare('
+            SELECT u.* 
+            FROM `users` u 
+            JOIN `students` s ON s.user_id = u.id 
+            WHERE LOWER(s.admission_number) = LOWER(:identifier) 
+            LIMIT 1
+        ');
+        $stmt->execute([':identifier' => $trimmed]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row) {
+            return null;
+        }
+
+        $roles = $this->getRolesForUser((int)$row['id']);
+        return User::fromArray($row, $roles);
+    }
+
     public function findByUuid(string $uuid): ?User
     {
         $stmt = $this->pdo->prepare('SELECT * FROM `users` WHERE `uuid` = :uuid LIMIT 1');

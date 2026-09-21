@@ -29,12 +29,12 @@ class AuthService
         $email = trim($email);
 
         if ($email === '' || $password === '') {
-            return ServiceResult::failure(['general' => ['Email and password are required.']], 'INVALID_CREDENTIALS');
+            return ServiceResult::failure(['general' => ['Email or admission number and password are required.']], 'INVALID_CREDENTIALS');
         }
 
-        $user = $this->userRepository->findByEmail($email);
+        $user = $this->userRepository->findByEmailOrAdmissionNumber($email);
         if (!$user) {
-            return ServiceResult::failure(['general' => ['Invalid email or password.']], 'INVALID_CREDENTIALS');
+            return ServiceResult::failure(['general' => ['Invalid email, admission number, or password.']], 'INVALID_CREDENTIALS');
         }
 
         if (!$user->isActive()) {

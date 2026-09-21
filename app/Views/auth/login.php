@@ -114,22 +114,22 @@ $this->layout('layouts/auth', [
         <form action="/login" method="POST" class="space-y-5" novalidate id="login-form">
             <?= csrf_field() ?>
 
-            <!-- Email Address Field -->
+            <!-- Email Address or Admission Number Field -->
             <div>
                 <label for="email" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                    Email Address
+                    Email Address or Student Admission Number
                 </label>
                 <div class="relative group">
                     <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#7B3046] transition-colors">
-                        <i data-lucide="mail" class="w-4 h-4 text-slate-400 shrink-0" style="width:16px;height:16px;"></i>
+                        <i data-lucide="user-check" class="w-4 h-4 text-slate-400 shrink-0" style="width:16px;height:16px;"></i>
                     </div>
                     <input id="email" 
                            name="email" 
-                           type="email" 
+                           type="text" 
                            value="<?= e(old('email')) ?>" 
                            required 
-                           autocomplete="email" 
-                           placeholder="name@claret.edu or your registered email"
+                           autocomplete="username" 
+                           placeholder="e.g. name@claret.edu or STD-00001"
                            class="w-full pl-11 pr-4 py-2.5 text-sm rounded-xl border <?= !empty($errors['email']) ? 'border-red-400 bg-red-50/30' : 'border-slate-200 bg-slate-50/50' ?> text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-[#7B3046] focus:ring-4 focus:ring-[#7B3046]/10 outline-none transition-all duration-200">
                 </div>
                 <?php if (!empty($errors['email'])): ?>

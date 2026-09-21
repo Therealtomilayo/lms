@@ -121,6 +121,39 @@ class EnrollmentService
      */
     public function autoEnrollClassSubjects(int $studentId, int $classId, int $sessionId): int
     {
+        $class = $this->academicRepository->findClassById($classId);
+        $level = $class ? $this->academicRepository->findLevelById($class->academicLevelId) : null;
+        $isSeniorSecondary = $level && $level->stage === 'senior_secondary';
+
+        // For non-senior secondary (Junior Secondary, Primary, Pre-School), all arms of that level take the same subjects.
+        // If other arms in the same level have active subjects for this session that this arm does not yet have,
+        // propagate them to this arm so offerings exist.
+        if (!$isSeniorSecondary && $class) {
+            $siblingClasses = $this->academicRepository->getClassesByLevel($class->academicLevelId);
+            $existingSubjects = $this->academicRepository->getClassSubjectsBySession($sessionId, $classId);
+            $existingSubjectIds = array_map(fn($cs) => $cs->subjectId, $existingSubjects);
+
+            foreach ($siblingClasses as $sibling) {
+                if ($sibling->id === $classId) {
+                    continue;
+                }
+                $siblingSubjects = $this->academicRepository->getClassSubjectsBySession($sessionId, $sibling->id);
+                foreach ($siblingSubjects as $sibCs) {
+                    if (!in_array($sibCs->subjectId, $existingSubjectIds, true) && $sibCs->isActive()) {
+                        $this->academicRepository->createClassSubject([
+                            'session_id' => $sessionId,
+                            'class_id' => $classId,
+                            'subject_id' => $sibCs->subjectId,
+                            'teacher_id' => $sibCs->teacherId,
+                            'status' => 'active',
+                        ]);
+                        $existingSubjectIds[] = $sibCs->subjectId;
+                    }
+                }
+            }
+        }
+
+        // Enroll student in all active class-subjects of this class arm
         $classSubjects = $this->academicRepository->getClassSubjectsBySession($sessionId, $classId);
         $count = 0;
 

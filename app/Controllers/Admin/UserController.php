@@ -26,17 +26,23 @@ class UserController extends Controller
     private UserRepository $userRepository;
     private AcademicRepository $academicRepository;
     private \App\Services\ApprovalService $approvalService;
+    private \App\Repositories\StudentRepository $studentRepository;
+    private \App\Repositories\TeacherRepository $teacherRepository;
 
     public function __construct(
         ?UserService $userService = null,
         ?UserRepository $userRepository = null,
         ?AcademicRepository $academicRepository = null,
-        ?\App\Services\ApprovalService $approvalService = null
+        ?\App\Services\ApprovalService $approvalService = null,
+        ?\App\Repositories\StudentRepository $studentRepository = null,
+        ?\App\Repositories\TeacherRepository $teacherRepository = null
     ) {
         $this->userService = $userService ?? new UserService();
         $this->userRepository = $userRepository ?? new UserRepository();
         $this->academicRepository = $academicRepository ?? new AcademicRepository();
         $this->approvalService = $approvalService ?? new \App\Services\ApprovalService();
+        $this->studentRepository = $studentRepository ?? new \App\Repositories\StudentRepository();
+        $this->teacherRepository = $teacherRepository ?? new \App\Repositories\TeacherRepository();
     }
 
     public function index(Request $request): Response
@@ -79,12 +85,17 @@ class UserController extends Controller
         }
 
         $classes = $this->academicRepository->getAllClasses();
+        $suggestedAdmissionNumber = $this->studentRepository->generateAdmissionNumber();
+        $suggestedStaffId = $this->teacherRepository->generateStaffId();
 
         return $this->view('admin/users/create', [
             'title' => 'Create User — Claret LMS',
             'headerTitle' => 'Create New User Account',
             'classes' => $classes,
+            'suggestedAdmissionNumber' => $suggestedAdmissionNumber,
+            'suggestedStaffId' => $suggestedStaffId,
             'actor' => $userContext,
+            'errors' => Session::getFlash('errors', []),
         ]);
     }
 
@@ -149,8 +160,10 @@ class UserController extends Controller
             }
 
             return $this->redirectWithSuccess('/admin/users', 'User account created successfully.');
-        } catch (ValidationException|DomainRuleException $e) {
-            return $this->redirectWithError('/admin/users/create', $e->getMessage());
+        } catch (ValidationException $e) {
+            return $this->redirectWithErrors('/admin/users/create', $e->getErrors(), $request->all());
+        } catch (DomainRuleException $e) {
+            return $this->redirectWithErrors('/admin/users/create', ['general' => [$e->getMessage()]], $request->all());
         }
     }
 
@@ -161,7 +174,8 @@ class UserController extends Controller
             return $this->forbidden('Forbidden');
         }
 
-        $user = $this->userRepository->findById((int)$id);
+        $userId = (int)$id;
+        $user = $this->userRepository->findById($userId);
         if (!$user) {
             return Response::html('User not found', 404);
         }
@@ -170,10 +184,21 @@ class UserController extends Controller
             return $this->forbidden('You do not have permission to edit this user.');
         }
 
+        $student = $this->studentRepository->findByUserId($userId);
+        $teacher = $this->teacherRepository->findTeacherByUserId($userId);
+        $suggestedAdmissionNumber = $student ? $student->admissionNumber : $this->studentRepository->generateAdmissionNumber();
+        $suggestedStaffId = $teacher ? $teacher->staffId : $this->teacherRepository->generateStaffId();
+        $classes = $this->academicRepository->getAllClasses();
+
         return $this->view('admin/users/edit', [
             'title' => "Edit {$user->name} — Claret LMS",
             'headerTitle' => "Edit User: {$user->name}",
             'user' => $user,
+            'student' => $student,
+            'teacher' => $teacher,
+            'suggestedAdmissionNumber' => $suggestedAdmissionNumber,
+            'suggestedStaffId' => $suggestedStaffId,
+            'classes' => $classes,
             'actor' => $userContext,
             'errors' => Session::getFlash('errors', []),
         ]);
@@ -211,6 +236,11 @@ class UserController extends Controller
                 'email' => $request->post('email'),
                 'phone' => $request->post('phone'),
                 'status' => $request->post('status'),
+                'gender' => $request->post('gender'),
+                'current_class_id' => $request->post('current_class_id'),
+                'admission_number' => $request->post('admission_number'),
+                'staff_id' => $request->post('staff_id'),
+                'date_of_birth' => $request->post('date_of_birth'),
             ];
 
             if ($roles !== null) {
@@ -244,7 +274,7 @@ class UserController extends Controller
         } catch (ValidationException $e) {
             return $this->redirectWithErrors("/admin/users/{$userId}/edit", $e->getErrors(), $request->all());
         } catch (DomainRuleException $e) {
-            return $this->redirectWithError("/admin/users/{$userId}/edit", $e->getMessage());
+            return $this->redirectWithErrors("/admin/users/{$userId}/edit", ['general' => [$e->getMessage()]], $request->all());
         } catch (ResourceNotFoundException $e) {
             return Response::html($e->getMessage(), 404);
         }

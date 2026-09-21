@@ -155,4 +155,33 @@ class TeacherRepository
             ':updated_at' => $now,
         ]);
     }
+
+    /**
+     * Generate a unique teacher staff ID that does not clash with existing records.
+     */
+    public function generateStaffId(): string
+    {
+        $stmt = $this->pdo->query("SELECT staff_id FROM `teachers` WHERE `staff_id` LIKE 'TCH-%' ORDER BY `id` DESC");
+        $maxNum = 0;
+        $existing = [];
+
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $staffId = trim((string)$row['staff_id']);
+            $existing[strtolower($staffId)] = true;
+            if (preg_match('/^TCH-(\d+)$/i', $staffId, $matches)) {
+                $val = (int)$matches[1];
+                if ($val > $maxNum) {
+                    $maxNum = $val;
+                }
+            }
+        }
+
+        $candidateNum = $maxNum + 1;
+        do {
+            $candidate = sprintf('TCH-%04d', $candidateNum);
+            $candidateNum++;
+        } while (isset($existing[strtolower($candidate)]));
+
+        return $candidate;
+    }
 }

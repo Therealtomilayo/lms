@@ -25,15 +25,18 @@ class TeacherAssignmentService
     private AcademicRepository $academicRepository;
     private TeacherRepository $teacherRepository;
     private UserRepository $userRepository;
+    private \App\Repositories\EnrollmentRepository $enrollmentRepository;
 
     public function __construct(
         ?AcademicRepository $academicRepository = null,
         ?TeacherRepository $teacherRepository = null,
-        ?UserRepository $userRepository = null
+        ?UserRepository $userRepository = null,
+        ?\App\Repositories\EnrollmentRepository $enrollmentRepository = null
     ) {
         $this->academicRepository = $academicRepository ?? new AcademicRepository();
         $this->teacherRepository = $teacherRepository ?? new TeacherRepository();
         $this->userRepository = $userRepository ?? new UserRepository();
+        $this->enrollmentRepository = $enrollmentRepository ?? new \App\Repositories\EnrollmentRepository();
     }
 
     /**
@@ -137,6 +140,53 @@ class TeacherAssignmentService
             'teacher_id' => $teacherId,
             'status' => $status,
         ]);
+
+        // 1. Automatically enroll existing students of this class in this session
+        $students = $this->enrollmentRepository->getStudentsByClassAndSession($classId, $sessionId);
+        foreach ($students as $student) {
+            $this->enrollmentRepository->enrollInSubject(
+                studentId: $student->id,
+                classSubjectId: $classSubject->id,
+                sessionId: $sessionId,
+                isElective: false,
+                status: 'active'
+            );
+        }
+
+        // 2. For non-senior secondary classes (Junior Secondary, Primary, Pre-School),
+        // or if explicitly requested via 'propagate_to_arms', propagate the subject offering across all arms
+        $level = $this->academicRepository->findLevelById($class->academicLevelId);
+        $isSenior = $level && $level->stage === 'senior_secondary';
+        $shouldPropagate = !$isSenior || !empty($data['propagate_to_arms']);
+
+        if ($shouldPropagate) {
+            $siblingClasses = $this->academicRepository->getClassesByLevel($class->academicLevelId);
+            foreach ($siblingClasses as $sibling) {
+                if ($sibling->id === $classId) {
+                    continue;
+                }
+                $existingSiblingCs = $this->academicRepository->findClassSubject($sessionId, $sibling->id, $subjectId);
+                if ($existingSiblingCs === null) {
+                    $siblingCs = $this->academicRepository->createClassSubject([
+                        'session_id' => $sessionId,
+                        'class_id' => $sibling->id,
+                        'subject_id' => $subjectId,
+                        'teacher_id' => $teacherId,
+                        'status' => $status,
+                    ]);
+                    $siblingStudents = $this->enrollmentRepository->getStudentsByClassAndSession($sibling->id, $sessionId);
+                    foreach ($siblingStudents as $sStudent) {
+                        $this->enrollmentRepository->enrollInSubject(
+                            studentId: $sStudent->id,
+                            classSubjectId: $siblingCs->id,
+                            sessionId: $sessionId,
+                            isElective: false,
+                            status: 'active'
+                        );
+                    }
+                }
+            }
+        }
 
         return ServiceResult::success($classSubject);
     }

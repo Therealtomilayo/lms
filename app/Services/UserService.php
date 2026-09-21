@@ -11,6 +11,7 @@ use App\Core\UserContext;
 use App\DTO\ServiceResult;
 use App\Models\User;
 use App\Policies\UserPolicy;
+use App\Repositories\AcademicRepository;
 use App\Repositories\ParentRepository;
 use App\Repositories\StudentRepository;
 use App\Repositories\TeacherRepository;
@@ -25,17 +26,27 @@ class UserService
     private StudentRepository $studentRepository;
     private TeacherRepository $teacherRepository;
     private ParentRepository $parentRepository;
+    private AcademicRepository $academicRepository;
+    private EnrollmentService $enrollmentService;
 
     public function __construct(
         ?UserRepository $userRepository = null,
         ?StudentRepository $studentRepository = null,
         ?TeacherRepository $teacherRepository = null,
-        ?ParentRepository $parentRepository = null
+        ?ParentRepository $parentRepository = null,
+        \App\Repositories\AcademicRepository|\PDO|null $academicRepository = null,
+        ?EnrollmentService $enrollmentService = null
     ) {
         $this->userRepository = $userRepository ?? new UserRepository();
         $this->studentRepository = $studentRepository ?? new StudentRepository();
         $this->teacherRepository = $teacherRepository ?? new TeacherRepository();
         $this->parentRepository = $parentRepository ?? new ParentRepository();
+        if ($academicRepository instanceof \PDO) {
+            $this->academicRepository = new AcademicRepository($academicRepository);
+        } else {
+            $this->academicRepository = $academicRepository ?? new AcademicRepository();
+        }
+        $this->enrollmentService = $enrollmentService ?? new EnrollmentService();
     }
 
     /**
@@ -49,6 +60,20 @@ class UserService
         $password = $data['password'] ?? '';
         $roles = $data['roles'] ?? [];
         $status = $data['status'] ?? 'active';
+
+        $isStudentOnly = count($roles) === 1 && in_array('student', $roles, true);
+
+        // Pre-resolve student admission number if needed for fallback email
+        $admNo = !empty($data['admission_number']) 
+            ? trim($data['admission_number']) 
+            : ($isStudentOnly ? $this->studentRepository->generateAdmissionNumber() : '');
+
+        // Fallback institutional email for students if left blank
+        if ($isStudentOnly && $email === '') {
+            $studentDomain = (string)\App\Core\Config::get('app.student_domain', 'claret.edu');
+            $cleanAdm = strtolower(str_replace(['/', '-', ' '], '', $admNo));
+            $email = "{$cleanAdm}.student@{$studentDomain}";
+        }
 
         $errors = [];
         if ($name === '') {
@@ -104,21 +129,30 @@ class UserService
             'must_change_password' => !empty($data['must_change_password']) ? 1 : 0,
         ], $roles);
 
-        // If 'student' role, create student profile if admission number provided
+        // If 'student' role, create student profile and auto-enroll in class & subjects
         if (in_array('student', $roles, true)) {
-            $admNo = !empty($data['admission_number']) ? trim($data['admission_number']) : 'STD-' . str_pad((string)$user->id, 5, '0', STR_PAD_LEFT);
-            $this->studentRepository->create(
+            $studentAdm = !empty($admNo) ? $admNo : $this->studentRepository->generateAdmissionNumber();
+            $classId = !empty($data['current_class_id']) ? (int)$data['current_class_id'] : null;
+
+            $student = $this->studentRepository->create(
                 userId: $user->id,
-                admissionNumber: $admNo,
+                admissionNumber: $studentAdm,
                 dateOfBirth: $data['date_of_birth'] ?? null,
                 gender: $data['gender'] ?? null,
-                currentClassId: !empty($data['current_class_id']) ? (int)$data['current_class_id'] : null
+                currentClassId: $classId
             );
+
+            if ($classId !== null && $classId > 0) {
+                $activeSession = $this->academicRepository->findActiveSession() ?? ($this->academicRepository->getAllSessions()[0] ?? null);
+                if ($activeSession) {
+                    $this->enrollmentService->enrollStudentInClass($student->id, $classId, $activeSession->id);
+                }
+            }
         }
 
-        // If 'teacher' role, create teacher profile if staff ID provided
+        // If 'teacher' role, create teacher profile with unique staff ID
         if (in_array('teacher', $roles, true)) {
-            $staffId = !empty($data['staff_id']) ? trim($data['staff_id']) : 'TCH-' . str_pad((string)$user->id, 4, '0', STR_PAD_LEFT);
+            $staffId = !empty($data['staff_id']) ? trim($data['staff_id']) : $this->teacherRepository->generateStaffId();
             $this->teacherRepository->createTeacher($user->id, $staffId);
         }
 
@@ -205,28 +239,64 @@ class UserService
 
         if (isset($data['roles'])) {
             $this->userRepository->syncRoles($userId, $roles);
+        }
 
-            // If 'teacher' role is assigned and teacher record does not exist, provision teacher profile
-            if (in_array('teacher', $roles, true) && !$this->teacherRepository->findTeacherByUserId($userId)) {
-                $staffId = !empty($data['staff_id']) ? trim($data['staff_id']) : 'TCH-' . str_pad((string)$userId, 4, '0', STR_PAD_LEFT);
+        // Manage Teacher Profile
+        if (in_array('teacher', $roles, true)) {
+            $existingTeacher = $this->teacherRepository->findTeacherByUserId($userId);
+            if (!$existingTeacher) {
+                $staffId = !empty($data['staff_id']) ? trim($data['staff_id']) : $this->teacherRepository->generateStaffId();
                 $this->teacherRepository->createTeacher($userId, $staffId);
+            } elseif (!empty($data['staff_id']) && trim($data['staff_id']) !== $existingTeacher->staffId) {
+                $this->teacherRepository->updateTeacherStaffId($existingTeacher->id, trim($data['staff_id']));
             }
+        }
 
-            // If 'parent' role is assigned and parent record does not exist, provision parent profile
-            if (in_array('parent', $roles, true) && !$this->parentRepository->findByUserId($userId)) {
-                $this->parentRepository->create($userId);
-            }
+        // Manage Parent Profile
+        if (in_array('parent', $roles, true) && !$this->parentRepository->findByUserId($userId)) {
+            $this->parentRepository->create($userId);
+        }
 
-            // If 'student' role is assigned and student record does not exist, provision student profile
-            if (in_array('student', $roles, true) && !$this->studentRepository->findByUserId($userId)) {
-                $admNo = !empty($data['admission_number']) ? trim($data['admission_number']) : 'STD-' . str_pad((string)$userId, 5, '0', STR_PAD_LEFT);
-                $this->studentRepository->create(
+        // Manage Student Profile & Class Placements
+        if (in_array('student', $roles, true)) {
+            $existingStudent = $this->studentRepository->findByUserId($userId);
+            $classId = isset($data['current_class_id']) && (int)$data['current_class_id'] > 0 ? (int)$data['current_class_id'] : null;
+
+            if (!$existingStudent) {
+                $admNo = !empty($data['admission_number']) ? trim($data['admission_number']) : $this->studentRepository->generateAdmissionNumber();
+                $student = $this->studentRepository->create(
                     userId: $userId,
                     admissionNumber: $admNo,
                     dateOfBirth: $data['date_of_birth'] ?? null,
                     gender: $data['gender'] ?? null,
-                    currentClassId: !empty($data['current_class_id']) ? (int)$data['current_class_id'] : null
+                    currentClassId: $classId
                 );
+
+                if ($classId !== null && $classId > 0) {
+                    $activeSession = $this->academicRepository->findActiveSession() ?? ($this->academicRepository->getAllSessions()[0] ?? null);
+                    if ($activeSession) {
+                        $this->enrollmentService->enrollStudentInClass($student->id, $classId, $activeSession->id);
+                    }
+                }
+            } else {
+                $admNo = !empty($data['admission_number']) ? trim($data['admission_number']) : $existingStudent->admissionNumber;
+                $gender = $data['gender'] ?? $existingStudent->gender;
+                $dob = $data['date_of_birth'] ?? $existingStudent->dateOfBirth;
+
+                $this->studentRepository->update(
+                    studentId: $existingStudent->id,
+                    admissionNumber: $admNo,
+                    dateOfBirth: $dob,
+                    gender: $gender,
+                    currentClassId: $classId
+                );
+
+                if ($classId !== null && $classId > 0 && $classId !== (int)$existingStudent->currentClassId) {
+                    $activeSession = $this->academicRepository->findActiveSession() ?? ($this->academicRepository->getAllSessions()[0] ?? null);
+                    if ($activeSession) {
+                        $this->enrollmentService->enrollStudentInClass($existingStudent->id, $classId, $activeSession->id);
+                    }
+                }
             }
         }
 

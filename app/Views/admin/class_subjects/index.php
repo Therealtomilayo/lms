@@ -211,6 +211,16 @@ foreach ($teachers as $t) {
         'placeholder' => ''
     ]); ?>
 
+    <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+        <label class="flex items-start gap-2.5 text-xs text-slate-700 cursor-pointer">
+            <input type="checkbox" name="propagate_to_arms" value="1" checked class="mt-0.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+            <div>
+                <span class="font-semibold block">Apply to all arms of this class level</span>
+                <span class="text-slate-500 text-[11px] block">For non-senior levels (e.g. JSS 1, Primary), enrolls students across all arms. For senior secondary, arms keep their distinct track courses.</span>
+            </div>
+        </label>
+    </div>
+
     <div class="pt-4 border-t border-slate-200 flex justify-end gap-3">
         <?php $this->include('components/button', [
             'type' => 'button',

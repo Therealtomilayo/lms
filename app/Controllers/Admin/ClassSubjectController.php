@@ -87,6 +87,7 @@ class ClassSubjectController extends Controller
                 'subject_id' => $request->post('subject_id'),
                 'teacher_id' => $request->post('teacher_id'),
                 'status' => $request->post('status', 'active'),
+                'propagate_to_arms' => (bool)$request->post('propagate_to_arms', false),
             ]);
 
             return $this->redirectWithSuccess($redirectUrl, 'Subject and teacher assigned to class successfully.');
