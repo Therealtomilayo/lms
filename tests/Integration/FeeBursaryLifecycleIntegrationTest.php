@@ -379,4 +379,94 @@ class FeeBursaryLifecycleIntegrationTest extends TestCase
         // Term 2 is LOCKED pending Term 2 fee settlement!
         $this->assertFalse($this->feeRepo->isStudentClearedForResult(1, 1, 2));
     }
+
+    public function testSyncStructureInvoicesPreservesPaidComponentsAndAddsNewUnpaid(): void
+    {
+        // 1. Create a fee structure with Tuition (50,000) and ICT (10,000)
+        $structure = $this->feeRepo->createStructure([
+            'session_id' => 1,
+            'term_id' => 1,
+            'class_id' => 1,
+            'title' => 'JSS 1 Term 1 Schedule',
+            'created_by' => 1,
+        ], [
+            ['fee_category_id' => 1, 'name' => 'Tuition', 'amount' => 50000.00, 'is_compulsory' => 1, 'is_required_for_result' => 1],
+            ['fee_category_id' => 2, 'name' => 'ICT Levy', 'amount' => 10000.00, 'is_compulsory' => 1, 'is_required_for_result' => 1],
+        ]);
+
+        // 2. Generate invoice for Student 1
+        $invoice = $this->feeRepo->createInvoice([
+            'invoice_number' => 'INV-SYNC-001',
+            'student_id' => 1,
+            'parent_id' => 1,
+            'class_id' => 1,
+            'session_id' => 1,
+            'term_id' => 1,
+            'discount_amount' => 0.00,
+            'created_by' => 1,
+        ], [
+            ['fee_category_id' => 1, 'name' => 'Tuition', 'amount' => 50000.00, 'is_compulsory' => 1, 'is_required_for_result' => 1],
+            ['fee_category_id' => 2, 'name' => 'ICT Levy', 'amount' => 10000.00, 'is_compulsory' => 1, 'is_required_for_result' => 1],
+        ]);
+
+        // 3. Mark Tuition as PAID
+        $tuitionItem = array_values(array_filter($invoice->items, fn($it) => $it->name === 'Tuition'))[0];
+        $this->feeRepo->markInvoiceItemsPaid($invoice->id, [$tuitionItem->id]);
+        $this->feeRepo->updateInvoiceFinancials($invoice->id, 50000.00, 10000.00, FeeInvoice::STATUS_PARTIALLY_PAID);
+
+        // 4. Admin edits fee structure mid-term:
+        // Updates ICT to 12,000 and adds a new Science Lab Levy (15,000)
+        $this->feeRepo->updateStructure($structure->id, [
+            'session_id' => 1,
+            'term_id' => 1,
+            'class_id' => 1,
+            'title' => 'JSS 1 Term 1 Schedule (Revised)',
+        ], [
+            ['fee_category_id' => 1, 'name' => 'Tuition', 'amount' => 50000.00, 'is_compulsory' => 1, 'is_required_for_result' => 1],
+            ['fee_category_id' => 2, 'name' => 'ICT Levy', 'amount' => 12000.00, 'is_compulsory' => 1, 'is_required_for_result' => 1],
+            ['fee_category_id' => 3, 'name' => 'Science Lab Levy', 'amount' => 15000.00, 'is_compulsory' => 1, 'is_required_for_result' => 1],
+        ]);
+
+        // 5. Synchronize structure invoices
+        $syncRes = $this->feeService->syncStructureInvoices($structure->id);
+        $this->assertTrue($syncRes->isSuccess());
+
+        // 6. Inspect updated invoice
+        $refreshed = $this->feeRepo->findInvoiceById($invoice->id);
+        $this->assertNotNull($refreshed);
+
+        // Invariants:
+        // Subtotal = 50,000 + 12,000 + 15,000 = 77,000
+        $this->assertEquals(77000.00, $refreshed->subtotal);
+        $this->assertEquals(77000.00, $refreshed->totalAmount);
+
+        // Paid amount is strictly preserved: 50,000 (past paid Tuition)
+        $this->assertEquals(50000.00, $refreshed->amountPaid);
+
+        // Balance due is strictly the new unpaid items: 77,000 - 50,000 = 27,000
+        $this->assertEquals(27000.00, $refreshed->balanceDue);
+        $this->assertEquals(FeeInvoice::STATUS_PARTIALLY_PAID, $refreshed->status);
+
+        // Check line items:
+        $itemsByName = [];
+        foreach ($refreshed->items as $it) {
+            $itemsByName[$it->name] = $it;
+        }
+
+        // Tuition must remain PAID
+        $this->assertTrue($itemsByName['Tuition']->isPaid);
+        $this->assertEquals(50000.00, $itemsByName['Tuition']->paidAmount);
+
+        // ICT Levy must be updated to 12,000 and UNPAID
+        $this->assertFalse($itemsByName['ICT Levy']->isPaid);
+        $this->assertEquals(12000.00, $itemsByName['ICT Levy']->amount);
+
+        // Science Lab Levy must be NEW and UNPAID
+        $this->assertArrayHasKey('Science Lab Levy', $itemsByName);
+        $this->assertFalse($itemsByName['Science Lab Levy']->isPaid);
+        $this->assertEquals(15000.00, $itemsByName['Science Lab Levy']->amount);
+
+        // Student is result-locked because ICT & Science Lab are mandatory and unpaid
+        $this->assertFalse($this->feeRepo->isStudentClearedForResult(1, 1, 1));
+    }
 }

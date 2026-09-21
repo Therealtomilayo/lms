@@ -61,6 +61,8 @@ class FeeController extends Controller
             'categories' => $categories,
             'selectedSessionId' => $sessionId,
             'selectedTermId' => $termId,
+            'activeSession' => $this->academicRepo->getCurrentSession(),
+            'activeTerm' => $this->academicRepo->getCurrentTerm(),
         ], 200, 'layouts/admin');
     }
 
@@ -226,8 +228,11 @@ class FeeController extends Controller
         }
 
         $this->feeRepo->updateStructure($structureId, $data, $items);
+        $syncResult = $this->feeService->syncStructureInvoices($structureId);
+        $syncCount = $syncResult->isSuccess() ? ($syncResult->getData()['synced_count'] ?? 0) : 0;
+        $syncMsg = $syncCount > 0 ? " and synchronized {$syncCount} student invoice(s)." : ".";
 
-        return $this->redirectWithFlash('/admin/fees/structures', 'success', 'Fee schedule successfully updated.');
+        return $this->redirectWithFlash('/admin/fees/structures', 'success', 'Fee schedule successfully updated' . $syncMsg);
     }
 
     /**

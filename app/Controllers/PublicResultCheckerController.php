@@ -9,6 +9,7 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Core\Session;
 use App\Repositories\AcademicRepository;
+use App\Repositories\FeeRepository;
 use App\Repositories\ResultPublicationRepository;
 use App\Repositories\StudentRepository;
 use App\Services\ReportCardService;
@@ -24,6 +25,7 @@ class PublicResultCheckerController extends Controller
     private AcademicRepository $academicRepository;
     private ResultPublicationRepository $publicationRepository;
     private ReportCardService $reportCardService;
+    private FeeRepository $feeRepository;
 
     public function __construct(
         ?AuthenticatorInterface $authenticator = null,
@@ -31,7 +33,8 @@ class PublicResultCheckerController extends Controller
         ?StudentRepository $studentRepository = null,
         ?AcademicRepository $academicRepository = null,
         ?ResultPublicationRepository $publicationRepository = null,
-        ?ReportCardService $reportCardService = null
+        ?ReportCardService $reportCardService = null,
+        ?FeeRepository $feeRepository = null
     ) {
         parent::__construct($authenticator);
         $this->pinService = $pinService ?? new ResultPinService();
@@ -39,6 +42,7 @@ class PublicResultCheckerController extends Controller
         $this->academicRepository = $academicRepository ?? new AcademicRepository();
         $this->publicationRepository = $publicationRepository ?? new ResultPublicationRepository();
         $this->reportCardService = $reportCardService ?? new ReportCardService();
+        $this->feeRepository = $feeRepository ?? new FeeRepository();
     }
 
     public function show(Request $request): Response
@@ -81,6 +85,15 @@ class PublicResultCheckerController extends Controller
         $activeTerm = $this->academicRepository->getCurrentTerm();
         $targetSessionId = $sessionId > 0 ? $sessionId : ($activeSession?->id ?? 1);
         $targetTermId = $termId > 0 ? $termId : ($activeTerm?->id ?? 1);
+
+        // Pre-check student bursary clearance before consuming PIN
+        $studentRecord = $this->studentRepository->findByAdmissionNumber($admissionNumber);
+        if ($studentRecord && !$this->feeRepository->isStudentClearedForResult($studentRecord->id, $targetSessionId, $targetTermId)) {
+            return $this->redirectWithError(
+                '/results/check',
+                'Result access for this student is currently locked due to unsettled termly fees. Please contact the bursary or settle outstanding fees to unlock results.'
+            );
+        }
 
         // 1. Verify and Consume PIN view attempt
         $result = $this->pinService->verifyAndConsumePin(

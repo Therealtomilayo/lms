@@ -208,7 +208,9 @@ $this->layout('layouts/admin', [
                     <select name="session_id" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
                         <option value="">-- Select Academic Session --</option>
                         <?php foreach ($sessions as $s): ?>
-                            <option value="<?= $s->id ?>"><?= htmlspecialchars($s->name, ENT_QUOTES, 'UTF-8') ?></option>
+                            <option value="<?= $s->id ?>" <?= ($selectedSessionId == $s->id || (!$selectedSessionId && isset($activeSession) && $activeSession->id == $s->id)) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($s->name, ENT_QUOTES, 'UTF-8') ?>
+                            </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -217,7 +219,9 @@ $this->layout('layouts/admin', [
                     <select name="term_id" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
                         <option value="">-- Select Term --</option>
                         <?php foreach ($terms as $t): ?>
-                            <option value="<?= $t->id ?>"><?= htmlspecialchars($t->name, ENT_QUOTES, 'UTF-8') ?></option>
+                            <option value="<?= $t->id ?>" <?= ($selectedTermId == $t->id || (!$selectedTermId && isset($activeTerm) && $activeTerm->id == $t->id)) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($t->name, ENT_QUOTES, 'UTF-8') ?>
+                            </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -228,25 +232,31 @@ $this->layout('layouts/admin', [
                     <label class="block font-bold text-slate-700 mb-1">Target Academic Level</label>
                     <select name="academic_level_id" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
                         <option value="">-- School-Wide (All Levels) --</option>
-                        <?php foreach ($academicLevels as $al): ?>
-                            <option value="<?= $al->id ?>"><?= htmlspecialchars($al->name, ENT_QUOTES, 'UTF-8') ?></option>
+                        <?php foreach ($academicLevels as $lvl): ?>
+                            <option value="<?= $lvl->id ?>"><?= htmlspecialchars($lvl->name, ENT_QUOTES, 'UTF-8') ?></option>
                         <?php endforeach; ?>
                     </select>
-                    <p class="text-[10px] text-slate-400 mt-0.5">Leave blank if this schedule applies school-wide.</p>
                 </div>
                 <div>
-                    <label class="block font-bold text-slate-700 mb-1">Payment Due Date</label>
-                    <input type="date" name="due_date" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
+                    <label class="block font-bold text-slate-700 mb-1">Specific Class (Optional)</label>
+                    <select name="class_id" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
+                        <option value="">-- Apply to Entire Level / School --</option>
+                        <?php foreach ($classes as $c): ?>
+                            <option value="<?= $c->id ?>"><?= htmlspecialchars($c->name, ENT_QUOTES, 'UTF-8') ?></option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
             </div>
 
-            <!-- Dynamic Fee Items Repeater with Lock Result selector -->
-            <div class="border-t border-slate-100 pt-3 space-y-2">
+            <div>
+                <label class="block font-bold text-slate-700 mb-1">Payment Due Date (Optional)</label>
+                <input type="date" name="due_date" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
+            </div>
+
+            <!-- Itemized Fee Rows -->
+            <div class="space-y-3 pt-2">
                 <div class="flex items-center justify-between">
-                    <div>
-                        <span class="font-bold text-slate-800 text-xs">Fee Breakdown Components</span>
-                        <p class="text-[10px] text-slate-400">Check "Lock Result" to require settlement before students/parents can access term report cards.</p>
-                    </div>
+                    <label class="block font-bold text-slate-800 text-xs">Fee Breakdown Components</label>
                     <button type="button" onclick="addFeeItemRow('fee-items-container')" class="text-brand-600 hover:text-brand-800 font-bold text-xs flex items-center gap-1">
                         <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Component
                     </button>
@@ -270,7 +280,7 @@ $this->layout('layouts/admin', [
                         <div class="col-span-2 text-center">
                             <input type="hidden" name="is_required_for_result[]" value="1" class="req-result-hidden">
                             <label class="inline-flex items-center gap-1 cursor-pointer font-bold text-slate-700" title="Result is locked until this fee is settled">
-                                <input type="checkbox" checked onchange="this.previousElementSibling.value = this.checked ? '1' : '0'" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                                <input type="checkbox" checked onchange="this.closest('.fee-row').querySelector('.req-result-hidden').value = this.checked ? '1' : '0'" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500">
                                 <span class="text-[10px]">Lock Result</span>
                             </label>
                         </div>
@@ -298,7 +308,7 @@ $this->layout('layouts/admin', [
                         <div class="col-span-2 text-center">
                             <input type="hidden" name="is_required_for_result[]" value="1" class="req-result-hidden">
                             <label class="inline-flex items-center gap-1 cursor-pointer font-bold text-slate-700" title="Result is locked until this fee is settled">
-                                <input type="checkbox" checked onchange="this.previousElementSibling.value = this.checked ? '1' : '0'" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                                <input type="checkbox" checked onchange="this.closest('.fee-row').querySelector('.req-result-hidden').value = this.checked ? '1' : '0'" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500">
                                 <span class="text-[10px]">Lock Result</span>
                             </label>
                         </div>
@@ -450,7 +460,7 @@ $this->layout('layouts/admin', [
         <div class="col-span-2 text-center">
             <input type="hidden" name="is_required_for_result[]" value="1" class="req-result-hidden">
             <label class="inline-flex items-center gap-1 cursor-pointer font-bold text-slate-700" title="Result is locked until this fee is settled">
-                <input type="checkbox" checked onchange="this.previousElementSibling.value = this.checked ? '1' : '0'" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500 req-checkbox">
+                <input type="checkbox" checked onchange="this.closest('.fee-row').querySelector('.req-result-hidden').value = this.checked ? '1' : '0'" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500 req-checkbox">
                 <span class="text-[10px]">Lock Result</span>
             </label>
         </div>
@@ -513,7 +523,7 @@ async function openEditStructureModal(structureId) {
                 
                 const hiddenReq = clone.querySelector('.req-result-hidden');
                 const checkReq = clone.querySelector('.req-checkbox');
-                const isReq = it.is_required_for_result !== false && it.is_required_for_result !== 0;
+                const isReq = parseInt(it.is_required_for_result, 10) === 1 || it.is_required_for_result === true;
                 hiddenReq.value = isReq ? '1' : '0';
                 checkReq.checked = isReq;
 

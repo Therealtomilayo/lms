@@ -125,11 +125,16 @@ class ReportCardController extends Controller
         // Term-Scoped Bursary Clearance Gate:
         if (!$this->feeRepo->isStudentClearedForResult($studentId, $targetSessionId, $tId)) {
             $unpaidItems = $this->feeRepo->getUnpaidRequiredFeeItems($studentId, $targetSessionId, $tId);
+            $invoice = $this->feeRepo->findInvoiceForStudentTerm($studentId, $targetSessionId, $tId);
+            if (!$invoice && !empty($unpaidItems) && !empty($unpaidItems[0]['invoice_id'])) {
+                $invoice = $this->feeRepo->findInvoiceById((int)$unpaidItems[0]['invoice_id']);
+            }
             return Response::html($this->render('student/grades/fee_locked', [
                 'student' => $student,
                 'term' => $targetTerm,
                 'session' => $this->academicRepo->findSessionById($targetSessionId),
                 'unpaidItems' => $unpaidItems,
+                'invoice' => $invoice,
                 'backUrl' => '/student/grades',
             ], 'layouts/student'));
         }
@@ -202,9 +207,20 @@ class ReportCardController extends Controller
             return Response::redirect("/student/grades/report-card?term_id={$termId}");
         }
 
+        $activeSession = $this->academicRepo->findCurrentSession();
+        $targetTerm = $this->academicRepo->findTermById($termId);
+        $targetSessionId = $sessionId > 0 ? $sessionId : ($targetTerm ? $targetTerm->sessionId : ($activeSession?->id ?? 0));
+
         \App\Core\Session::start();
+
+        // Enforce Bursary Fee Clearance before consuming PIN
+        if (!$this->feeRepo->isStudentClearedForResult($studentId, $targetSessionId, $termId)) {
+            \App\Core\Session::flash('error', 'Cannot unlock report card: required school fees have not been cleared. Please settle outstanding fees before using a Scratch-Card PIN.');
+            return Response::redirect("/student/grades/report-card?term_id={$termId}");
+        }
+
         $admNo = $student ? $student->admissionNumber : '';
-        $result = $this->pinService->verifyAndConsumePin($admNo, $pinCode, $sessionId, $termId);
+        $result = $this->pinService->verifyAndConsumePin($admNo, $pinCode, $targetSessionId, $termId);
         if (!$result->success) {
             \App\Core\Session::flash('error', $result->error ?? 'PIN verification failed.');
             return Response::redirect("/student/grades/report-card?term_id={$termId}");

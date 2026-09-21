@@ -491,6 +491,13 @@ class FeeRepository
         return $payments;
     }
 
+    public function getTotalPaidForInvoice(int $invoiceId): float
+    {
+        $stmt = $this->pdo->prepare('SELECT COALESCE(SUM(amount), 0.0) FROM `payments` WHERE `invoice_id` = :id AND `status` = "successful"');
+        $stmt->execute([':id' => $invoiceId]);
+        return (float)$stmt->fetchColumn();
+    }
+
     /**
      * @return FeeInvoice[]
      */
@@ -661,6 +668,24 @@ class FeeRepository
         ]);
     }
 
+    public function updateInvoiceTotals(int $id, float $subtotal, float $totalAmount, float $amountPaid, float $balanceDue, string $status): bool
+    {
+        $now = date('Y-m-d H:i:s');
+        $stmt = $this->pdo->prepare('UPDATE `fee_invoices` 
+            SET `subtotal` = :subtotal, `total_amount` = :total, `amount_paid` = :paid, `balance_due` = :balance, `status` = :status, `updated_at` = :now
+            WHERE `id` = :id');
+
+        return $stmt->execute([
+            ':subtotal' => $subtotal,
+            ':total' => $totalAmount,
+            ':paid' => $amountPaid,
+            ':balance' => $balanceDue,
+            ':status' => $status,
+            ':now' => $now,
+            ':id' => $id,
+        ]);
+    }
+
     /**
      * Aggregate Bursary metrics for dashboard & reporting
      */
@@ -741,30 +766,69 @@ class FeeRepository
      */
     public function isStudentClearedForResult(int $studentId, int $sessionId, int $termId): bool
     {
+        // 1. First check if student has an invoice specifically for this term
         $stmt = $this->pdo->prepare('SELECT id, status, balance_due FROM `fee_invoices` 
             WHERE student_id = :s AND session_id = :ses AND term_id = :t LIMIT 1');
         $stmt->execute([':s' => $studentId, ':ses' => $sessionId, ':t' => $termId]);
         $inv = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // If no invoice exists for this term, the student is not blocked by bursary
-        if (!$inv) {
+        if ($inv) {
+            // If the invoice is marked fully paid or has 0 balance due, cleared for this term
+            if ($inv['status'] === 'paid' || (float)$inv['balance_due'] <= 0.0) {
+                return true;
+            }
+
+            // Check if there are any unpaid items flagged as is_required_for_result = 1 on this invoice
+            $itemStmt = $this->pdo->prepare('SELECT COUNT(*) FROM `fee_invoice_items` 
+                WHERE `invoice_id` = :inv_id 
+                  AND `is_required_for_result` = 1 
+                  AND `is_paid` = 0');
+            $itemStmt->execute([':inv_id' => (int)$inv['id']]);
+            $unpaidRequiredCount = (int)$itemStmt->fetchColumn();
+
+            if ($unpaidRequiredCount > 0) {
+                return false;
+            }
+
             return true;
         }
 
-        // If the invoice is marked fully paid or has 0 balance due, cleared
-        if ($inv['status'] === 'paid' || (float)$inv['balance_due'] <= 0.0) {
-            return true;
+        // 2. If NO invoice exists for this specific term:
+        // A) Check if an active fee structure exists for this student's class/level in this session & term
+        // containing mandatory result-locking components. If so, fees have not been settled!
+        $studentStmt = $this->pdo->prepare('SELECT current_class_id FROM `students` WHERE `id` = :id');
+        $studentStmt->execute([':id' => $studentId]);
+        $classId = (int)$studentStmt->fetchColumn();
+
+        $levelId = null;
+        if ($classId > 0) {
+            $lvlStmt = $this->pdo->prepare('SELECT academic_level_id FROM `classes` WHERE `id` = :id');
+            $lvlStmt->execute([':id' => $classId]);
+            $levelId = $lvlStmt->fetchColumn() ?: null;
         }
 
-        // Check if there are any unpaid items flagged as is_required_for_result = 1
-        $itemStmt = $this->pdo->prepare('SELECT COUNT(*) FROM `fee_invoice_items` 
-            WHERE `invoice_id` = :inv_id 
-              AND `is_required_for_result` = 1 
-              AND `is_paid` = 0');
-        $itemStmt->execute([':inv_id' => (int)$inv['id']]);
-        $unpaidRequiredCount = (int)$itemStmt->fetchColumn();
+        $struct = $this->findMatchingStructure($sessionId, $termId, $classId ?: null, $levelId ? (int)$levelId : null);
+        if ($struct && !empty($struct->items)) {
+            foreach ($struct->items as $it) {
+                if (!empty($it->isRequiredForResult)) {
+                    return false;
+                }
+            }
+        }
 
-        return $unpaidRequiredCount === 0;
+        // B) Check if the student has ANY invoice in this session with unpaid mandatory result-locking items
+        $sessionUnpaidStmt = $this->pdo->prepare('SELECT COUNT(*) FROM `fee_invoice_items` fii
+            JOIN `fee_invoices` fi ON fi.id = fii.invoice_id
+            WHERE fi.student_id = :s 
+              AND fi.session_id = :ses 
+              AND fii.is_required_for_result = 1 
+              AND fii.is_paid = 0');
+        $sessionUnpaidStmt->execute([':s' => $studentId, ':ses' => $sessionId]);
+        if ((int)$sessionUnpaidStmt->fetchColumn() > 0) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -772,22 +836,190 @@ class FeeRepository
      */
     public function getUnpaidRequiredFeeItems(int $studentId, int $sessionId, int $termId): array
     {
+        // 1. Check term invoice
         $stmt = $this->pdo->prepare('SELECT id FROM `fee_invoices` 
             WHERE student_id = :s AND session_id = :ses AND term_id = :t LIMIT 1');
         $stmt->execute([':s' => $studentId, ':ses' => $sessionId, ':t' => $termId]);
         $invoiceId = $stmt->fetchColumn();
 
-        if (!$invoiceId) {
-            return [];
+        if ($invoiceId) {
+            $itemStmt = $this->pdo->prepare('SELECT fii.*, fc.name as category_name 
+                FROM `fee_invoice_items` fii
+                LEFT JOIN `fee_categories` fc ON fc.id = fii.fee_category_id
+                WHERE fii.invoice_id = :inv_id 
+                  AND fii.is_required_for_result = 1 
+                  AND fii.is_paid = 0');
+            $itemStmt->execute([':inv_id' => (int)$invoiceId]);
+            $items = $itemStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            if (!empty($items)) {
+                return $items;
+            }
         }
 
-        $itemStmt = $this->pdo->prepare('SELECT fii.*, fc.name as category_name 
+        // 2. If no items on term invoice, check any invoice in this session with unpaid required items
+        $sessionStmt = $this->pdo->prepare('SELECT fii.*, fc.name as category_name, fi.term_id, t.name as term_name
             FROM `fee_invoice_items` fii
+            JOIN `fee_invoices` fi ON fi.id = fii.invoice_id
+            LEFT JOIN `terms` t ON t.id = fi.term_id
             LEFT JOIN `fee_categories` fc ON fc.id = fii.fee_category_id
-            WHERE fii.invoice_id = :inv_id 
+            WHERE fi.student_id = :s 
+              AND fi.session_id = :ses 
               AND fii.is_required_for_result = 1 
-              AND fii.is_paid = 0');
-        $itemStmt->execute([':inv_id' => (int)$invoiceId]);
-        return $itemStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+              AND fii.is_paid = 0
+            ORDER BY fii.id ASC');
+        $sessionStmt->execute([':s' => $studentId, ':ses' => $sessionId]);
+        $sessionItems = $sessionStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        if (!empty($sessionItems)) {
+            return $sessionItems;
+        }
+
+        // 3. If no invoice exists at all, check matching structure items
+        $studentStmt = $this->pdo->prepare('SELECT current_class_id FROM `students` WHERE `id` = :id');
+        $studentStmt->execute([':id' => $studentId]);
+        $classId = (int)$studentStmt->fetchColumn();
+
+        $levelId = null;
+        if ($classId > 0) {
+            $lvlStmt = $this->pdo->prepare('SELECT academic_level_id FROM `classes` WHERE `id` = :id');
+            $lvlStmt->execute([':id' => $classId]);
+            $levelId = $lvlStmt->fetchColumn() ?: null;
+        }
+
+        $struct = $this->findMatchingStructure($sessionId, $termId, $classId ?: null, $levelId ? (int)$levelId : null);
+        if ($struct && !empty($struct->items)) {
+            $structItems = [];
+            foreach ($struct->items as $it) {
+                if (!empty($it->isRequiredForResult)) {
+                    $structItems[] = [
+                        'id' => $it->id,
+                        'invoice_id' => null,
+                        'fee_category_id' => $it->feeCategoryId,
+                        'name' => $it->name,
+                        'amount' => $it->amount,
+                        'is_compulsory' => $it->isCompulsory,
+                        'is_required_for_result' => 1,
+                        'is_paid' => 0,
+                        'paid_amount' => 0.00,
+                        'category_name' => $it->categoryName ?? 'Fee Component',
+                    ];
+                }
+            }
+            return $structItems;
+        }
+
+        return [];
+    }
+
+    public function addInvoiceItem(int $invoiceId, array $data): int
+    {
+        $now = date('Y-m-d H:i:s');
+        $stmt = $this->pdo->prepare('INSERT INTO `fee_invoice_items`
+            (`invoice_id`, `fee_category_id`, `name`, `amount`, `is_compulsory`, `is_required_for_result`, `is_paid`, `paid_amount`, `created_at`)
+            VALUES (:inv_id, :cat_id, :name, :amount, :is_compulsory, :is_required_for_result, :is_paid, :paid_amount, :created_at)');
+        
+        $stmt->execute([
+            ':inv_id' => $invoiceId,
+            ':cat_id' => !empty($data['fee_category_id']) ? (int)$data['fee_category_id'] : null,
+            ':name' => trim((string)$data['name']),
+            ':amount' => (float)($data['amount'] ?? 0.0),
+            ':is_compulsory' => isset($data['is_compulsory']) ? (int)$data['is_compulsory'] : 1,
+            ':is_required_for_result' => isset($data['is_required_for_result']) ? (int)$data['is_required_for_result'] : 1,
+            ':is_paid' => !empty($data['is_paid']) ? 1 : 0,
+            ':paid_amount' => (float)($data['paid_amount'] ?? 0.0),
+            ':created_at' => $now,
+        ]);
+
+        return (int)$this->pdo->lastInsertId();
+    }
+
+    public function updateInvoiceItem(int $itemId, array $data): void
+    {
+        $stmt = $this->pdo->prepare('UPDATE `fee_invoice_items` SET
+            `name` = :name,
+            `fee_category_id` = :cat_id,
+            `amount` = :amount,
+            `is_compulsory` = :is_compulsory,
+            `is_required_for_result` = :is_required_for_result
+            WHERE `id` = :id');
+
+        $stmt->execute([
+            ':id' => $itemId,
+            ':name' => trim((string)$data['name']),
+            ':cat_id' => !empty($data['fee_category_id']) ? (int)$data['fee_category_id'] : null,
+            ':amount' => (float)($data['amount'] ?? 0.0),
+            ':is_compulsory' => isset($data['is_compulsory']) ? (int)$data['is_compulsory'] : 1,
+            ':is_required_for_result' => isset($data['is_required_for_result']) ? (int)$data['is_required_for_result'] : 1,
+        ]);
+    }
+
+    public function updateInvoiceItemFlags(int $itemId, int $isCompulsory, int $isRequiredForResult): void
+    {
+        $stmt = $this->pdo->prepare('UPDATE `fee_invoice_items` SET
+            `is_compulsory` = :is_compulsory,
+            `is_required_for_result` = :is_required_for_result
+            WHERE `id` = :id');
+
+        $stmt->execute([
+            ':id' => $itemId,
+            ':is_compulsory' => $isCompulsory,
+            ':is_required_for_result' => $isRequiredForResult,
+        ]);
+    }
+
+    public function deleteInvoiceItem(int $itemId): void
+    {
+        $stmt = $this->pdo->prepare('DELETE FROM `fee_invoice_items` WHERE `id` = :id AND `is_paid` = 0 AND `paid_amount` = 0.00');
+        $stmt->execute([':id' => $itemId]);
+    }
+
+    /**
+     * @return FeeInvoice[]
+     */
+    public function getInvoicesForStructureScope(int $sessionId, int $termId, ?int $academicLevelId = null, ?int $classId = null): array
+    {
+        $sql = 'SELECT fi.*,
+                       s.admission_number,
+                       u_st.name as student_name,
+                       u_p.name as parent_name,
+                       u_p.email as parent_email,
+                       u_p.phone as parent_phone,
+                       c.name as class_name,
+                       ses.name as session_name,
+                       t.name as term_name
+                FROM `fee_invoices` fi
+                JOIN `students` s ON s.id = fi.student_id
+                JOIN `users` u_st ON u_st.id = s.user_id
+                LEFT JOIN `parents` p ON p.id = fi.parent_id
+                LEFT JOIN `users` u_p ON u_p.id = p.user_id
+                JOIN `classes` c ON c.id = fi.class_id
+                JOIN `sessions` ses ON ses.id = fi.session_id
+                JOIN `terms` t ON t.id = fi.term_id
+                WHERE fi.session_id = :session_id AND fi.term_id = :term_id';
+
+        $params = [
+            ':session_id' => $sessionId,
+            ':term_id' => $termId,
+        ];
+
+        if ($classId !== null && $classId > 0) {
+            $sql .= ' AND fi.class_id = :class_id';
+            $params[':class_id'] = $classId;
+        } elseif ($academicLevelId !== null && $academicLevelId > 0) {
+            $sql .= ' AND fi.class_id IN (SELECT id FROM `classes` WHERE academic_level_id = :level_id)';
+            $params[':level_id'] = $academicLevelId;
+        }
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $invoices = [];
+        foreach ($rows as $row) {
+            $items = $this->getItemsForInvoice((int)$row['id']);
+            $payments = $this->getPaymentsForInvoice((int)$row['id']);
+            $invoices[] = FeeInvoice::fromArray($row, $items, $payments);
+        }
+
+        return $invoices;
     }
 }

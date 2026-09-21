@@ -141,6 +141,9 @@ class ReportCardController extends Controller
         if (!$this->feeRepo->isStudentClearedForResult($sId, $targetSessionId, $tId)) {
             $unpaidItems = $this->feeRepo->getUnpaidRequiredFeeItems($sId, $targetSessionId, $tId);
             $invoice = $this->feeRepo->findInvoiceForStudentTerm($sId, $targetSessionId, $tId);
+            if (!$invoice && !empty($unpaidItems) && !empty($unpaidItems[0]['invoice_id'])) {
+                $invoice = $this->feeRepo->findInvoiceById((int)$unpaidItems[0]['invoice_id']);
+            }
 
             return Response::html($this->render('parent/grades/fee_locked', [
                 'student' => $student,
@@ -264,8 +267,19 @@ class ReportCardController extends Controller
             return Response::redirect("/parent/children/{$sId}/grades/report-card?term_id={$termId}");
         }
 
+        $targetTerm = $this->academicRepo->findTermById($termId);
+        $activeSession = $this->academicRepo->getCurrentSession();
+        $targetSessionId = $sessionId > 0 ? $sessionId : ($targetTerm ? $targetTerm->sessionId : ($activeSession ? $activeSession->id : 0));
+
         Session::start();
-        $result = $this->pinService->verifyAndConsumePin($student->admissionNumber, $pinCode, $sessionId, $termId);
+
+        // Enforce Bursary Fee Clearance before consuming PIN
+        if (!$this->feeRepo->isStudentClearedForResult($sId, $targetSessionId, $termId)) {
+            Session::flash('error', 'Cannot unlock report card: required school fees have not been cleared. Please settle outstanding fees before using a Scratch-Card PIN.');
+            return Response::redirect("/parent/children/{$sId}/grades/report-card?term_id={$termId}");
+        }
+
+        $result = $this->pinService->verifyAndConsumePin($student->admissionNumber, $pinCode, $targetSessionId, $termId);
         if (!$result->success) {
             Session::flash('error', $result->error ?? 'PIN verification failed.');
             return Response::redirect("/parent/children/{$sId}/grades/report-card?term_id={$termId}");

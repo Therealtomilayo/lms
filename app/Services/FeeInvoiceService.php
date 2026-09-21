@@ -409,4 +409,130 @@ class FeeInvoiceService
             'invoice' => $refreshedInvoice,
         ]);
     }
+
+    /**
+     * Synchronize existing student invoices when a fee structure schedule is modified.
+     * Preserves already paid fee components strictly:
+     *  - Paid items remain paid and are not marked outstanding or modified.
+     *  - Unpaid items have their amounts and attributes updated.
+     *  - Newly added items along the term are inserted as unpaid.
+     *  - Invoice totals (subtotal, total_amount, balance_due, status) are accurately recomputed.
+     *
+     * @return ServiceResult
+     */
+    public function syncStructureInvoices(int $structureId): ServiceResult
+    {
+        $structure = $this->feeRepo->findStructureById($structureId);
+        if (!$structure) {
+            return ServiceResult::error('Fee structure not found.');
+        }
+
+        $invoices = $this->feeRepo->getInvoicesForStructureScope(
+            $structure->sessionId,
+            $structure->termId,
+            $structure->academicLevelId,
+            $structure->classId
+        );
+
+        $syncedCount = 0;
+        $structureItems = $structure->items;
+
+        foreach ($invoices as $inv) {
+            $existingItems = $this->feeRepo->getItemsForInvoice($inv->id);
+
+            // Index existing invoice items by lowercase name
+            $existingByName = [];
+            foreach ($existingItems as $it) {
+                $key = mb_strtolower(trim($it->name));
+                $existingByName[$key] = $it;
+            }
+
+            $matchedItemIds = [];
+
+            // 1. Process each component in the updated structure
+            foreach ($structureItems as $structItem) {
+                $key = mb_strtolower(trim($structItem->name));
+
+                if (isset($existingByName[$key])) {
+                    $existing = $existingByName[$key];
+                    $matchedItemIds[] = $existing->id;
+
+                    $compulsoryFlag = !empty($structItem->isCompulsory) ? 1 : 0;
+                    $reqResultFlag = !empty($structItem->isRequiredForResult) ? 1 : 0;
+
+                    if ($existing->isPaid || (float)$existing->paidAmount > 0.0) {
+                        // Already paid: DO NOT modify paid amount or reset status to unpaid!
+                        // Only sync metadata flags (compulsory, result-lock)
+                        $this->feeRepo->updateInvoiceItemFlags(
+                            $existing->id,
+                            $compulsoryFlag,
+                            $reqResultFlag
+                        );
+                    } else {
+                        // Unpaid: safely update amount, name, and result-lock settings
+                        $this->feeRepo->updateInvoiceItem($existing->id, [
+                            'name' => trim($structItem->name),
+                            'fee_category_id' => $structItem->feeCategoryId,
+                            'amount' => (float)$structItem->amount,
+                            'is_compulsory' => $compulsoryFlag,
+                            'is_required_for_result' => $reqResultFlag,
+                        ]);
+                    }
+                } else {
+                    // New component added along the term: insert as unpaid invoice item
+                    $compulsoryFlag = !empty($structItem->isCompulsory) ? 1 : 0;
+                    $reqResultFlag = !empty($structItem->isRequiredForResult) ? 1 : 0;
+
+                    $this->feeRepo->addInvoiceItem($inv->id, [
+                        'fee_category_id' => $structItem->feeCategoryId,
+                        'name' => trim($structItem->name),
+                        'amount' => (float)$structItem->amount,
+                        'is_compulsory' => $compulsoryFlag,
+                        'is_required_for_result' => $reqResultFlag,
+                        'is_paid' => 0,
+                        'paid_amount' => 0.00,
+                    ]);
+                }
+            }
+
+            // 2. Remove items that were deleted from the structure ONLY IF they are unpaid
+            foreach ($existingItems as $existing) {
+                if (!in_array($existing->id, $matchedItemIds, true)) {
+                    if (!$existing->isPaid && (float)$existing->paidAmount <= 0.0) {
+                        $this->feeRepo->deleteInvoiceItem($existing->id);
+                    }
+                }
+            }
+
+            // 3. Recalculate invoice totals
+            $refreshedItems = $this->feeRepo->getItemsForInvoice($inv->id);
+            $newSubtotal = 0.0;
+            foreach ($refreshedItems as $it) {
+                $newSubtotal += (float)$it->amount;
+            }
+
+            $newTotal = max(0.0, $newSubtotal - (float)$inv->discountAmount);
+
+            // Fetch authoritative total amount paid from actual successful payments
+            $totalPayments = $this->feeRepo->getTotalPaidForInvoice($inv->id);
+            $currentAmountPaid = max((float)$totalPayments, (float)$inv->amountPaid);
+
+            $newBalance = max(0.0, $newTotal - $currentAmountPaid);
+
+            $newStatus = FeeInvoice::STATUS_UNPAID;
+            if ($newBalance <= 0.0) {
+                $newStatus = FeeInvoice::STATUS_PAID;
+            } elseif ($currentAmountPaid > 0.0) {
+                $newStatus = FeeInvoice::STATUS_PARTIALLY_PAID;
+            }
+
+            $this->feeRepo->updateInvoiceTotals($inv->id, $newSubtotal, $newTotal, $currentAmountPaid, $newBalance, $newStatus);
+            $syncedCount++;
+        }
+
+        return ServiceResult::success([
+            'synced_count' => $syncedCount,
+            'structure_id' => $structureId,
+        ]);
+    }
 }
