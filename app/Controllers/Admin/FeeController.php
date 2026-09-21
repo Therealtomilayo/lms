@@ -109,7 +109,27 @@ class FeeController extends Controller
             return $this->redirectWithFlash('/admin/fees/structures', 'error', $res->getError() ?? 'Failed to save fee structure.');
         }
 
-        return $this->redirectWithFlash('/admin/fees/structures', 'success', 'Fee schedule successfully created and activated.');
+        // Auto-generate invoices for enrolled students immediately (defaults to true)
+        $autoBill = $request->input('generate_invoices', '1') === '1';
+        $billedMsg = '';
+        if ($autoBill) {
+            $genRes = $this->feeService->batchGenerateInvoices(
+                $data['session_id'],
+                $data['term_id'],
+                $data['academic_level_id'],
+                $data['class_id'],
+                $userContext->getUserId()
+            );
+            if ($genRes->isSuccess()) {
+                $genData = $genRes->getData();
+                $count = (int)($genData['created_count'] ?? 0);
+                if ($count > 0) {
+                    $billedMsg = " {$count} student invoice(s) generated immediately.";
+                }
+            }
+        }
+
+        return $this->redirectWithFlash('/admin/fees/structures', 'success', 'Fee schedule successfully created and activated.' . $billedMsg);
     }
 
     /**

@@ -92,17 +92,24 @@ class FeeInvoiceService
             return ServiceResult::error('Invalid Academic Session or Term.');
         }
 
-        // Fetch target enrolled students
-        $sql = 'SELECT ce.student_id, ce.class_id, c.academic_level_id, s.user_id as student_user_id
-                FROM `class_enrollments` ce
-                JOIN `classes` c ON c.id = ce.class_id
-                JOIN `students` s ON s.id = ce.student_id
-                WHERE ce.session_id = :session_id AND ce.status = "active"';
+        // Fetch target enrolled students (from active class_enrollments or active students with current_class_id)
+        $sql = 'SELECT DISTINCT s.id as student_id, 
+                       COALESCE(ce.class_id, s.current_class_id) as class_id, 
+                       c.academic_level_id, 
+                       s.user_id as student_user_id
+                FROM `students` s
+                JOIN `users` u ON u.id = s.user_id AND u.status = "active"
+                LEFT JOIN `class_enrollments` ce ON ce.student_id = s.id AND ce.session_id = :session_id AND ce.status = "active"
+                JOIN `classes` c ON c.id = COALESCE(ce.class_id, s.current_class_id)
+                WHERE (ce.session_id = :session_id_where OR (ce.id IS NULL AND s.current_class_id IS NOT NULL))';
 
-        $params = [':session_id' => $sessionId];
+        $params = [
+            ':session_id' => $sessionId,
+            ':session_id_where' => $sessionId,
+        ];
 
         if ($classId !== null) {
-            $sql .= ' AND ce.class_id = :class_id';
+            $sql .= ' AND COALESCE(ce.class_id, s.current_class_id) = :class_id';
             $params[':class_id'] = $classId;
         } elseif ($levelId !== null) {
             $sql .= ' AND c.academic_level_id = :level_id';
@@ -114,7 +121,7 @@ class FeeInvoiceService
         $enrollments = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
         if (empty($enrollments)) {
-            return ServiceResult::error('No active student enrollments found matching the criteria.');
+            return ServiceResult::error('No active student enrollments or class allocations found matching the criteria.');
         }
 
         $createdCount = 0;
@@ -125,6 +132,12 @@ class FeeInvoiceService
             $studentId = (int)$enr['student_id'];
             $stClassId = (int)$enr['class_id'];
             $stLevelId = (int)$enr['academic_level_id'];
+
+            // Ensure active enrollment row exists in class_enrollments
+            $this->pdo->prepare('INSERT INTO `class_enrollments` (`student_id`, `class_id`, `session_id`, `status`, `enrolled_at`, `created_at`, `updated_at`)
+                VALUES (?, ?, ?, "active", NOW(), NOW(), NOW())
+                ON DUPLICATE KEY UPDATE `class_id` = VALUES(`class_id`), `status` = "active"')
+                ->execute([$studentId, $stClassId, $sessionId]);
 
             // 1. Idempotency check: verify if already billed
             $existing = $this->feeRepo->findInvoiceForStudentTerm($studentId, $sessionId, $termId);

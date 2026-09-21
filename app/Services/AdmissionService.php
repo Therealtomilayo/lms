@@ -823,6 +823,17 @@ class AdmissionService
                 // Link parent and student
                 $this->parentRepo->linkStudent($parent->id, $student->id, 'Parent');
 
+                // Enroll student into active class enrollment if allocated to a class
+                if ($classId) {
+                    $admissionSession = $this->admissionRepo->findSessionById($app->sessionId);
+                    if ($admissionSession && !empty($admissionSession->academicSessionId)) {
+                        $this->pdo->prepare('INSERT INTO `class_enrollments` (`student_id`, `class_id`, `session_id`, `status`, `enrolled_at`, `created_at`, `updated_at`)
+                            VALUES (?, ?, ?, "active", NOW(), NOW(), NOW())
+                            ON DUPLICATE KEY UPDATE `class_id` = VALUES(`class_id`), `status` = "active"')
+                            ->execute([$student->id, $classId, $admissionSession->academicSessionId]);
+                    }
+                }
+
                 // Link ward converted student ID
                 $this->admissionRepo->linkWardConvertedStudent($ward->id, $student->id);
 

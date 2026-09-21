@@ -456,14 +456,20 @@ class FeeRepository
     public function getInvoicesForParent(int $parentId): array
     {
         // Finds all invoices where parent_id matches OR where student is linked to this parent in parent_student
+        // Robustly handles $parentId being parents.id OR users.id
         $sql = 'SELECT fi.id
                 FROM `fee_invoices` fi
                 WHERE fi.parent_id = :p1 
-                   OR fi.student_id IN (SELECT student_id FROM `parent_student` WHERE parent_id = :p2)
+                   OR fi.parent_id IN (SELECT id FROM `parents` WHERE user_id = :p2)
+                   OR fi.student_id IN (
+                       SELECT student_id FROM `parent_student` 
+                       WHERE parent_id = :p3 
+                          OR parent_id IN (SELECT id FROM `parents` WHERE user_id = :p4)
+                   )
                 ORDER BY fi.created_at DESC, fi.id DESC';
 
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':p1' => $parentId, ':p2' => $parentId]);
+        $stmt->execute([':p1' => $parentId, ':p2' => $parentId, ':p3' => $parentId, ':p4' => $parentId]);
         $ids = $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
 
         $invoices = [];

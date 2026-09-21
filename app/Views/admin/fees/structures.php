@@ -146,9 +146,22 @@ $this->layout('layouts/admin', [
                             <span class="text-[10px] uppercase font-bold text-slate-400 block">Total Schedule Fee</span>
                             <span class="text-lg font-black text-brand-700 font-mono">₦<?= number_format($st->getTotalAmount(), 2) ?></span>
                         </div>
-                        <a href="/admin/fees/invoices?session_id=<?= $st->sessionId ?>&term_id=<?= $st->termId ?>" class="text-xs font-bold text-brand-600 hover:text-brand-800 flex items-center gap-1">
-                            View Invoices &rarr;
-                        </a>
+                        <div class="flex items-center gap-3">
+                            <form method="POST" action="/admin/fees/invoices/generate" class="inline">
+                                <?= \App\Core\Csrf::field() ?>
+                                <input type="hidden" name="session_id" value="<?= $st->sessionId ?>">
+                                <input type="hidden" name="term_id" value="<?= $st->termId ?>">
+                                <input type="hidden" name="academic_level_id" value="<?= $st->academicLevelId ?? '' ?>">
+                                <input type="hidden" name="class_id" value="<?= $st->classId ?? '' ?>">
+                                <button type="submit" title="Generate invoices for enrolled students matching this schedule" class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-white text-slate-700 hover:text-brand-600 text-xs font-bold transition flex items-center gap-1 shadow-2xs">
+                                    <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-500"></i>
+                                    Issue Invoices
+                                </button>
+                            </form>
+                            <a href="/admin/fees/invoices?session_id=<?= $st->sessionId ?>&term_id=<?= $st->termId ?>" class="text-xs font-bold text-brand-600 hover:text-brand-800 flex items-center gap-1">
+                                Invoices &rarr;
+                            </a>
+                        </div>
                     </div>
                 </div>
             <?php endforeach; ?>
@@ -268,6 +281,16 @@ $this->layout('layouts/admin', [
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <div class="p-3 bg-brand-50/80 border border-brand-200/80 rounded-2xl flex items-center justify-between text-xs">
+                <label class="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
+                    <input type="checkbox" name="generate_invoices" value="1" checked class="rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                    <span>Issue invoices immediately to all currently enrolled students</span>
+                </label>
+                <span class="text-[10px] text-brand-700 bg-white px-2 py-0.5 rounded-full border border-brand-200 font-bold hidden sm:inline">
+                    Automatic Billing
+                </span>
             </div>
 
             <div class="flex items-center justify-between border-t border-slate-100 pt-4">
