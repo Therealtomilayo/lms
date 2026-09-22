@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="crestGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9B3B58" />
+      <stop offset="100%" stop-color="#5F2234" />
+    </linearGradient>
+    <filter id="drop" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.3" />
+    </filter>
+  </defs>
+  <rect width="100" height="100" rx="24" fill="url(#crestGrad)" />
+  <circle cx="50" cy="50" r="38" fill="none" stroke="#F5C5CF" stroke-width="2" stroke-opacity="0.4" />
+  <!-- Graduation Cap & Emblem Motif -->
+  <path d="M50 26 L80 39 L50 52 L20 39 Z" fill="#FDF2F4" filter="url(#drop)" />
+  <path d="M32 46.5 L32 60 C32 68 68 68 68 60 L68 46.5 L50 54.5 Z" fill="#FBE8EC" />
+  <path d="M78 40 L84 55 C85 58 81 60 79 58 L76 53 Z" fill="#F5C5CF" />
+  <circle cx="50" cy="72" r="3.5" fill="#FDF2F4" />
+</svg>

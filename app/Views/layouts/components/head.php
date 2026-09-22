@@ -8,6 +8,33 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?= e($title ?? 'Claret LMS') ?></title>
+
+<!-- Favicon Suite -->
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="shortcut icon" href="/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+
+<!-- PWA & Mobile Web App Meta -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#7B3046">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Claret LMS">
+
+<!-- PWA Service Worker Registration -->
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').catch((err) => {
+                console.debug('[PWA] SW register skipped:', err);
+            });
+        });
+    }
+</script>
+
 <!-- Google Fonts: Fraunces (Prestige Serif) + Plus Jakarta Sans (Modern UI Sans) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
