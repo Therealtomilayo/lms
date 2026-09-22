@@ -18,6 +18,11 @@ class CsrfMiddleware
         $method = $request->getMethod();
 
         if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+            // Allow login requests originating from trusted school website domains
+            if ($this->isTrustedLoginRequest($request)) {
+                return $next($request);
+            }
+
             $token = $request->input('_csrf_token') ?? $request->input('csrf_token') ?? $request->input('_token') ?? $request->header('X-CSRF-TOKEN') ?? $request->header('X-XSRF-TOKEN');
 
             if (!$token || !Csrf::validate((string)$token)) {
@@ -36,5 +41,50 @@ class CsrfMiddleware
         }
 
         return $next($request);
+    }
+
+    /**
+     * Determine if the incoming request is a login submission from an authorized domain
+     */
+    private function isTrustedLoginRequest(Request $request): bool
+    {
+        $path = $request->getPath();
+
+        if ($path !== '/login' && $path !== '/api/auth/external-login') {
+            return false;
+        }
+
+        $origin = $request->header('Origin') ?? $request->header('Referer') ?? '';
+        $returnUrl = (string)$request->input('return_url', '');
+
+        $candidateHosts = [];
+        if (!empty($origin)) {
+            $candidateHosts[] = strtolower((string)parse_url($origin, PHP_URL_HOST));
+        }
+        if (!empty($returnUrl)) {
+            $candidateHosts[] = strtolower((string)parse_url($returnUrl, PHP_URL_HOST));
+        }
+
+        $trusted = [
+            'claretschools.xo.je',
+            'www.claretschools.xo.je',
+            'portal-claretschools.xo.je',
+            'lms.test',
+            'localhost',
+            '127.0.0.1',
+        ];
+
+        foreach ($candidateHosts as $host) {
+            if (empty($host)) {
+                continue;
+            }
+            foreach ($trusted as $t) {
+                if ($host === $t || str_ends_with($host, '.' . $t)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

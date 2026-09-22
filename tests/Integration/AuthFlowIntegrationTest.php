@@ -78,6 +78,17 @@ final class AuthFlowIntegrationTest extends TestCase
                 `used_at` DATETIME NULL,
                 `created_at` DATETIME NOT NULL
             );
+
+            CREATE TABLE `api_tokens` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT,
+                `user_id` INTEGER NOT NULL,
+                `name` VARCHAR(100) NOT NULL,
+                `token_hash` VARCHAR(64) NOT NULL UNIQUE,
+                `abilities_json` TEXT NULL,
+                `last_used_at` DATETIME NULL,
+                `expires_at` DATETIME NULL,
+                `created_at` DATETIME NOT NULL
+            );
         ");
 
         $this->userRepository = new UserRepository($this->pdo);
@@ -87,6 +98,8 @@ final class AuthFlowIntegrationTest extends TestCase
         $this->router = new Router();
         $this->router->get('/login', [$this->authController, 'showLogin']);
         $this->router->post('/login', [$this->authController, 'login'], [CsrfMiddleware::class]);
+        $this->router->post('/api/auth/external-login', [$this->authController, 'externalLogin']);
+        $this->router->get('/auth/sso', [$this->authController, 'consumeSsoTicket']);
         $this->router->get('/forgot-password', [$this->authController, 'showForgotPassword']);
         $this->router->post('/forgot-password', [$this->authController, 'forgotPassword'], [CsrfMiddleware::class]);
         $this->router->get('/reset-password/{token}', [$this->authController, 'showResetPassword']);
@@ -182,5 +195,89 @@ final class AuthFlowIntegrationTest extends TestCase
         $loginResp = $this->router->dispatch($loginReq);
         $this->assertSame(302, $loginResp->getStatusCode());
         $this->assertSame('/teacher/dashboard', $loginResp->getHeader('Location'));
+    }
+
+    public function testCrossDomainDirectPostLoginWithReturnUrl(): void
+    {
+        $this->userRepository->create([
+            'uuid' => 'u-cd-1',
+            'name' => 'Parent Peter',
+            'email' => 'peter@claret.edu',
+            'password_hash' => password_hash('SecretPeter99!', PASSWORD_DEFAULT),
+            'status' => 'active',
+            'must_change_password' => 0,
+        ], ['parent']);
+
+        // 1. Direct POST from trusted domain with wrong password redirects to return_url with error
+        $failReq = new Request([], [
+            'email' => 'peter@claret.edu',
+            'password' => 'WrongPass',
+            'return_url' => 'https://claretschools.xo.je/portal.php',
+        ], [
+            'REQUEST_METHOD' => 'POST',
+            'REQUEST_URI' => '/login',
+            'HTTP_ORIGIN' => 'https://claretschools.xo.je',
+        ]);
+
+        $failResp = $this->router->dispatch($failReq);
+        $this->assertSame(302, $failResp->getStatusCode());
+        $location = $failResp->getHeader('Location');
+        $this->assertStringContainsString('https://claretschools.xo.je/portal.php', $location);
+        $this->assertStringContainsString('error=', $location);
+
+        // 2. Direct POST from trusted domain with valid credentials succeeds without CSRF
+        $successReq = new Request([], [
+            'email' => 'peter@claret.edu',
+            'password' => 'SecretPeter99!',
+            'return_url' => 'https://claretschools.xo.je/portal.php',
+        ], [
+            'REQUEST_METHOD' => 'POST',
+            'REQUEST_URI' => '/login',
+            'HTTP_ORIGIN' => 'https://claretschools.xo.je',
+        ]);
+
+        $successResp = $this->router->dispatch($successReq);
+        $this->assertSame(302, $successResp->getStatusCode());
+        $this->assertSame('/parent/dashboard', $successResp->getHeader('Location'));
+    }
+
+    public function testCrossDomainAjaxExternalLoginAndSsoBridge(): void
+    {
+        $this->userRepository->create([
+            'uuid' => 'u-cd-2',
+            'name' => 'Student Sam',
+            'email' => 'sam@claret.edu',
+            'password_hash' => password_hash('SecretSam99!', PASSWORD_DEFAULT),
+            'status' => 'active',
+            'must_change_password' => 0,
+        ], ['student']);
+
+        // 1. Cross-domain AJAX login request
+        $ajaxReq = new Request([], [
+            'email' => 'sam@claret.edu',
+            'password' => 'SecretSam99!',
+        ], [
+            'REQUEST_METHOD' => 'POST',
+            'REQUEST_URI' => '/api/auth/external-login',
+            'HTTP_ORIGIN' => 'https://claretschools.xo.je',
+        ]);
+
+        $ajaxResp = $this->router->dispatch($ajaxReq);
+        $this->assertSame(200, $ajaxResp->getStatusCode());
+        $json = json_decode($ajaxResp->getContent(), true);
+        $this->assertTrue($json['success']);
+        $this->assertNotEmpty($json['ticket']);
+        $this->assertSame('/student/dashboard', $json['redirect']);
+
+        // 2. Consume ticket via top-level browser navigation to /auth/sso?ticket=...
+        $ssoReq = new Request(['ticket' => $json['ticket']], [], [
+            'REQUEST_METHOD' => 'GET',
+            'REQUEST_URI' => '/auth/sso?ticket=' . $json['ticket'],
+        ]);
+
+        $ssoResp = $this->router->dispatch($ssoReq);
+        $this->assertSame(302, $ssoResp->getStatusCode());
+        $this->assertSame('/student/dashboard', $ssoResp->getHeader('Location'));
+        $this->assertSame(['student'], Session::get('user_roles'));
     }
 }

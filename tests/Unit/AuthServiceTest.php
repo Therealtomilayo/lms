@@ -66,6 +66,17 @@ final class AuthServiceTest extends TestCase
                 `used_at` DATETIME NULL,
                 `created_at` DATETIME NOT NULL
             );
+
+            CREATE TABLE `api_tokens` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT,
+                `user_id` INTEGER NOT NULL,
+                `name` VARCHAR(100) NOT NULL,
+                `token_hash` VARCHAR(64) NOT NULL UNIQUE,
+                `abilities_json` TEXT NULL,
+                `last_used_at` DATETIME NULL,
+                `expires_at` DATETIME NULL,
+                `created_at` DATETIME NOT NULL
+            );
         ");
 
         $this->userRepository = new UserRepository($this->pdo);
@@ -221,5 +232,39 @@ final class AuthServiceTest extends TestCase
         // Login with new password
         $loginRes = $this->authService->login('stella@claret.edu', 'StellaNewSecret99!');
         $this->assertTrue($loginRes->isSuccess());
+    }
+
+    public function testSsoTicketCreationAndConsumption(): void
+    {
+        $this->userRepository->create([
+            'uuid' => 'u-sso-1',
+            'name' => 'SSO Teacher',
+            'email' => 'ssoteacher@claret.edu',
+            'password_hash' => password_hash('PassSso123!', PASSWORD_DEFAULT),
+            'status' => 'active',
+            'must_change_password' => 0,
+        ], ['teacher']);
+
+        // 1. Invalid credentials fails
+        $failRes = $this->authService->createSsoTicket('ssoteacher@claret.edu', 'WrongPass!');
+        $this->assertTrue($failRes->isFailure());
+
+        // 2. Valid credentials creates SSO ticket
+        $ticketRes = $this->authService->createSsoTicket('ssoteacher@claret.edu', 'PassSso123!');
+        $this->assertTrue($ticketRes->isSuccess());
+        $this->assertArrayHasKey('ticket', $ticketRes->data);
+        $this->assertArrayHasKey('redirect', $ticketRes->data);
+        $this->assertSame('/teacher/dashboard', $ticketRes->data['redirect']);
+        $ticket = $ticketRes->data['ticket'];
+
+        // 3. Consume SSO ticket successfully establishes session
+        $consumeRes = $this->authService->consumeSsoTicket($ticket, '127.0.0.1', 'PHPUnit Browser');
+        $this->assertTrue($consumeRes->isSuccess());
+        $this->assertSame('/teacher/dashboard', $consumeRes->data['redirect']);
+        $this->assertSame(['teacher'], Session::get('user_roles'));
+
+        // 4. Ticket is single-use: consuming again must fail
+        $secondConsume = $this->authService->consumeSsoTicket($ticket, '127.0.0.1', 'PHPUnit Browser');
+        $this->assertTrue($secondConsume->isFailure());
     }
 }

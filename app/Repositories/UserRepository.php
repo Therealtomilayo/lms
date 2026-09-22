@@ -267,6 +267,49 @@ class UserRepository
         ]);
     }
 
+    public function createSsoTicket(int $userId, string $tokenHash, int $lifetimeSeconds = 120): bool
+    {
+        $now = date('Y-m-d H:i:s');
+        $expiresAt = date('Y-m-d H:i:s', time() + $lifetimeSeconds);
+
+        $sql = 'INSERT INTO `api_tokens` (`user_id`, `name`, `token_hash`, `abilities_json`, `expires_at`, `created_at`)
+                VALUES (:user_id, "sso_ticket", :token_hash, :abilities, :expires_at, :created_at)';
+        $stmt = $this->pdo->prepare($sql);
+        return $stmt->execute([
+            ':user_id' => $userId,
+            ':token_hash' => $tokenHash,
+            ':abilities' => json_encode(['sso']),
+            ':expires_at' => $expiresAt,
+            ':created_at' => $now,
+        ]);
+    }
+
+    public function consumeSsoTicket(string $tokenHash): ?int
+    {
+        $now = date('Y-m-d H:i:s');
+        $sql = 'SELECT id, user_id FROM `api_tokens` 
+                WHERE `token_hash` = :token_hash 
+                  AND `name` = "sso_ticket" 
+                  AND `expires_at` > :now 
+                LIMIT 1';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            ':token_hash' => $tokenHash,
+            ':now' => $now,
+        ]);
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        if (!$row) {
+            return null;
+        }
+
+        // Single-use burn: delete immediately
+        $delStmt = $this->pdo->prepare('DELETE FROM `api_tokens` WHERE `id` = :id');
+        $delStmt->execute([':id' => $row['id']]);
+
+        return (int)$row['user_id'];
+    }
+
     public function updatePassword(int $userId, string $newPasswordHash, bool $mustChangePassword = false): bool
     {
         $now = date('Y-m-d H:i:s');

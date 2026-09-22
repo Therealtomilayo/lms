@@ -48,7 +48,21 @@ class AuthService
             return ServiceResult::failure(['general' => ['Invalid email or password.']], 'INVALID_CREDENTIALS');
         }
 
-        // Establish secure session
+        $redirectUrl = $this->establishUserSession($user, $ipAddress, $userAgent);
+
+        return ServiceResult::success([
+            'user' => $user,
+            'redirect' => $redirectUrl,
+            'must_change_password' => $user->mustChangePassword,
+            'roles' => $user->roles,
+        ]);
+    }
+
+    /**
+     * Establish an authenticated session in session store and database
+     */
+    public function establishUserSession(User $user, ?string $ipAddress = null, ?string $userAgent = null): string
+    {
         Session::start();
         Session::regenerate();
 
@@ -74,9 +88,79 @@ class AuthService
         Session::set('user_email', $user->email);
         Session::set('user_roles', $user->roles);
 
-        $redirectUrl = $user->mustChangePassword
+        return $user->mustChangePassword
             ? '/profile/password'
             : $this->resolveDashboardUrl($user->roles);
+    }
+
+    /**
+     * Verify credentials and issue a short-lived one-time SSO login ticket
+     */
+    public function createSsoTicket(string $email, string $password): ServiceResult
+    {
+        $email = trim($email);
+        if ($email === '' || $password === '') {
+            return ServiceResult::failure(['general' => ['Email or admission number and password are required.']], 'INVALID_CREDENTIALS');
+        }
+
+        $user = $this->userRepository->findByEmailOrAdmissionNumber($email);
+        if (!$user) {
+            return ServiceResult::failure(['general' => ['Invalid email, admission number, or password.']], 'INVALID_CREDENTIALS');
+        }
+
+        if (!$user->isActive()) {
+            if ($user->isSuspended()) {
+                return ServiceResult::failure(['general' => ['Your account has been suspended. Please contact the administrator.']], 'ACCOUNT_SUSPENDED');
+            }
+            return ServiceResult::failure(['general' => ['Your account is inactive. Please contact the administrator.']], 'ACCOUNT_INACTIVE');
+        }
+
+        if (!password_verify($password, $user->passwordHash)) {
+            return ServiceResult::failure(['general' => ['Invalid email, admission number, or password.']], 'INVALID_CREDENTIALS');
+        }
+
+        $ticket = bin2hex(random_bytes(32));
+        $tokenHash = hash('sha256', $ticket);
+
+        $created = $this->userRepository->createSsoTicket($user->id, $tokenHash, 120);
+        if (!$created) {
+            return ServiceResult::failure(['general' => ['Unable to generate authentication ticket. Please try again.']], 'TICKET_CREATION_FAILED');
+        }
+
+        $targetUrl = $user->mustChangePassword
+            ? '/profile/password'
+            : $this->resolveDashboardUrl($user->roles);
+
+        return ServiceResult::success([
+            'ticket' => $ticket,
+            'user' => $user,
+            'redirect' => $targetUrl,
+        ]);
+    }
+
+    /**
+     * Consume a one-time SSO login ticket and establish authenticated session
+     */
+    public function consumeSsoTicket(string $ticket, ?string $ipAddress = null, ?string $userAgent = null): ServiceResult
+    {
+        $trimmedTicket = trim($ticket);
+        if ($trimmedTicket === '') {
+            return ServiceResult::failure(['ticket' => ['Authentication ticket missing or invalid.']], 'INVALID_TICKET');
+        }
+
+        $tokenHash = hash('sha256', $trimmedTicket);
+        $userId = $this->userRepository->consumeSsoTicket($tokenHash);
+
+        if (!$userId) {
+            return ServiceResult::failure(['ticket' => ['Login ticket has expired or already been used. Please log in again.']], 'EXPIRED_TICKET');
+        }
+
+        $user = $this->userRepository->findById($userId);
+        if (!$user || !$user->isActive()) {
+            return ServiceResult::failure(['general' => ['User account is invalid or suspended.']], 'ACCOUNT_INVALID');
+        }
+
+        $redirectUrl = $this->establishUserSession($user, $ipAddress, $userAgent);
 
         return ServiceResult::success([
             'user' => $user,

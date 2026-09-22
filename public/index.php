@@ -84,6 +84,9 @@ try {
     // Public / Guest Authentication Routes
     $router->get('/login', [AuthController::class, 'showLogin']);
     $router->post('/login', [AuthController::class, 'login'], [$loginThrottle, CsrfMiddleware::class]);
+    $router->options('/api/auth/external-login', [AuthController::class, 'externalLogin']);
+    $router->post('/api/auth/external-login', [AuthController::class, 'externalLogin'], [$loginThrottle]);
+    $router->get('/auth/sso', [AuthController::class, 'consumeSsoTicket']);
 
     $router->get('/forgot-password', [AuthController::class, 'showForgotPassword']);
     $router->post('/forgot-password', [AuthController::class, 'forgotPassword'], [$passwordResetThrottle, CsrfMiddleware::class]);
