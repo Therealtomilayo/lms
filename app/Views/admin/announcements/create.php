@@ -101,7 +101,7 @@ $defaultPublishedAt = date('Y-m-d\TH:i');
                             >
                                 <option value="">-- Choose Class --</option>
                                 <?php foreach ($classes as $cls): ?>
-                                    <option value="<?= (int)$cls->id ?>"><?= htmlspecialchars($cls->name) ?></option>
+                                    <option value="<?= (int)$cls->id ?>"><?= htmlspecialchars($cls->getFullName()) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>

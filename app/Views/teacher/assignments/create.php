@@ -66,9 +66,12 @@
                     <select name="term_id" id="term_id" required
                             class="w-full rounded-xl border border-slate-300 text-xs focus:border-emerald-500 focus:ring-emerald-500 bg-slate-50 py-2.5 px-3 font-bold text-slate-900 transition">
                         <?php foreach ($terms as $term): ?>
-                            <?php $isCurrent = !empty($term->isCurrent); ?>
-                            <option value="<?= (int)$term->id ?>" <?= $isCurrent ? 'selected' : 'disabled' ?> class="<?= $isCurrent ? 'font-bold text-slate-900 bg-white' : 'text-slate-400 bg-slate-100' ?>">
-                                <?= htmlspecialchars($term->name) ?> <?= $isCurrent ? '✓ (Current Active Term)' : '(Locked — Inactive Term)' ?>
+                            <?php 
+                                $isCurrent = $term->isActive() || (!empty($activeTerm) && (int)$term->id === (int)$activeTerm->id);
+                                $isSelected = (int)$term->id === (int)old('term_id') || ($isCurrent && !old('term_id'));
+                            ?>
+                            <option value="<?= (int)$term->id ?>" <?= $isSelected ? 'selected' : '' ?> class="<?= $isCurrent ? 'font-bold text-slate-900 bg-white' : 'text-slate-600 bg-white' ?>">
+                                <?= htmlspecialchars($term->name) ?> <?= $isCurrent ? '✓ (Current Active Term)' : '' ?>
                             </option>
                         <?php endforeach; ?>
                     </select>

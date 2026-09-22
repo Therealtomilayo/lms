@@ -109,7 +109,7 @@ $statusVariant = $isActive ? 'success' : ($isExpired ? 'neutral' : 'warning');
                                 <option value="">-- Choose Class --</option>
                                 <?php foreach ($classes as $cls): ?>
                                     <option value="<?= (int)$cls->id ?>" <?= ($announcement->scope === 'class' && (int)$announcement->scopeId === (int)$cls->id) ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($cls->name) ?>
+                                        <?= htmlspecialchars($cls->getFullName()) ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>

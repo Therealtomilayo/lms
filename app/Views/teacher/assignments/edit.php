@@ -73,10 +73,10 @@
                         <?php foreach ($terms as $term): ?>
                             <?php 
                                 $isSelected = (int)$term->id === (int)old('term_id', $assignment->termId);
-                                $isCurrent = !empty($term->isCurrent);
+                                $isCurrent = $term->isActive() || (!empty($activeTerm) && (int)$term->id === (int)$activeTerm->id);
                             ?>
-                            <option value="<?= (int)$term->id ?>" <?= $isSelected ? 'selected' : ($isCurrent ? '' : 'disabled') ?> class="<?= ($isSelected || $isCurrent) ? 'font-bold text-slate-900 bg-white' : 'text-slate-400 bg-slate-100' ?>">
-                                <?= htmlspecialchars($term->name) ?> <?= $isCurrent ? '✓ (Current Term)' : ($isSelected ? '(Assigned)' : '(Locked — Inactive Term)') ?>
+                            <option value="<?= (int)$term->id ?>" <?= $isSelected ? 'selected' : '' ?> class="<?= ($isSelected || $isCurrent) ? 'font-bold text-slate-900 bg-white' : 'text-slate-600 bg-white' ?>">
+                                <?= htmlspecialchars($term->name) ?> <?= $isCurrent ? '✓ (Current Term)' : ($isSelected ? '(Assigned)' : '') ?>
                             </option>
                         <?php endforeach; ?>
                     </select>

@@ -160,8 +160,37 @@ class AdmissionController extends Controller
 
         if ($result->isSuccess()) {
             $data = $result->getData();
-            $count = count($data['enrolled_students'] ?? []);
-            Session::setFlash('success', "Application successfully approved! {$count} prospective student(s) matriculated with STD registration numbers, and guardian parent portal account configured.");
+            $enrolled = $data['enrolled_students'] ?? [];
+            $count = count($enrolled);
+            $msg = "Application successfully approved! {$count} prospective student(s) matriculated and enrolled in all class subjects.";
+            if (!empty($enrolled)) {
+                $creds = array_map(fn($s) => "{$s['ward_name']} (Adm: {$s['admission_number']}, Email: {$s['student_email']}, Default Pwd: {$s['default_password']})", $enrolled);
+                $msg .= " Credentials: " . implode('; ', $creds);
+            }
+
+            // Dispatch multi-channel external notifications (SMS & Email) to applicant
+            try {
+                $app = $this->admissionRepo->findApplicationById($appId);
+                if ($app && $app->applicant) {
+                    $notificationService = new \App\Services\NotificationService();
+                    foreach ($enrolled as $student) {
+                        $notificationService->sendAdmissionApprovedNotice(
+                            parentPhone: $app->applicant->phone,
+                            parentEmail: $app->applicant->email,
+                            parentName: $app->applicant->name,
+                            studentName: $student['ward_name'],
+                            admissionNumber: $student['admission_number'],
+                            className: $student['class_name'] ?? 'Assigned Class',
+                            defaultPassword: $student['default_password'] ?? 'Claret@2026!',
+                            userId: $app->applicantUserId
+                        );
+                    }
+                }
+            } catch (\Throwable $e) {
+                error_log("Failed to dispatch admission notification: " . $e->getMessage());
+            }
+
+            Session::setFlash('success', $msg);
         } else {
             Session::setFlash('error', $result->getMessage());
         }

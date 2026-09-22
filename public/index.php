@@ -205,6 +205,7 @@ try {
     $router->post('/admin/grading-scales', [\App\Controllers\Admin\GradingScaleController::class, 'store'], $adminFormAuth);
     $router->get('/admin/assessment-categories', [\App\Controllers\Admin\AssessmentCategoryController::class, 'index'], $adminAuth);
     $router->post('/admin/assessment-categories', [\App\Controllers\Admin\AssessmentCategoryController::class, 'store'], $adminFormAuth);
+    $router->post('/admin/assessment-categories/{id}/update', [\App\Controllers\Admin\AssessmentCategoryController::class, 'update'], $adminFormAuth);
     $router->post('/admin/assessment-categories/{id}/delete', [\App\Controllers\Admin\AssessmentCategoryController::class, 'delete'], $adminFormAuth);
     $router->get('/admin/results/review', [\App\Controllers\Admin\ResultReviewController::class, 'index'], $adminAuth);
     $router->get('/admin/results/broadsheet', [\App\Controllers\Admin\ResultReviewController::class, 'broadsheet'], $adminAuth);
@@ -212,6 +213,7 @@ try {
     $router->post('/admin/results/compute', [\App\Controllers\Admin\ResultReviewController::class, 'compute'], $adminFormAuth);
     $router->post('/admin/results/publish', [\App\Controllers\Admin\ResultPublicationController::class, 'publish'], $adminFormAuth);
     $router->post('/admin/results/unpublish', [\App\Controllers\Admin\ResultPublicationController::class, 'unpublish'], $adminFormAuth);
+    $router->post('/admin/results/approve-submission', [\App\Controllers\Admin\ResultReviewController::class, 'approveSubmission'], $adminFormAuth);
     $router->get('/admin/reports/student/{studentId}/{termId}.pdf', [\App\Controllers\Admin\ReportController::class, 'pdf'], $adminAuth);
     $router->get('/admin/gradebook', [\App\Controllers\Admin\GradebookController::class, 'index'], $adminAuth);
     $router->get('/admin/gradebook/class/{classId}', [\App\Controllers\Admin\GradebookController::class, 'showClass'], $adminAuth);
@@ -321,6 +323,12 @@ try {
     $router->get('/admin/backups/{filename}/download', [\App\Controllers\Admin\BackupController::class, 'download'], $adminAuth);
     $router->get('/admin/audit-logs', [\App\Controllers\Admin\AuditLogController::class, 'index'], $adminAuth);
 
+    // Admin External Notification Gateway & Delivery Audit Routes (SRS §14, §15, §47, §57 Phase 4)
+    $router->get('/admin/notifications/gateway', [\App\Controllers\Admin\NotificationGatewayController::class, 'index'], $adminAuth);
+    $router->post('/admin/notifications/gateway/test', [\App\Controllers\Admin\NotificationGatewayController::class, 'sendTest'], $adminFormAuth);
+    $router->get('/admin/notifications/logs', [\App\Controllers\Admin\NotificationGatewayController::class, 'logs'], $adminAuth);
+    $router->post('/admin/notifications/broadcast', [\App\Controllers\Admin\NotificationGatewayController::class, 'broadcast'], $adminFormAuth);
+
     // Protected File System Delivery
     $router->get('/files/{id}/download', [\App\Controllers\FileController::class, 'download'], [AuthMiddleware::class]);
     $router->get('/files/{id}/stream', [\App\Controllers\FileController::class, 'stream'], [AuthMiddleware::class]);
@@ -403,6 +411,8 @@ try {
     $router->post('/teacher/gradebook/{classSubjectId}/save', [\App\Controllers\Teacher\GradebookController::class, 'save'], $teacherFormAuth);
     $router->get('/teacher/results/comments', [\App\Controllers\Teacher\BatchRemarkController::class, 'index'], $teacherAuth);
     $router->post('/teacher/results/comments', [\App\Controllers\Teacher\BatchRemarkController::class, 'save'], $teacherFormAuth);
+    $router->get('/teacher/results/overview', [\App\Controllers\Teacher\ResultOverviewController::class, 'overview'], $teacherAuth);
+    $router->post('/teacher/results/submit', [\App\Controllers\Teacher\ResultOverviewController::class, 'submit'], $teacherFormAuth);
 
     // Teacher Attendance & Announcements Routes
     $router->get('/teacher/attendance', [\App\Controllers\Teacher\AttendanceController::class, 'index'], $teacherAuth);
@@ -505,6 +515,8 @@ try {
     // Student School Fees Invoices
     $router->get('/student/fees', [\App\Controllers\Student\StudentFeeController::class, 'index'], $studentAuth);
     $router->get('/student/fees/invoices/{id}', [\App\Controllers\Student\StudentFeeController::class, 'show'], $studentAuth);
+    $router->post('/student/fees/invoices/{id}/checkout', [\App\Controllers\Student\StudentFeeController::class, 'checkout'], $studentFormAuth);
+    $router->get('/student/fees/verify', [\App\Controllers\Student\StudentFeeController::class, 'verify'], $studentAuth);
 
     // Parent Portal Routes
     $parentAuth = [AuthMiddleware::class, RoleMiddleware::allow(['parent', 'admin', 'super_admin'])];

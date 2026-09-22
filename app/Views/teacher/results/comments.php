@@ -26,6 +26,23 @@ $this->layout('layouts/teacher', [
         </div>
     <?php endif; ?>
 
+    <!-- Tab Navigation between Overview and Batch Remarks -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-2 sm:p-3">
+        <nav class="flex flex-wrap items-center gap-1.5" aria-label="Results Navigation Tabs">
+            <a href="/teacher/results/overview<?= ($selectedTermId > 0 && $selectedClassId > 0) ? "?term_id={$selectedTermId}&class_id={$selectedClassId}" : '' ?>"
+               class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                <span>Form Class Broadsheet Overview</span>
+            </a>
+
+            <a href="/teacher/results/comments<?= ($selectedTermId > 0 && $selectedClassId > 0) ? "?term_id={$selectedTermId}&class_id={$selectedClassId}" : '' ?>"
+               class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-brand-700 bg-brand-50 border border-brand-200/60 shadow-xs transition" aria-current="page">
+                <svg class="w-4 h-4 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
+                <span>Batch Remarks &amp; Behavioral Ratings</span>
+            </a>
+        </nav>
+    </div>
+
     <!-- Header Card -->
     <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

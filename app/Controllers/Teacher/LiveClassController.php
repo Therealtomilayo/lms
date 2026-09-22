@@ -104,7 +104,7 @@ class LiveClassController extends Controller
      * Update an existing live class.
      * Route: POST /teacher/live-classes/{id}/update
      */
-    public function update(Request $request, array|string|int $id = null): Response
+    public function update(Request $request, array|string|int|null $id = null): Response
     {
         $userContext = $this->requireAuthContext($request);
         $liveClassId = is_array($id) ? (int)($id['id'] ?? 0) : (int)($id ?: ($request->getAttribute('id') ?? 0));
@@ -123,7 +123,7 @@ class LiveClassController extends Controller
      * Start live class (mark in_progress).
      * Route: POST /teacher/live-classes/{id}/start
      */
-    public function start(Request $request, array|string|int $id = null): Response
+    public function start(Request $request, array|string|int|null $id = null): Response
     {
         $userContext = $this->requireAuthContext($request);
         $liveClassId = is_array($id) ? (int)($id['id'] ?? 0) : (int)($id ?: ($request->getAttribute('id') ?? 0));
@@ -141,7 +141,7 @@ class LiveClassController extends Controller
      * End live class (mark completed).
      * Route: POST /teacher/live-classes/{id}/end
      */
-    public function end(Request $request, array|string|int $id = null): Response
+    public function end(Request $request, array|string|int|null $id = null): Response
     {
         $userContext = $this->requireAuthContext($request);
         $liveClassId = is_array($id) ? (int)($id['id'] ?? 0) : (int)($id ?: ($request->getAttribute('id') ?? 0));
@@ -159,7 +159,7 @@ class LiveClassController extends Controller
      * Cancel live class.
      * Route: POST /teacher/live-classes/{id}/cancel
      */
-    public function cancel(Request $request, array|string|int $id = null): Response
+    public function cancel(Request $request, array|string|int|null $id = null): Response
     {
         $userContext = $this->requireAuthContext($request);
         $liveClassId = is_array($id) ? (int)($id['id'] ?? 0) : (int)($id ?: ($request->getAttribute('id') ?? 0));
@@ -177,7 +177,7 @@ class LiveClassController extends Controller
      * Delete live class.
      * Route: POST /teacher/live-classes/{id}/delete
      */
-    public function destroy(Request $request, array|string|int $id = null): Response
+    public function destroy(Request $request, array|string|int|null $id = null): Response
     {
         $userContext = $this->requireAuthContext($request);
         $liveClassId = is_array($id) ? (int)($id['id'] ?? 0) : (int)($id ?: ($request->getAttribute('id') ?? 0));
@@ -195,7 +195,7 @@ class LiveClassController extends Controller
      * View attendee register.
      * Route: GET /teacher/live-classes/{id}/attendees
      */
-    public function attendees(Request $request, array|string|int $id = null): Response
+    public function attendees(Request $request, array|string|int|null $id = null): Response
     {
         $userContext = $this->requireAuthContext($request);
         $liveClassId = is_array($id) ? (int)($id['id'] ?? 0) : (int)($id ?: ($request->getAttribute('id') ?? 0));

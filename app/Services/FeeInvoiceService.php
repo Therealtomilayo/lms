@@ -323,6 +323,10 @@ class FeeInvoiceService
         $refreshedPayment = $this->paymentRepo->findById($payment->id);
         $refreshedInvoice = $this->feeRepo->findInvoiceById($invoice->id);
 
+        if ($refreshedPayment && $refreshedInvoice) {
+            $this->dispatchFeeReceiptNotification($refreshedPayment, $refreshedInvoice);
+        }
+
         return ServiceResult::success([
             'payment' => $refreshedPayment,
             'invoice' => $refreshedInvoice,
@@ -404,10 +408,54 @@ class FeeInvoiceService
 
         $refreshedInvoice = $this->feeRepo->findInvoiceById($invoice->id);
 
+        if ($payment && $refreshedInvoice) {
+            $this->dispatchFeeReceiptNotification($payment, $refreshedInvoice);
+        }
+
         return ServiceResult::success([
             'payment' => $payment,
             'invoice' => $refreshedInvoice,
         ]);
+    }
+
+    /**
+     * Dispatch multi-channel fee receipt notification (SMS & Email)
+     */
+    private function dispatchFeeReceiptNotification(Payment $payment, FeeInvoice $invoice): void
+    {
+        try {
+            $notificationService = new NotificationService();
+            $meta = $payment->metadata ?? [];
+            $payerName = $meta['payer_name'] ?? 'Parent / Guardian';
+            $payerEmail = $meta['payer_email'] ?? null;
+            $payerPhone = $meta['payer_phone'] ?? null;
+
+            if (empty($payerPhone) || empty($payerEmail)) {
+                $user = (new \App\Repositories\UserRepository($this->pdo))->findById($payment->userId);
+                if ($user) {
+                    if (empty($payerEmail)) $payerEmail = $user->email;
+                    if (empty($payerPhone)) $payerPhone = $user->phone;
+                    if ($payerName === 'Parent / Guardian' && !empty($user->name)) $payerName = $user->name;
+                }
+            }
+
+            if (!empty($payerPhone) || !empty($payerEmail)) {
+                $notificationService->sendFeePaymentReceipt(
+                    payerPhone: $payerPhone,
+                    payerEmail: $payerEmail,
+                    payerName: $payerName,
+                    studentName: $invoice->studentName ?? ($meta['student_name'] ?? 'Student'),
+                    invoiceNumber: $invoice->invoiceNumber ?? ($meta['invoice_number'] ?? 'INV'),
+                    reference: $payment->reference,
+                    amountPaid: (float)$payment->amount,
+                    balanceRemaining: (float)$invoice->balanceDue,
+                    termName: $invoice->termName ?? ($meta['term_name'] ?? 'Current Term'),
+                    userId: $payment->userId
+                );
+            }
+        } catch (\Throwable $e) {
+            error_log("Failed to dispatch fee receipt notification: " . $e->getMessage());
+        }
     }
 
     /**

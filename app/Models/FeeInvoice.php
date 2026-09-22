@@ -50,6 +50,14 @@ final class FeeInvoice
 
     public static function fromArray(array $data, array $items = [], array $payments = []): self
     {
+        $className = $data['class_name'] ?? null;
+        if (!empty($className) && !empty($data['section_arm'])) {
+            $arm = trim((string)$data['section_arm']);
+            if (!str_ends_with(strtoupper($className), strtoupper($arm))) {
+                $className .= ' (' . $arm . ')';
+            }
+        }
+
         return new self(
             id: (int)$data['id'],
             invoiceNumber: (string)$data['invoice_number'],
@@ -74,7 +82,7 @@ final class FeeInvoice
             parentName: $data['parent_name'] ?? null,
             parentEmail: $data['parent_email'] ?? null,
             parentPhone: $data['parent_phone'] ?? null,
-            className: $data['class_name'] ?? null,
+            className: $className,
             sessionName: $data['session_name'] ?? null,
             termName: $data['term_name'] ?? null,
             items: $items,

@@ -21,7 +21,7 @@
 // Prepare options for select components
 $classOptions = [];
 foreach ($classes as $cls) {
-    $classOptions[$cls->id] = $cls->name;
+    $classOptions[$cls->id] = $cls->getFullName();
 }
 
 $termOptions = [];

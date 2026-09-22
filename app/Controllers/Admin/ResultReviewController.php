@@ -14,6 +14,7 @@ use App\Repositories\AcademicRepository;
 use App\Repositories\EnrollmentRepository;
 use App\Repositories\GradebookRepository;
 use App\Repositories\ResultPublicationRepository;
+use App\Repositories\ResultSubmissionRepository;
 use App\Services\GradebookService;
 
 /**
@@ -24,6 +25,7 @@ class ResultReviewController extends Controller
     private GradebookService $gradebookService;
     private GradebookRepository $gradebookRepo;
     private ResultPublicationRepository $publicationRepo;
+    private ResultSubmissionRepository $submissionRepo;
     private AcademicRepository $academicRepo;
     private EnrollmentRepository $enrollmentRepo;
 
@@ -33,7 +35,8 @@ class ResultReviewController extends Controller
         ?GradebookRepository $gradebookRepo = null,
         ?ResultPublicationRepository $publicationRepo = null,
         ?AcademicRepository $academicRepo = null,
-        ?EnrollmentRepository $enrollmentRepo = null
+        ?EnrollmentRepository $enrollmentRepo = null,
+        ?ResultSubmissionRepository $submissionRepo = null
     ) {
         parent::__construct($authenticator);
         $this->gradebookService = $gradebookService ?? new GradebookService();
@@ -41,6 +44,7 @@ class ResultReviewController extends Controller
         $this->publicationRepo = $publicationRepo ?? new ResultPublicationRepository();
         $this->academicRepo = $academicRepo ?? new AcademicRepository();
         $this->enrollmentRepo = $enrollmentRepo ?? new EnrollmentRepository();
+        $this->submissionRepo = $submissionRepo ?? new ResultSubmissionRepository();
     }
 
     public function index(Request $request, int|string|null $termId = null): Response
@@ -59,10 +63,12 @@ class ResultReviewController extends Controller
 
         $summaries = [];
         $isPublished = false;
+        $submission = null;
 
         if ($selectedTermId > 0 && $selectedClassId > 0) {
             $summaries = $this->gradebookRepo->getSummariesByClassAndTerm($selectedClassId, $selectedTermId);
             $isPublished = $this->publicationRepo->isPublished($selectedTermId, $selectedClassId);
+            $submission = $this->submissionRepo->findSubmission($selectedClassId, $selectedTermId);
         }
 
         return $this->view('admin/results/review', [
@@ -72,6 +78,7 @@ class ResultReviewController extends Controller
             'selectedClassId' => $selectedClassId,
             'summaries' => $summaries,
             'isPublished' => $isPublished,
+            'submission' => $submission,
         ]);
     }
 
@@ -150,6 +157,7 @@ class ResultReviewController extends Controller
             $classSubjects = $this->academicRepo->getClassSubjectsByClassAndSession($selectedClassId, $sessionId);
             $students = $this->enrollmentRepo->getStudentsByClassAndSession($selectedClassId, $sessionId);
             $resultsMatrix = $this->gradebookRepo->getTermResultsMatrixByClass($selectedClassId, $selectedTerm->id);
+            $submission = $this->submissionRepo->findSubmission($selectedClassId, $selectedTerm->id);
             $summaries = $this->gradebookRepo->getSummariesByClassAndTerm($selectedClassId, $selectedTerm->id);
             $isPublished = $this->publicationRepo->isPublished($selectedTerm->id, $selectedClassId);
 
@@ -200,6 +208,7 @@ class ResultReviewController extends Controller
             'subjectAverages' => $subjectAverages,
             'classMean' => $classMean,
             'isPublished' => $isPublished,
+            'submission' => $submission,
         ]);
     }
 
@@ -323,5 +332,25 @@ class ResultReviewController extends Controller
             'Pragma' => 'no-cache',
             'Expires' => '0',
         ]);
+    }
+
+    public function approveSubmission(Request $request): Response
+    {
+        $userContext = $this->user($request);
+        if (!$userContext || !ResultPolicy::canReview($userContext)) {
+            throw new AuthorizationException('Administrator access required.');
+        }
+
+        $termId = (int)$request->post('term_id', 0);
+        $classId = (int)$request->post('class_id', 0);
+
+        if ($termId > 0 && $classId > 0) {
+            $this->submissionRepo->approve($classId, $termId, $userContext->id);
+        }
+
+        return $this->redirectWithSuccess(
+            "/admin/results/review?term_id={$termId}&class_id={$classId}",
+            'Form Teacher terminal results submission approved successfully.'
+        );
     }
 }

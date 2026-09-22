@@ -149,6 +149,19 @@ class AuthService
                 expiresAt: $expiresAt,
                 requestedIp: $ipAddress
             );
+
+            // Dispatch external password reset email
+            try {
+                $notificationService = new NotificationService();
+                $notificationService->sendPasswordResetEmail(
+                    email: $user->email,
+                    name: $user->name,
+                    resetToken: $plainToken,
+                    userId: $user->id
+                );
+            } catch (Throwable $e) {
+                error_log("Failed to dispatch password reset email: " . $e->getMessage());
+            }
         }
 
         // Generic response to avoid email enumeration

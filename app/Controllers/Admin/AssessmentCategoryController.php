@@ -40,22 +40,28 @@ class AssessmentCategoryController extends Controller
 
         $sessions = $this->academicRepo->getAllSessions();
         $terms = $this->academicRepo->getAllTerms();
+        $academicLevels = $this->academicRepo->getAllAcademicLevels();
         $activeSession = $this->academicRepo->getCurrentSession();
         $activeTerm = $this->academicRepo->getCurrentTerm();
 
         $selectedSessionId = (int)($request->get('session_id') ?? ($activeSession ? $activeSession->id : 0));
         $selectedTermId = (int)($request->get('term_id') ?? ($activeTerm ? $activeTerm->id : 0));
+        $selectedAcademicLevelId = $request->get('academic_level_id') !== null && $request->get('academic_level_id') !== ''
+            ? (int)$request->get('academic_level_id')
+            : null;
 
         $categories = [];
         if ($selectedSessionId > 0 && $selectedTermId > 0) {
-            $categories = $this->gradebookRepo->getCategoriesByContext($selectedSessionId, $selectedTermId);
+            $categories = $this->gradebookRepo->getAllCategories($selectedSessionId, $selectedTermId, $selectedAcademicLevelId);
         }
 
         return $this->view('admin/assessment_categories/index', [
             'sessions' => $sessions,
             'terms' => $terms,
+            'academicLevels' => $academicLevels,
             'selectedSessionId' => $selectedSessionId,
             'selectedTermId' => $selectedTermId,
+            'selectedAcademicLevelId' => $selectedAcademicLevelId,
             'categories' => $categories,
         ]);
     }
@@ -69,20 +75,55 @@ class AssessmentCategoryController extends Controller
 
         $sessionId = (int)$request->input('session_id');
         $termId = (int)$request->input('term_id');
+        $academicLevelId = $request->input('academic_level_id') !== null && $request->input('academic_level_id') !== ''
+            ? (int)$request->input('academic_level_id')
+            : null;
 
         $this->gradebookRepo->createCategory([
             'session_id' => $sessionId,
             'term_id' => $termId,
+            'academic_level_id' => $academicLevelId,
             'class_subject_id' => $request->input('class_subject_id'),
-            'name' => (string)$request->input('name'),
+            'name' => trim((string)$request->input('name')),
             'weight_percentage' => (float)$request->input('weight_percentage'),
             'max_points' => (float)($request->input('max_points') ?? 100.0),
         ]);
 
-        return $this->redirectWithSuccess(
-            "/admin/assessment-categories?session_id={$sessionId}&term_id={$termId}",
-            'Assessment category added successfully.'
-        );
+        $redirectUrl = "/admin/assessment-categories?session_id={$sessionId}&term_id={$termId}" . ($academicLevelId ? "&academic_level_id={$academicLevelId}" : '');
+
+        return $this->redirectWithSuccess($redirectUrl, 'Assessment category added successfully.');
+    }
+
+    public function update(Request $request, int|string $id): Response
+    {
+        $userContext = $this->user($request);
+        if (!$userContext || !GradebookPolicy::canManageCategories($userContext)) {
+            throw new AuthorizationException('Administrator access required.');
+        }
+
+        $catId = (int)$id;
+        $cat = $this->gradebookRepo->findCategoryById($catId);
+        if (!$cat) {
+            return $this->redirectWithError('/admin/assessment-categories', 'Assessment category not found.');
+        }
+
+        $name = trim((string)$request->input('name'));
+        $weight = (float)$request->input('weight_percentage');
+        $maxPoints = (float)($request->input('max_points') ?? 100.0);
+        $academicLevelId = $request->input('academic_level_id') !== null && $request->input('academic_level_id') !== ''
+            ? (int)$request->input('academic_level_id')
+            : null;
+
+        $this->gradebookRepo->updateCategory($catId, [
+            'name' => $name,
+            'weight_percentage' => $weight,
+            'max_points' => $maxPoints,
+            'academic_level_id' => $academicLevelId,
+        ]);
+
+        $redirectUrl = "/admin/assessment-categories?session_id={$cat->sessionId}&term_id={$cat->termId}" . ($academicLevelId ? "&academic_level_id={$academicLevelId}" : '');
+
+        return $this->redirectWithSuccess($redirectUrl, 'Assessment category updated successfully.');
     }
 
     public function delete(Request $request, int|string $id): Response
@@ -96,12 +137,17 @@ class AssessmentCategoryController extends Controller
         $cat = $this->gradebookRepo->findCategoryById($catId);
         $sessionId = $cat ? $cat->sessionId : 0;
         $termId = $cat ? $cat->termId : 0;
+        $academicLevelId = $cat?->academicLevelId;
+        $redirectUrl = "/admin/assessment-categories?session_id={$sessionId}&term_id={$termId}" . ($academicLevelId ? "&academic_level_id={$academicLevelId}" : '');
 
-        $this->gradebookRepo->deleteCategory($catId);
-
-        return $this->redirectWithSuccess(
-            "/admin/assessment-categories?session_id={$sessionId}&term_id={$termId}",
-            'Assessment category deleted successfully.'
-        );
+        try {
+            $this->gradebookRepo->deleteCategory($catId);
+            return $this->redirectWithSuccess($redirectUrl, 'Assessment category deleted successfully.');
+        } catch (\Throwable $e) {
+            return $this->redirectWithError(
+                $redirectUrl,
+                $e->getMessage() ?: 'Cannot delete assessment category because active assessment scores are associated with it.'
+            );
+        }
     }
 }

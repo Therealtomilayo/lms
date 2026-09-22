@@ -87,6 +87,7 @@ class FeeBursaryLifecycleIntegrationTest extends TestCase
             CREATE TABLE classes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
+                section_arm TEXT NULL,
                 academic_level_id INTEGER,
                 class_group TEXT,
                 capacity INTEGER DEFAULT 40,

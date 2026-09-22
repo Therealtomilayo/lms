@@ -53,10 +53,10 @@
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
             <p class="text-xs font-bold uppercase tracking-wider text-sky-600">Class Cohort</p>
             <div class="flex items-baseline gap-2 mt-1">
-                <h3 class="text-lg font-extrabold text-slate-900 truncate"><?= htmlspecialchars($student->schoolClass?->name ?? 'Class') ?></h3>
+                <h3 class="text-lg font-extrabold text-slate-900 truncate"><?= htmlspecialchars($student->schoolClass?->name ?? 'Enrolled Class') ?></h3>
             </div>
             <span class="text-[11px] font-medium text-sky-600 mt-1 block">
-                <?= htmlspecialchars($student->schoolClass?->sectionArm ?? 'General') ?>
+                <?= !empty($student->schoolClass?->sectionArm) ? 'Arm ' . htmlspecialchars($student->schoolClass->sectionArm) : 'Standard Cohort' ?>
             </span>
         </div>
 

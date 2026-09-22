@@ -191,7 +191,7 @@ $passRate = $totalStudents > 0 ? round(($passCount / $totalStudents) * 100, 1) :
                                 <?php if (!empty($suggestedNextClasses)): ?>
                                     <?php foreach ($suggestedNextClasses as $nc): ?>
                                         <option value="<?= (int)$nc->id ?>">
-                                            <?= htmlspecialchars($nc->name) ?> (Sequential Next Level)
+                                            <?= htmlspecialchars($nc->getFullName()) ?> (Sequential Next Level)
                                         </option>
                                     <?php endforeach; ?>
                                 <?php else: ?>
@@ -199,7 +199,7 @@ $passRate = $totalStudents > 0 ? round(($passCount / $totalStudents) * 100, 1) :
                                     <?php foreach ($allClasses as $ac): ?>
                                         <?php if ($ac->id !== $classId): ?>
                                             <option value="<?= (int)$ac->id ?>">
-                                                <?= htmlspecialchars($ac->name) ?>
+                                                <?= htmlspecialchars($ac->getFullName()) ?>
                                             </option>
                                         <?php endif; ?>
                                     <?php endforeach; ?>

@@ -246,6 +246,7 @@ final class GradebookAndReportCardLifecycleIntegrationTest extends TestCase
                 `session_id` INTEGER NOT NULL,
                 `term_id` INTEGER NOT NULL,
                 `class_subject_id` INTEGER NULL,
+                `academic_level_id` INTEGER NULL,
                 `name` VARCHAR(100) NOT NULL,
                 `weight_percentage` DECIMAL(5,2) NOT NULL,
                 `max_points` DECIMAL(5,2) NOT NULL DEFAULT 100.00,

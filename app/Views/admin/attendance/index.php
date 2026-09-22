@@ -63,7 +63,7 @@
                                 Class
                             </span>
                             <h3 class="mt-1 text-lg font-bold text-slate-900 leading-tight">
-                                <?= e($cls->name) ?>
+                                <?= e($cls->getFullName()) ?>
                             </h3>
                         </div>
 

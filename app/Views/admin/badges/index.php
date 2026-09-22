@@ -99,7 +99,7 @@ $categoryStyles = [
                     <option value="">All Classes</option>
                     <?php foreach ($classes as $c): ?>
                         <option value="<?= (int)$c->id ?>" <?= $selectedClassId === (int)$c->id ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($c->name) ?>
+                            <?= htmlspecialchars($c->getFullName()) ?>
                         </option>
                     <?php endforeach; ?>
                 </select>

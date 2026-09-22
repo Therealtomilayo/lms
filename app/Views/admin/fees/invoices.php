@@ -131,7 +131,7 @@ $this->layout('layouts/admin', [
                 <option value="">-- All Classes --</option>
                 <?php foreach ($classes as $c): ?>
                     <option value="<?= $c->id ?>" <?= ($filters['class_id'] ?? 0) === $c->id ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($c->name, ENT_QUOTES, 'UTF-8') ?>
+                        <?= htmlspecialchars($c->getFullName(), ENT_QUOTES, 'UTF-8') ?>
                     </option>
                 <?php endforeach; ?>
             </select>
@@ -312,7 +312,7 @@ $this->layout('layouts/admin', [
                     <select name="class_id" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
                         <option value="">-- Or Specific Class --</option>
                         <?php foreach ($classes as $c): ?>
-                            <option value="<?= $c->id ?>"><?= htmlspecialchars($c->name, ENT_QUOTES, 'UTF-8') ?></option>
+                            <option value="<?= $c->id ?>"><?= htmlspecialchars($c->getFullName(), ENT_QUOTES, 'UTF-8') ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>

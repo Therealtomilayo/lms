@@ -14,9 +14,11 @@ final class AssessmentCategory
         public readonly int $sessionId,
         public readonly int $termId,
         public readonly ?int $classSubjectId = null,
+        public readonly ?int $academicLevelId = null,
         public readonly string $name = '',
         public readonly float $weightPercentage = 0.0,
         public readonly float $maxPoints = 100.0,
+        public readonly ?string $academicLevelName = null,
         public readonly ?string $createdAt = null,
         public readonly ?string $updatedAt = null
     ) {
@@ -31,9 +33,13 @@ final class AssessmentCategory
             classSubjectId: isset($data['class_subject_id']) && $data['class_subject_id'] !== '' && $data['class_subject_id'] !== null
                 ? (int)$data['class_subject_id']
                 : null,
+            academicLevelId: isset($data['academic_level_id']) && $data['academic_level_id'] !== '' && $data['academic_level_id'] !== null
+                ? (int)$data['academic_level_id']
+                : null,
             name: (string)($data['name'] ?? ''),
             weightPercentage: (float)($data['weight_percentage'] ?? 0.0),
             maxPoints: (float)($data['max_points'] ?? 100.0),
+            academicLevelName: isset($data['academic_level_name']) ? (string)$data['academic_level_name'] : null,
             createdAt: isset($data['created_at']) ? (string)$data['created_at'] : null,
             updatedAt: isset($data['updated_at']) ? (string)$data['updated_at'] : null
         );
@@ -46,9 +52,11 @@ final class AssessmentCategory
             'session_id' => $this->sessionId,
             'term_id' => $this->termId,
             'class_subject_id' => $this->classSubjectId,
+            'academic_level_id' => $this->academicLevelId,
             'name' => $this->name,
             'weight_percentage' => $this->weightPercentage,
             'max_points' => $this->maxPoints,
+            'academic_level_name' => $this->academicLevelName,
             'created_at' => $this->createdAt,
             'updated_at' => $this->updatedAt,
         ];

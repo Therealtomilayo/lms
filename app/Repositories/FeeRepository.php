@@ -81,7 +81,8 @@ class FeeRepository
                        s.name as session_name, 
                        t.name as term_name, 
                        al.name as level_name, 
-                       c.name as class_name
+                       c.name as class_name,
+                       c.section_arm
                 FROM `fee_structures` fs
                 JOIN `sessions` s ON s.id = fs.session_id
                 JOIN `terms` t ON t.id = fs.term_id
@@ -120,7 +121,8 @@ class FeeRepository
                        s.name as session_name, 
                        t.name as term_name, 
                        al.name as level_name, 
-                       c.name as class_name
+                       c.name as class_name,
+                       c.section_arm
                 FROM `fee_structures` fs
                 JOIN `sessions` s ON s.id = fs.session_id
                 JOIN `terms` t ON t.id = fs.term_id
@@ -404,8 +406,8 @@ class FeeRepository
                        u_st.name as student_name,
                        u_p.name as parent_name,
                        u_p.email as parent_email,
-                       u_p.phone as parent_phone,
                        c.name as class_name,
+                       c.section_arm,
                        ses.name as session_name,
                        t.name as term_name
                 FROM `fee_invoices` fi

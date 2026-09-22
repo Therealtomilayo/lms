@@ -95,14 +95,22 @@
                                 <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">
                                     <?= htmlspecialchars($cls['level_name'] ?? 'Class') ?>
                                 </span>
-                                <?php $this->include('components/badge', [
-                                    'label' => 'Active',
-                                    'variant' => 'success',
-                                    'size' => 'sm'
-                                ]); ?>
+                                <?php if (!empty($cls['is_form_teacher'])): ?>
+                                    <?php $this->include('components/badge', [
+                                        'label' => 'Form Class',
+                                        'variant' => 'info',
+                                        'size' => 'sm'
+                                    ]); ?>
+                                <?php else: ?>
+                                    <?php $this->include('components/badge', [
+                                        'label' => 'Active',
+                                        'variant' => 'success',
+                                        'size' => 'sm'
+                                    ]); ?>
+                                <?php endif; ?>
                             </div>
                             <h3 class="text-base font-bold text-slate-900 mt-1">
-                                <?= htmlspecialchars($cls['name']) ?>
+                                <?= htmlspecialchars($cls['full_name'] ?? $cls['name']) ?>
                             </h3>
                         </div>
 
@@ -142,7 +150,7 @@
                         <?php foreach ($allocations as $alloc): ?>
                             <tr class="hover:bg-slate-50/60 transition">
                                 <td class="py-3.5 px-5 font-bold text-slate-900">
-                                    <?= htmlspecialchars($alloc['class_name']) ?>
+                                    <?= htmlspecialchars($alloc['full_class_name'] ?? $alloc['class_name']) ?>
                                 </td>
                                 <td class="py-3.5 px-4 text-slate-700">
                                     <span class="font-semibold text-slate-900"><?= htmlspecialchars($alloc['subject_name']) ?></span>

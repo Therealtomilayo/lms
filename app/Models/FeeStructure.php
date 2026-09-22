@@ -32,6 +32,14 @@ final class FeeStructure
 
     public static function fromArray(array $data, array $items = []): self
     {
+        $className = $data['class_name'] ?? null;
+        if (!empty($className) && !empty($data['section_arm'])) {
+            $arm = trim((string)$data['section_arm']);
+            if (!str_ends_with(strtoupper($className), strtoupper($arm))) {
+                $className .= ' (' . $arm . ')';
+            }
+        }
+
         return new self(
             id: (int)$data['id'],
             sessionId: (int)$data['session_id'],
@@ -48,7 +56,7 @@ final class FeeStructure
             sessionName: $data['session_name'] ?? null,
             termName: $data['term_name'] ?? null,
             levelName: $data['level_name'] ?? null,
-            className: $data['class_name'] ?? null,
+            className: $className,
             items: $items
         );
     }

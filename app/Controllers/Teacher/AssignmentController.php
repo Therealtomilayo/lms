@@ -101,6 +101,7 @@ class AssignmentController extends Controller
             : $this->academicRepository->getAllClassSubjects($activeSession?->id);
 
         $terms = $activeSession ? $this->academicRepository->getTermsBySession($activeSession->id) : [];
+        $activeTerm = $activeSession ? $this->academicRepository->findActiveTermForSession($activeSession->id) : null;
 
         $presetClassSubjectId = (int)($request->query('class_subject_id', 0) ?: $request->get('class_subject_id', 0));
 
@@ -109,6 +110,7 @@ class AssignmentController extends Controller
             'headerTitle' => 'Create Assignment',
             'classSubjects' => $classSubjects,
             'terms' => $terms,
+            'activeTerm' => $activeTerm,
             'presetClassSubjectId' => $presetClassSubjectId,
             'activeSession' => $activeSession,
             'user' => $userContext,
@@ -168,12 +170,14 @@ class AssignmentController extends Controller
 
         $activeSession = $this->academicRepository->getActiveSession();
         $terms = $activeSession ? $this->academicRepository->getTermsBySession($activeSession->id) : [];
+        $activeTerm = $activeSession ? $this->academicRepository->findActiveTermForSession($activeSession->id) : null;
 
         return Response::html($this->render('teacher/assignments/edit', [
             'title' => 'Edit Assignment — Claret Faculty Portal',
             'headerTitle' => 'Edit Assignment',
             'assignment' => $assignment,
             'terms' => $terms,
+            'activeTerm' => $activeTerm,
             'user' => $userContext,
         ], 'layouts/teacher'));
     }

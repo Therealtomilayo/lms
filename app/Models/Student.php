@@ -64,6 +64,7 @@ final class Student
             'name', 'user_name', 'userName' => $this->user?->name ?? '',
             'email', 'user_email', 'userEmail' => $this->user?->email ?? '',
             'phone', 'user_phone', 'userPhone' => $this->user?->phone,
+            'schoolClass', 'school_class' => $this->currentClass,
             'class_name', 'className' => $this->currentClass?->name ?? '',
             'relationship_type', 'relationshipType' => $this->relationshipType,
             default => null,

@@ -664,6 +664,47 @@ class AcademicRepository
         }, $rows);
     }
 
+    /**
+     * @return SchoolClass[]
+     */
+    public function getClassesByFormTeacherId(int $teacherId): array
+    {
+        if (!$this->supportsFormTeacherColumn()) {
+            return [];
+        }
+
+        $joinTeachers = $this->supportsTeachersJoin();
+        $selectFields = 'c.*, al.name as level_name, al.stage as level_stage, al.rank_order as level_rank_order, al.grading_scale_id as level_grading_scale_id';
+        $joins = 'JOIN `academic_levels` al ON al.id = c.academic_level_id';
+
+        if ($joinTeachers) {
+            $selectFields .= ', ft.staff_id as form_teacher_staff_id, ftu.name as form_teacher_name';
+            $joins .= ' LEFT JOIN `teachers` ft ON ft.id = c.form_teacher_id LEFT JOIN `users` ftu ON ftu.id = ft.user_id';
+        }
+
+        $sql = "SELECT {$selectFields}
+                FROM `classes` c
+                {$joins}
+                WHERE c.form_teacher_id = :teacher_id AND c.status = 'active'
+                ORDER BY c.name ASC, c.section_arm ASC, c.id ASC";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':teacher_id' => $teacherId]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return array_map(function (array $row) {
+            $level = new AcademicLevel(
+                id: (int)$row['academic_level_id'],
+                name: (string)$row['level_name'],
+                stage: (string)$row['level_stage'],
+                rankOrder: (int)$row['level_rank_order'],
+                gradingScaleId: isset($row['level_grading_scale_id']) ? (int)$row['level_grading_scale_id'] : null
+            );
+
+            return SchoolClass::fromArray($row, $level);
+        }, $rows);
+    }
+
     public function createClass(array $data): SchoolClass
     {
         $now = date('Y-m-d H:i:s');

@@ -103,7 +103,7 @@ $hasUnpaid = !empty($unpaidItems);
     <?php endif; ?>
 
     <!-- Itemized Fee Component Checklist & Form -->
-    <form id="fee-checkout-form" method="POST" action="/parent/fees/invoices/<?= $invoice->id ?>/checkout" class="space-y-6">
+    <form id="fee-checkout-form" method="POST" action="<?= $isStudent ? '/student/fees/invoices/' . $invoice->id . '/checkout' : '/parent/fees/invoices/' . $invoice->id . '/checkout' ?>" class="space-y-6">
         <?= \App\Core\Csrf::field() ?>
 
         <div class="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
@@ -112,7 +112,7 @@ $hasUnpaid = !empty($unpaidItems);
                     <h3 class="text-sm font-black text-slate-900">Itemized Fee Components</h3>
                     <p class="text-xs text-slate-500">Select the specific fee components you wish to pay now. Total increments automatically.</p>
                 </div>
-                <?php if (!$isStudent && $hasUnpaid): ?>
+                <?php if ($hasUnpaid): ?>
                     <div class="flex items-center gap-3 text-xs">
                         <button type="button" onclick="selectAllItems(true)" class="font-bold text-brand-700 hover:text-brand-800 transition">
                             Select All
@@ -129,7 +129,7 @@ $hasUnpaid = !empty($unpaidItems);
                 <table class="w-full text-left text-xs">
                     <thead class="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
                         <tr>
-                            <?php if (!$isStudent && $hasUnpaid): ?>
+                            <?php if ($hasUnpaid): ?>
                                 <th class="py-3 px-4 w-10 text-center">
                                     <input type="checkbox" id="header-select-all" checked onchange="toggleAllCheckboxes(this)" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500 cursor-pointer">
                                 </th>
@@ -146,7 +146,7 @@ $hasUnpaid = !empty($unpaidItems);
                     <tbody class="divide-y divide-slate-100">
                         <?php foreach ($invoice->items as $idx => $it): ?>
                             <tr class="hover:bg-slate-50/70 transition <?= $it->isPaid ? 'bg-slate-50/40 text-slate-400' : '' ?>">
-                                <?php if (!$isStudent && $hasUnpaid): ?>
+                                <?php if ($hasUnpaid): ?>
                                     <td class="py-3.5 px-4 text-center">
                                         <?php if ($it->isPaid): ?>
                                             <i data-lucide="check" class="w-4 h-4 text-emerald-600 mx-auto"></i>
@@ -211,25 +211,25 @@ $hasUnpaid = !empty($unpaidItems);
                     </tbody>
                     <tfoot class="bg-slate-50 font-bold border-t border-slate-200 text-xs">
                         <tr>
-                            <td colspan="<?= (!$isStudent && $hasUnpaid) ? 5 : 4 ?>" class="py-2.5 px-5 text-right text-slate-600">Subtotal:</td>
+                            <td colspan="<?= $hasUnpaid ? 5 : 4 ?>" class="py-2.5 px-5 text-right text-slate-600">Subtotal:</td>
                             <td class="py-2.5 px-5 text-right font-mono text-slate-900">₦<?= number_format($invoice->subtotal, 2) ?></td>
                         </tr>
                         <?php if ($invoice->discountAmount > 0): ?>
                             <tr>
-                                <td colspan="<?= (!$isStudent && $hasUnpaid) ? 5 : 4 ?>" class="py-2 px-5 text-right text-emerald-600">Scholarship / Waiver:</td>
+                                <td colspan="<?= $hasUnpaid ? 5 : 4 ?>" class="py-2 px-5 text-right text-emerald-600">Scholarship / Waiver:</td>
                                 <td class="py-2 px-5 text-right font-mono text-emerald-600">-₦<?= number_format($invoice->discountAmount, 2) ?></td>
                             </tr>
                         <?php endif; ?>
                         <tr class="text-sm font-black border-t border-slate-200">
-                            <td colspan="<?= (!$isStudent && $hasUnpaid) ? 5 : 4 ?>" class="py-3 px-5 text-right text-slate-900">Total Billed:</td>
+                            <td colspan="<?= $hasUnpaid ? 5 : 4 ?>" class="py-3 px-5 text-right text-slate-900">Total Billed:</td>
                             <td class="py-3 px-5 text-right font-mono text-brand-700">₦<?= number_format($invoice->totalAmount, 2) ?></td>
                         </tr>
                         <tr class="text-xs font-bold text-emerald-700">
-                            <td colspan="<?= (!$isStudent && $hasUnpaid) ? 5 : 4 ?>" class="py-2 px-5 text-right">Settled Amount:</td>
+                            <td colspan="<?= $hasUnpaid ? 5 : 4 ?>" class="py-2 px-5 text-right">Settled Amount:</td>
                             <td class="py-2 px-5 text-right font-mono text-emerald-700">-₦<?= number_format($invoice->amountPaid, 2) ?></td>
                         </tr>
                         <tr class="text-sm font-black border-t border-slate-200 bg-slate-100/80">
-                            <td colspan="<?= (!$isStudent && $hasUnpaid) ? 5 : 4 ?>" class="py-3 px-5 text-right text-slate-900">Outstanding Balance:</td>
+                            <td colspan="<?= $hasUnpaid ? 5 : 4 ?>" class="py-3 px-5 text-right text-slate-900">Outstanding Balance:</td>
                             <td class="py-3 px-5 text-right font-mono <?= $invoice->balanceDue > 0 ? 'text-rose-700' : 'text-emerald-700' ?>">
                                 ₦<?= number_format($invoice->balanceDue, 2) ?>
                             </td>
@@ -240,7 +240,7 @@ $hasUnpaid = !empty($unpaidItems);
         </div>
 
         <!-- Institutional Payment Summary Box (Clean Institutional Design) -->
-        <?php if (!$isStudent && $hasUnpaid): ?>
+        <?php if ($hasUnpaid): ?>
             <div class="bg-white rounded-3xl border border-slate-200 p-6 sm:p-7 shadow-xs space-y-6">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
                     <div>
@@ -268,7 +268,7 @@ $hasUnpaid = !empty($unpaidItems);
                     <div>
                         <div id="clearance-status-title" class="font-bold text-emerald-950">Academic Result Clearance: Cleared upon payment</div>
                         <div id="clearance-status-desc" class="text-[11px] text-emerald-700 mt-0.5">
-                            All fee components required for viewing your ward's <?= htmlspecialchars($invoice->termName ?? 'term') ?> report card are included in this payment.
+                            All fee components required for viewing <?= $isStudent ? 'your' : 'your ward\'s' ?> report card are included in this payment.
                         </div>
                     </div>
                 </div>

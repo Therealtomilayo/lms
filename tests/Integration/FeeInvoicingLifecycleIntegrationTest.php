@@ -132,11 +132,15 @@ class FeeInvoicingLifecycleIntegrationTest extends TestCase
         $this->pdo->prepare('INSERT INTO `class_enrollments` (`student_id`, `class_id`, `session_id`, `status`, `enrolled_at`)
             VALUES (?, ?, ?, "active", NOW())')->execute([$this->studentId, $this->classId, $this->sessionId]);
 
-        // Clean any fee data from previous aborted test runs
-        $this->pdo->exec('DELETE FROM `fee_invoice_items`');
-        $this->pdo->exec('DELETE FROM `fee_invoices`');
-        $this->pdo->exec('DELETE FROM `fee_structure_items`');
-        $this->pdo->exec('DELETE FROM `fee_structures`');
+        // Clean any fee data from previous aborted test runs for this test user/student
+        $this->pdo->prepare('DELETE FROM `fee_invoice_items` WHERE `invoice_id` IN (SELECT id FROM `fee_invoices` WHERE `created_by` = ? OR `student_id` = ?)')
+            ->execute([$this->adminUserId, $this->studentId]);
+        $this->pdo->prepare('DELETE FROM `fee_invoices` WHERE `created_by` = ? OR `student_id` = ?')
+            ->execute([$this->adminUserId, $this->studentId]);
+        $this->pdo->prepare('DELETE FROM `fee_structure_items` WHERE `fee_structure_id` IN (SELECT id FROM `fee_structures` WHERE `created_by` = ?)')
+            ->execute([$this->adminUserId]);
+        $this->pdo->prepare('DELETE FROM `fee_structures` WHERE `created_by` = ?')
+            ->execute([$this->adminUserId]);
     }
 
     protected function tearDown(): void

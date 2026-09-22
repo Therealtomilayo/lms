@@ -31,13 +31,14 @@ final class GradebookRepository
     /**
      * @return array<int, AssessmentCategory>
      */
-    public function getCategoriesByContext(int $sessionId, int $termId, ?int $classSubjectId = null): array
+    public function getCategoriesByContext(int $sessionId, int $termId, ?int $classSubjectId = null, ?int $academicLevelId = null): array
     {
         if ($classSubjectId !== null) {
             $stmt = $this->pdo->prepare(
-                'SELECT * FROM `assessment_categories` 
-                 WHERE `session_id` = :session_id AND `term_id` = :term_id AND `class_subject_id` = :class_subject_id
-                 ORDER BY `id` ASC'
+                'SELECT ac.*, al.name as academic_level_name FROM `assessment_categories` ac
+                 LEFT JOIN `academic_levels` al ON al.id = ac.academic_level_id
+                 WHERE ac.session_id = :session_id AND ac.term_id = :term_id AND ac.class_subject_id = :class_subject_id
+                 ORDER BY ac.id ASC'
             );
             $stmt->execute([
                 ':session_id' => $sessionId,
@@ -48,13 +49,47 @@ final class GradebookRepository
             if (!empty($rows)) {
                 return array_map(fn (array $r) => AssessmentCategory::fromArray($r), $rows);
             }
+
+            // If no specific class-subject override, determine class's academic level if not provided
+            if ($academicLevelId === null) {
+                try {
+                    $csStmt = $this->pdo->prepare('SELECT c.academic_level_id FROM class_subjects cs JOIN classes c ON c.id = cs.class_id WHERE cs.id = :csid LIMIT 1');
+                    $csStmt->execute([':csid' => $classSubjectId]);
+                    $lvl = $csStmt->fetchColumn();
+                    $academicLevelId = ($lvl !== false && $lvl !== null) ? (int)$lvl : null;
+                } catch (\Throwable $e) {
+                    $academicLevelId = null;
+                }
+            }
         }
 
-        // Fallback to term default categories (class_subject_id IS NULL)
+        // Try academic-level specific categories if level is known
+        if ($academicLevelId !== null && $academicLevelId > 0) {
+            $stmt = $this->pdo->prepare(
+                'SELECT ac.*, al.name as academic_level_name FROM `assessment_categories` ac
+                 LEFT JOIN `academic_levels` al ON al.id = ac.academic_level_id
+                 WHERE ac.session_id = :session_id AND ac.term_id = :term_id 
+                   AND ac.academic_level_id = :level_id AND ac.class_subject_id IS NULL
+                 ORDER BY ac.id ASC'
+            );
+            $stmt->execute([
+                ':session_id' => $sessionId,
+                ':term_id' => $termId,
+                ':level_id' => $academicLevelId,
+            ]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            if (!empty($rows)) {
+                return array_map(fn (array $r) => AssessmentCategory::fromArray($r), $rows);
+            }
+        }
+
+        // Fallback to global term default categories (academic_level_id IS NULL and class_subject_id IS NULL)
         $stmt = $this->pdo->prepare(
-            'SELECT * FROM `assessment_categories` 
-             WHERE `session_id` = :session_id AND `term_id` = :term_id AND `class_subject_id` IS NULL
-             ORDER BY `id` ASC'
+            'SELECT ac.*, al.name as academic_level_name FROM `assessment_categories` ac
+             LEFT JOIN `academic_levels` al ON al.id = ac.academic_level_id
+             WHERE ac.session_id = :session_id AND ac.term_id = :term_id 
+               AND ac.class_subject_id IS NULL AND ac.academic_level_id IS NULL
+             ORDER BY ac.id ASC'
         );
         $stmt->execute([
             ':session_id' => $sessionId,
@@ -62,12 +97,59 @@ final class GradebookRepository
         ]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        // If no global defaults, return any categories configured for this session/term
+        if (empty($rows)) {
+            $stmt = $this->pdo->prepare(
+                'SELECT ac.*, al.name as academic_level_name FROM `assessment_categories` ac
+                 LEFT JOIN `academic_levels` al ON al.id = ac.academic_level_id
+                 WHERE ac.session_id = :session_id AND ac.term_id = :term_id AND ac.class_subject_id IS NULL
+                 ORDER BY ac.id ASC'
+            );
+            $stmt->execute([
+                ':session_id' => $sessionId,
+                ':term_id' => $termId,
+            ]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        return array_map(fn (array $r) => AssessmentCategory::fromArray($r), $rows);
+    }
+
+    /**
+     * @return array<int, AssessmentCategory>
+     */
+    public function getAllCategories(int $sessionId, int $termId, ?int $academicLevelId = null): array
+    {
+        $sql = 'SELECT ac.*, al.name as academic_level_name FROM `assessment_categories` ac
+                LEFT JOIN `academic_levels` al ON al.id = ac.academic_level_id
+                WHERE ac.session_id = :session_id AND ac.term_id = :term_id AND ac.class_subject_id IS NULL';
+        
+        $params = [
+            ':session_id' => $sessionId,
+            ':term_id' => $termId,
+        ];
+
+        if ($academicLevelId !== null) {
+            $sql .= ' AND ac.academic_level_id = :academic_level_id';
+            $params[':academic_level_id'] = $academicLevelId;
+        }
+
+        $sql .= ' ORDER BY ac.academic_level_id ASC, ac.id ASC';
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
         return array_map(fn (array $r) => AssessmentCategory::fromArray($r), $rows);
     }
 
     public function findCategoryById(int $id): ?AssessmentCategory
     {
-        $stmt = $this->pdo->prepare('SELECT * FROM `assessment_categories` WHERE `id` = :id');
+        $stmt = $this->pdo->prepare(
+            'SELECT ac.*, al.name as academic_level_name FROM `assessment_categories` ac
+             LEFT JOIN `academic_levels` al ON al.id = ac.academic_level_id
+             WHERE ac.id = :id'
+        );
         $stmt->execute([':id' => $id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -81,13 +163,14 @@ final class GradebookRepository
     {
         $stmt = $this->pdo->prepare(
             'INSERT INTO `assessment_categories` 
-             (`session_id`, `term_id`, `class_subject_id`, `name`, `weight_percentage`, `max_points`) 
-             VALUES (:session_id, :term_id, :class_subject_id, :name, :weight_percentage, :max_points)'
+             (`session_id`, `term_id`, `class_subject_id`, `academic_level_id`, `name`, `weight_percentage`, `max_points`) 
+             VALUES (:session_id, :term_id, :class_subject_id, :academic_level_id, :name, :weight_percentage, :max_points)'
         );
         $stmt->execute([
             ':session_id' => $data['session_id'],
             ':term_id' => $data['term_id'],
             ':class_subject_id' => !empty($data['class_subject_id']) ? (int)$data['class_subject_id'] : null,
+            ':academic_level_id' => !empty($data['academic_level_id']) ? (int)$data['academic_level_id'] : null,
             ':name' => $data['name'],
             ':weight_percentage' => (float)$data['weight_percentage'],
             ':max_points' => (float)($data['max_points'] ?? 100.0),
@@ -103,7 +186,8 @@ final class GradebookRepository
     {
         $stmt = $this->pdo->prepare(
             'UPDATE `assessment_categories` 
-             SET `name` = :name, `weight_percentage` = :weight_percentage, `max_points` = :max_points 
+             SET `name` = :name, `weight_percentage` = :weight_percentage, `max_points` = :max_points,
+                 `academic_level_id` = :academic_level_id 
              WHERE `id` = :id'
         );
         return $stmt->execute([
@@ -111,11 +195,21 @@ final class GradebookRepository
             ':name' => $data['name'],
             ':weight_percentage' => (float)$data['weight_percentage'],
             ':max_points' => (float)($data['max_points'] ?? 100.0),
+            ':academic_level_id' => !empty($data['academic_level_id']) ? (int)$data['academic_level_id'] : null,
         ]);
     }
 
     public function deleteCategory(int $id): bool
     {
+        // Safe check for foreign key integrity
+        $countStmt = $this->pdo->prepare('SELECT COUNT(*) FROM `student_assessment_scores` WHERE `assessment_category_id` = :id');
+        $countStmt->execute([':id' => $id]);
+        $scoresCount = (int)$countStmt->fetchColumn();
+
+        if ($scoresCount > 0) {
+            throw new \RuntimeException("Cannot delete this assessment category because {$scoresCount} student assessment score(s) have already been recorded against it. You can edit its details instead.");
+        }
+
         $stmt = $this->pdo->prepare('DELETE FROM `assessment_categories` WHERE `id` = :id');
         return $stmt->execute([':id' => $id]);
     }

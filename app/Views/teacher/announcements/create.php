@@ -56,7 +56,7 @@
                             class="w-full rounded-xl border border-slate-300 text-xs focus:border-emerald-500 focus:ring-emerald-500 bg-slate-50 py-2.5 px-3 font-semibold text-slate-900 transition">
                         <?php foreach ($classes as $cls): ?>
                             <option value="<?= (int)$cls['id'] ?>" <?= (int)old('scope_id') === (int)$cls['id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($cls['name']) ?>
+                                <?= htmlspecialchars($cls['name']) ?><?= !empty($cls['section_arm']) && !str_ends_with(strtoupper($cls['name']), strtoupper(trim($cls['section_arm']))) ? ' (' . htmlspecialchars($cls['section_arm']) . ')' : '' ?>
                             </option>
                         <?php endforeach; ?>
                     </select>

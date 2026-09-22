@@ -12,7 +12,7 @@ foreach ($terms as $t) {
 
 $classOptions = [];
 foreach ($classes as $c) {
-    $classOptions[$c->id] = $c->name;
+    $classOptions[$c->id] = method_exists($c, 'getFullName') ? $c->getFullName() : ($c->name . (!empty($c->sectionArm) ? ' (' . $c->sectionArm . ')' : ''));
 }
 ?>
 
@@ -87,22 +87,54 @@ foreach ($classes as $c) {
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4
                         pb-4 border-b border-slate-200">
 
-                <div class="flex items-center gap-3">
-                    <span class="text-sm font-bold text-slate-700">Publication Status:</span>
-                    <?php if ($isPublished): ?>
-                        <?php $this->include('components/badge', [
-                            'label'   => 'Published to Students & Guardians',
-                            'variant' => 'success',
-                        ]); ?>
-                    <?php else: ?>
-                        <?php $this->include('components/badge', [
-                            'label'   => 'Unpublished — Draft Review',
-                            'variant' => 'warning',
-                        ]); ?>
-                    <?php endif; ?>
+                <div class="flex flex-wrap items-center gap-4">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Form Teacher Submission:</span>
+                        <?php if (isset($submission) && $submission && $submission->isApproved()): ?>
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                Approved
+                            </span>
+                        <?php elseif (isset($submission) && $submission && $submission->isSubmitted()): ?>
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                Submitted <?= !empty($submission->teacherName) ? 'by ' . e($submission->teacherName) : '' ?>
+                            </span>
+                        <?php else: ?>
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                Pending Submission
+                            </span>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Publication:</span>
+                        <?php if ($isPublished): ?>
+                            <?php $this->include('components/badge', [
+                                'label'   => 'Published',
+                                'variant' => 'success',
+                            ]); ?>
+                        <?php else: ?>
+                            <?php $this->include('components/badge', [
+                                'label'   => 'Unpublished (Draft)',
+                                'variant' => 'warning',
+                            ]); ?>
+                        <?php endif; ?>
+                    </div>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-3">
+                    <?php if (isset($submission) && $submission && $submission->isSubmitted()): ?>
+                        <form method="POST" action="/admin/results/approve-submission">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="term_id"  value="<?= e((string)$selectedTermId) ?>">
+                            <input type="hidden" name="class_id" value="<?= e((string)$selectedClassId) ?>">
+                            <?php $this->include('components/button', [
+                                'type'    => 'submit',
+                                'variant' => 'primary',
+                                'label'   => 'Approve Submission',
+                                'icon'    => '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>',
+                            ]); ?>
+                        </form>
+                    <?php endif; ?>
 
                     <!-- Recompute & Rank -->
                     <form method="POST" action="/admin/results/compute">

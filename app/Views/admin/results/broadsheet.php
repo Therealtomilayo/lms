@@ -129,6 +129,18 @@ foreach ($classes as $c) {
                                 Draft Review
                             </span>
                         <?php endif; ?>
+
+                        <?php if (isset($submission) && $submission && $submission->isApproved()): ?>
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                Submission Approved
+                            </span>
+                        <?php elseif (isset($submission) && $submission && $submission->isSubmitted()): ?>
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                Form Teacher Submitted
+                            </span>
+                        <?php endif; ?>
                     </div>
 
                     <div class="flex flex-wrap items-center gap-4 text-xs sm:text-sm text-slate-500">

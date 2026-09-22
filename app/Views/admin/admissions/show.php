@@ -379,7 +379,7 @@ $this->layout('layouts/admin', [
                                         <option value="">-- Optional: Assign Later --</option>
                                         <?php foreach ($classes as $c): ?>
                                             <option value="<?= $c->id ?>">
-                                                <?= htmlspecialchars($c->name, ENT_QUOTES, 'UTF-8') ?> (<?= htmlspecialchars($c->academicLevel->name ?? 'Level', ENT_QUOTES, 'UTF-8') ?>)
+                                                <?= htmlspecialchars($c->getFullName(), ENT_QUOTES, 'UTF-8') ?> (<?= htmlspecialchars($c->academicLevel->name ?? 'Level', ENT_QUOTES, 'UTF-8') ?>)
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
@@ -419,14 +419,22 @@ $this->layout('layouts/admin', [
                         </details>
                     </div>
                 <?php elseif ($application->status === 'approved'): ?>
-                    <div class="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs space-y-2">
-                        <div class="flex items-center gap-1.5 font-bold">
-                            <i data-lucide="check" class="w-4 h-4 text-emerald-600"></i>
-                            Docket Finalized
+                    <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs space-y-3">
+                        <div class="flex items-center gap-2 font-bold text-sm text-emerald-800">
+                            <i data-lucide="check-circle" class="w-5 h-5 text-emerald-600"></i>
+                            Docket Approved &amp; Matriculated
                         </div>
-                        <p class="text-[11px] leading-relaxed text-emerald-700">
-                            This application has been completed. Prospective students have been converted and enrolled.
+                        <p class="text-xs leading-relaxed text-emerald-800">
+                            Prospective student(s) have been matriculated and automatically enrolled in all curriculum subjects for their assigned class and arm.
                         </p>
+                        <div class="p-3 rounded-xl bg-white border border-emerald-200/80 space-y-1.5 text-slate-700">
+                            <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Student Access Credentials</div>
+                            <div class="text-xs">
+                                <span class="text-slate-500 font-medium">Default Password:</span>
+                                <code class="font-mono font-bold text-brand-700 bg-brand-50 px-1.5 py-0.5 rounded">Claret@<?= date('Y') ?>!</code>
+                            </div>
+                            <p class="text-[11px] text-slate-500">Students can log in via <a href="/login" class="text-brand-600 underline font-semibold" target="_blank">/login</a> using either their <strong>Admission Number</strong> (STD-xxxxx) or their institutional email.</p>
+                        </div>
                     </div>
                 <?php endif; ?>
             </div>

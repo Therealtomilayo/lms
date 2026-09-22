@@ -82,19 +82,24 @@ class AttendanceController extends Controller
         ], 'layouts/admin'));
     }
 
-    public function update(Request $request): Response
+    public function update(Request $request, array|string|int|null $classId = null, array|string|null $date = null): Response
     {
         $user = $this->getUserContext($request);
         if (!$user) {
             return Response::redirect('/login');
         }
 
-        $classId = (int)$request->getRouteParam('classId', 0);
-        $date = (string)$request->getRouteParam('date', date('Y-m-d'));
+        $cId = is_array($classId) ? (int)($classId['classId'] ?? $classId['id'] ?? 0) : (int)($classId ?? $request->getRouteParam('classId', 0));
+        $markingDate = is_string($date) && !empty($date) ? $date : (string)$request->getRouteParam('date', date('Y-m-d'));
         $classSubjectId = $request->getBodyParam('class_subject_id') ? (int)$request->getBodyParam('class_subject_id') : null;
         $periodNumber = $request->getBodyParam('period_number') ? (int)$request->getBodyParam('period_number') : null;
         $statuses = (array)$request->getBodyParam('status', []);
-        $correctionReason = (string)$request->getBodyParam('correction_reason', '');
+        $correctionReason = trim((string)$request->getBodyParam('correction_reason', ''));
+
+        if (empty($correctionReason)) {
+            $this->setFlash($request, 'error', 'Audit justification is strictly mandatory for administrative attendance modifications.');
+            return Response::redirect("/admin/attendance/{$cId}/{$markingDate}/edit");
+        }
 
         $records = [];
         foreach ($statuses as $studentId => $status) {
@@ -106,8 +111,8 @@ class AttendanceController extends Controller
 
         try {
             $this->attendanceService->recordRoster(
-                classId: $classId,
-                date: $date,
+                classId: $cId,
+                date: $markingDate,
                 classSubjectId: $classSubjectId,
                 periodNumber: $periodNumber,
                 records: $records,
@@ -115,11 +120,11 @@ class AttendanceController extends Controller
                 correctionReason: $correctionReason
             );
 
-            $this->setFlash($request, 'success', 'Attendance records updated successfully with audit trail.');
-            return Response::redirect("/admin/attendance/{$classId}/{$date}/edit");
+            $this->setFlash($request, 'success', 'Attendance records updated successfully with permanent audit trail.');
+            return Response::redirect("/admin/attendance/{$cId}/{$markingDate}/edit");
         } catch (ValidationException $e) {
             $this->setFlash($request, 'error', implode(' ', $e->getErrors()));
-            return Response::redirect("/admin/attendance/{$classId}/{$date}/edit");
+            return Response::redirect("/admin/attendance/{$cId}/{$markingDate}/edit");
         } catch (AuthorizationException $e) {
             return Response::forbidden($e->getMessage());
         }

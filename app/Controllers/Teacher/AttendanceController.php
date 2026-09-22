@@ -54,22 +54,71 @@ class AttendanceController extends Controller
             ? $this->teacherRepo->getTeachingAllocations($teacherId, $currentSession->id)
             : [];
 
-        // Collect distinct classes
-        $classes = [];
+        // Form classes: classes where teacher is the designated Form Teacher
+        $formClasses = $teacherId > 0 ? $this->academicRepo->getClassesByFormTeacherId($teacherId) : [];
+        if ($userContext->isAdmin() && empty($formClasses)) {
+            $formClasses = $this->academicRepo->getAllClasses();
+        }
+
+        $homeroomClasses = [];
+        $isDesignatedFormTeacher = !empty($formClasses);
+
+        if (!empty($formClasses)) {
+            foreach ($formClasses as $fc) {
+                $homeroomClasses[] = [
+                    'id' => $fc->id,
+                    'name' => $fc->name,
+                    'full_name' => $fc->getFullName(),
+                    'section_arm' => $fc->sectionArm ?? '',
+                    'level_name' => $fc->academicLevel?->name ?? 'Class',
+                    'is_form_teacher' => true,
+                ];
+            }
+        } else {
+            // Fallback for teachers without form class assignment
+            $seenCids = [];
+            foreach ($allocations as $alloc) {
+                $cid = (int)$alloc['class_id'];
+                if (!isset($seenCids[$cid])) {
+                    $seenCids[$cid] = true;
+                    $arm = trim((string)($alloc['section_arm'] ?? ''));
+                    $cName = (string)$alloc['class_name'];
+                    $fullName = (!empty($arm) && !str_ends_with($cName, "({$arm})") && !str_ends_with($cName, " {$arm}"))
+                        ? "{$cName} ({$arm})"
+                        : $cName;
+
+                    $homeroomClasses[] = [
+                        'id' => $cid,
+                        'name' => $cName,
+                        'full_name' => $fullName,
+                        'section_arm' => $arm,
+                        'level_name' => $alloc['academic_level_name'] ?? 'Class',
+                        'is_form_teacher' => false,
+                    ];
+                }
+            }
+        }
+
+        // Format subject allocations with full class name including arm
+        $formattedAllocations = [];
         foreach ($allocations as $alloc) {
-            $classes[$alloc['class_id']] = [
-                'id' => $alloc['class_id'],
-                'name' => $alloc['class_name'],
-                'level_name' => $alloc['academic_level_name'] ?? '',
-            ];
+            $arm = trim((string)($alloc['section_arm'] ?? ''));
+            $cName = (string)$alloc['class_name'];
+            $fullClassName = (!empty($arm) && !str_ends_with($cName, "({$arm})") && !str_ends_with($cName, " {$arm}"))
+                ? "{$cName} ({$arm})"
+                : $cName;
+
+            $alloc['full_class_name'] = $fullClassName;
+            $formattedAllocations[] = $alloc;
         }
 
         return Response::html($this->render('teacher/attendance/index', [
             'title' => 'Attendance Management — Faculty Portal',
             'headerTitle' => 'Daily & Subject Attendance Register',
             'user' => $userContext,
-            'classes' => array_values($classes),
-            'allocations' => $allocations,
+            'classes' => $homeroomClasses,
+            'allocations' => $formattedAllocations,
+            'isDesignatedFormTeacher' => $isDesignatedFormTeacher,
             'currentSession' => $currentSession,
             'today' => date('Y-m-d'),
         ], 'layouts/teacher'));

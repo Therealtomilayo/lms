@@ -211,6 +211,66 @@ class AttendanceService
         } else {
             Database::transaction($executeSave);
         }
+
+        // Dispatch external absence alert notifications for homeroom morning roll-call
+        if ($classSubjectId === null) {
+            $this->dispatchAbsenceAlerts($classId, $date, $records, $correctionReason);
+        }
+    }
+
+    /**
+     * Dispatch multi-channel absence alerts (SMS + Email) to guardians of absent students
+     */
+    private function dispatchAbsenceAlerts(int $classId, string $date, array $records, ?string $remarks = null): void
+    {
+        try {
+            $class = $this->academicRepo->findClassById($classId);
+            $className = $class ? $class->getFullName() : "Class #{$classId}";
+
+            $parentRepo = new \App\Repositories\ParentRepository($this->db);
+            $studentRepo = new \App\Repositories\StudentRepository($this->db);
+            $notificationService = new \App\Services\NotificationService();
+
+            foreach ($records as $record) {
+                if (($record['status'] ?? '') !== 'absent') {
+                    continue;
+                }
+                $studentId = (int)($record['student_id'] ?? 0);
+                if (!$studentId) {
+                    continue;
+                }
+
+                $student = $studentRepo->findById($studentId);
+                if (!$student) {
+                    continue;
+                }
+
+                $studentName = $student->user?->name ?? "Student #{$studentId}";
+                $admissionNumber = $student->admissionNumber ?? (string)$studentId;
+
+                $guardians = $parentRepo->getGuardiansForStudent($studentId);
+                foreach ($guardians as $guardian) {
+                    $phone = $guardian->phone ?? $guardian->user?->phone;
+                    $email = $guardian->email ?? $guardian->user?->email;
+                    if (empty($phone) && empty($email)) {
+                        continue;
+                    }
+
+                    $notificationService->sendAbsenceAlert(
+                        parentPhone: $phone,
+                        parentEmail: $email,
+                        studentName: $studentName,
+                        admissionNumber: $admissionNumber,
+                        className: $className,
+                        date: $date,
+                        remarks: $remarks,
+                        userId: $guardian->userId
+                    );
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log("Failed to dispatch absence alerts: " . $e->getMessage());
+        }
     }
 
     /**

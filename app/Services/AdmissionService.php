@@ -27,6 +27,7 @@ class AdmissionService
     private AcademicRepository $academicRepo;
     private \App\Repositories\StudentRepository $studentRepo;
     private \App\Repositories\ParentRepository $parentRepo;
+    private EnrollmentService $enrollmentService;
     private \PDO $pdo;
 
     public function __construct(
@@ -35,13 +36,15 @@ class AdmissionService
         ?AcademicRepository $academicRepo = null,
         ?\App\Repositories\StudentRepository $studentRepo = null,
         ?\App\Repositories\ParentRepository $parentRepo = null,
-        ?\PDO $pdo = null
+        ?\PDO $pdo = null,
+        ?EnrollmentService $enrollmentService = null
     ) {
         $this->admissionRepo = $admissionRepo ?? new AdmissionRepository();
         $this->userRepo = $userRepo ?? new UserRepository();
         $this->academicRepo = $academicRepo ?? new AcademicRepository();
         $this->studentRepo = $studentRepo ?? new \App\Repositories\StudentRepository();
         $this->parentRepo = $parentRepo ?? new \App\Repositories\ParentRepository();
+        $this->enrollmentService = $enrollmentService ?? new EnrollmentService();
         $this->pdo = $pdo ?? Database::getInstance();
     }
 
@@ -810,6 +813,8 @@ class AdmissionService
                 ], ['student']);
 
                 $classId = !empty($wardClassAllocations[$ward->id]) ? (int)$wardClassAllocations[$ward->id] : null;
+                $assignedClass = $classId ? $this->academicRepo->findClassById($classId) : null;
+                $className = $assignedClass ? $assignedClass->getFullName() : 'Assigned Class';
 
                 // Create student profile
                 $student = $this->studentRepo->create(
@@ -823,14 +828,25 @@ class AdmissionService
                 // Link parent and student
                 $this->parentRepo->linkStudent($parent->id, $student->id, 'Parent');
 
-                // Enroll student into active class enrollment if allocated to a class
+                // Enroll student into active class enrollment & auto-enroll subjects for that class/arm
                 if ($classId) {
                     $admissionSession = $this->admissionRepo->findSessionById($app->sessionId);
-                    if ($admissionSession && !empty($admissionSession->academicSessionId)) {
-                        $this->pdo->prepare('INSERT INTO `class_enrollments` (`student_id`, `class_id`, `session_id`, `status`, `enrolled_at`, `created_at`, `updated_at`)
-                            VALUES (?, ?, ?, "active", NOW(), NOW(), NOW())
-                            ON DUPLICATE KEY UPDATE `class_id` = VALUES(`class_id`), `status` = "active"')
-                            ->execute([$student->id, $classId, $admissionSession->academicSessionId]);
+                    $academicSessionId = $admissionSession?->academicSessionId ?? $this->academicRepo->findActiveSession()?->id;
+                    if ($academicSessionId) {
+                        try {
+                            $this->enrollmentService->enrollStudentInClass(
+                                studentId: $student->id,
+                                classId: $classId,
+                                sessionId: (int)$academicSessionId,
+                                status: \App\Models\ClassEnrollment::STATUS_ACTIVE,
+                                autoEnrollSubjects: true
+                            );
+                        } catch (\Throwable $e) {
+                            $this->pdo->prepare('INSERT INTO `class_enrollments` (`student_id`, `class_id`, `session_id`, `status`, `enrolled_at`, `created_at`, `updated_at`)
+                                VALUES (?, ?, ?, "active", NOW(), NOW(), NOW())
+                                ON DUPLICATE KEY UPDATE `class_id` = VALUES(`class_id`), `status` = "active"')
+                                ->execute([$student->id, $classId, $academicSessionId]);
+                        }
                     }
                 }
 
@@ -843,6 +859,8 @@ class AdmissionService
                     'admission_number' => $admNumber,
                     'student_id' => $student->id,
                     'student_email' => $studentEmail,
+                    'default_password' => $defaultPassword,
+                    'class_name' => $className,
                 ];
             }
 

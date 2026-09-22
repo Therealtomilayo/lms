@@ -185,6 +185,7 @@ final class AdminGradebookIntegrationTest extends TestCase
                 `session_id` INTEGER NOT NULL,
                 `term_id` INTEGER NOT NULL,
                 `class_subject_id` INTEGER NULL,
+                `academic_level_id` INTEGER NULL,
                 `name` VARCHAR(50) NOT NULL,
                 `weight_percentage` REAL NOT NULL,
                 `max_points` REAL NOT NULL DEFAULT 100.0

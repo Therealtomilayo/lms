@@ -97,7 +97,7 @@ class LiveClassController extends Controller
      * Join a live class session, log attendance, and redirect to external video meeting.
      * Route: GET /student/live-classes/{id}/join
      */
-    public function join(Request $request, array|string|int $id = null): Response
+    public function join(Request $request, array|string|int|null $id = null): Response
     {
         $userContext = $this->requireAuthContext($request);
         $liveClassId = is_array($id) ? (int)($id['id'] ?? 0) : (int)($id ?: ($request->getAttribute('id') ?? 0));

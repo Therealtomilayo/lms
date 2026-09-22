@@ -49,6 +49,31 @@ final class SchoolClass
         return $this->status === self::STATUS_ACTIVE;
     }
 
+    public function getFullName(): string
+    {
+        if (!empty($this->sectionArm)) {
+            $arm = trim($this->sectionArm);
+            if (str_ends_with(strtoupper($this->name), strtoupper($arm))) {
+                return $this->name;
+            }
+            return $this->name . ' (' . $arm . ')';
+        }
+        return $this->name;
+    }
+
+    public function getDisplayName(): string
+    {
+        return $this->getFullName();
+    }
+
+    public function __get(string $name): mixed
+    {
+        if ($name === 'fullName' || $name === 'full_name' || $name === 'displayName') {
+            return $this->getFullName();
+        }
+        return null;
+    }
+
     public function toArray(): array
     {
         return [
@@ -56,6 +81,7 @@ final class SchoolClass
             'academic_level_id' => $this->academicLevelId,
             'name' => $this->name,
             'section_arm' => $this->sectionArm,
+            'full_name' => $this->getFullName(),
             'status' => $this->status,
             'form_teacher_id' => $this->formTeacherId,
             'form_teacher_name' => $this->formTeacherName,
@@ -65,3 +91,4 @@ final class SchoolClass
         ];
     }
 }
+
