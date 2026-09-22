@@ -41,6 +41,10 @@ class Router
     {
         return $this->addRoute('DELETE', $path, $action, $middleware, $name);
     }
+    public function options(string $path, callable|array|string $action, array $middleware = [], ?string $name = null): self
+    {
+        return $this->addRoute('OPTIONS', $path, $action, $middleware, $name);
+    }
 
     public function group(array $attributes, callable $callback): void
     {

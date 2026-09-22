@@ -46,4 +46,5 @@ node_modules/
 # Scratch & Debug Files
 /scratch/
 /claret-samples/
+/database/*_lms.sql
 
