@@ -31,15 +31,28 @@ $sessionTitle = strtoupper($session->name ?? '2025/2026') . ' ACADEMIC SESSION';
 
     <!-- Header & Brand Crest -->
     <div class="relative z-10 pt-10 px-12 text-center">
+        <?php
+        $rawSchoolName = trim($school['name'] ?? 'Claret International School');
+        $words = preg_split('/\s+/', $rawSchoolName);
+        if (count($words) > 1) {
+            $primaryBrand = strtoupper($words[0]);
+            $subBrand = strtoupper(implode(' ', array_slice($words, 1)));
+        } else {
+            $primaryBrand = strtoupper($rawSchoolName);
+            $subBrand = '';
+        }
+        ?>
         <div class="flex items-center justify-center gap-6 mb-2">
             <img src="<?= htmlspecialchars(!empty($school['logo']) ? $school['logo'] : '/assets/img/logo.png') ?>" alt="Claret Crest" class="h-24 w-auto object-contain drop-shadow-sm">
             <div class="text-left">
                 <h1 class="text-6xl sm:text-7xl font-black tracking-tight text-[#0C9DD5] font-sans leading-none">
-                    CLARET
+                    <?= htmlspecialchars($primaryBrand) ?>
                 </h1>
-                <p class="text-xl sm:text-2xl font-black tracking-wider text-slate-900 uppercase font-sans mt-1">
-                    <?= htmlspecialchars(strtoupper($school['name'] ?? 'INTERNATIONAL SCHOOL')) ?>
-                </p>
+                <?php if (!empty($subBrand)): ?>
+                    <p class="text-xl sm:text-2xl font-black tracking-wider text-slate-900 uppercase font-sans mt-1">
+                        <?= htmlspecialchars($subBrand) ?>
+                    </p>
+                <?php endif; ?>
                 <div class="flex items-center gap-3 text-base sm:text-lg font-serif italic text-slate-700 mt-1">
                     <span class="text-amber-800">Crèche</span>
                     <span class="font-sans not-italic font-extrabold uppercase text-amber-600 tracking-wider text-sm">NURSERY</span>
