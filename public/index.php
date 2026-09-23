@@ -203,6 +203,10 @@ try {
     $router->post('/admin/imports/{id}/commit', [\App\Controllers\Admin\ImportController::class, 'commit'], $adminFormAuth);
     $router->get('/admin/imports/{id}/errors.csv', [\App\Controllers\Admin\ImportController::class, 'downloadErrors'], $adminAuth);
 
+    // Admin Institutional Settings & Identity Configuration
+    $router->get('/admin/settings', [\App\Controllers\Admin\SettingsController::class, 'index'], $adminAuth);
+    $router->post('/admin/settings', [\App\Controllers\Admin\SettingsController::class, 'update'], $adminFormAuth);
+
     // Admin Grading Scales, Assessment Categories & Result Publication Routes
     $router->get('/admin/grading-scales', [\App\Controllers\Admin\GradingScaleController::class, 'index'], $adminAuth);
     $router->post('/admin/grading-scales', [\App\Controllers\Admin\GradingScaleController::class, 'store'], $adminFormAuth);

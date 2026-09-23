@@ -81,10 +81,15 @@ class ReportCardService
         $school = [
             'name' => $settings['school_name'] ?? 'Claret International School',
             'motto' => $settings['school_motto'] ?? 'Discipline, Integrity & Ardour',
-            'address' => $settings['school_address'] ?? 'Plot 700, Gitto Street, Mabushi, Mabushi, Abuja, Federal Capital Territory, 900104, Nigeria',
+            'address' => $settings['school_address'] ?? 'Plot 700, Gitto Street, Mabushi, Abuja, Federal Capital Territory, 900104, Nigeria',
             'phone' => $settings['school_phone'] ?? '+234 803 788 1737',
             'email' => $settings['school_email'] ?? 'info@claret.edu',
-            'logo' => '/assets/img/logo.png',
+            'website' => $settings['school_website'] ?? 'https://claret.edu',
+            'logo' => !empty($settings['school_logo_url']) ? $settings['school_logo_url'] : '/assets/img/logo.png',
+            'head_teacher_name' => $settings['head_teacher_name'] ?? 'Mrs. Cynthia Rowland',
+            'head_teacher_title' => $settings['head_teacher_title'] ?? 'Head of School',
+            'head_teacher_signature_url' => $settings['head_teacher_signature_url'] ?? '',
+            'school_stamp_url' => $settings['school_stamp_url'] ?? '',
         ];
 
         // Class Cohort Benchmark Analytics
@@ -133,20 +138,40 @@ class ReportCardService
             $cumulativeSummaries[$st->id] = $this->gradebookRepo->findStudentTermSummary($studentId, $st->id);
         }
 
-        // Form Teacher Name
-        $formTeacher = 'Subject Teacher';
+        // Form Teacher Resolution
+        $formTeacher = null;
         if ($class && !empty($class->formTeacherName)) {
-            $formTeacher = $class->formTeacherName;
+            $formTeacher = (object)[
+                'name' => $class->formTeacherName,
+                'staffId' => $class->formTeacherStaffId ?? '',
+            ];
+        } elseif ($class && !empty($class->formTeacherId)) {
+            $t = $this->teacherRepo->findTeacherById((int)$class->formTeacherId);
+            if ($t) {
+                $formTeacher = (object)[
+                    'name' => $t->userName ?: ($t->name ?: 'Form Teacher'),
+                    'staffId' => $t->staffId ?? '',
+                ];
+            }
         } elseif (!empty($subjectResults)) {
             foreach ($subjectResults as $res) {
                 if ($res->classSubject && $res->classSubject->teacherId) {
                     $t = $this->teacherRepo->findTeacherById($res->classSubject->teacherId);
                     if ($t) {
-                        $formTeacher = $t->userName ?: $t->name;
+                        $formTeacher = (object)[
+                            'name' => $t->userName ?: ($t->name ?: 'Class Teacher'),
+                            'staffId' => $t->staffId ?? '',
+                        ];
                         break;
                     }
                 }
             }
+        }
+        if (!$formTeacher) {
+            $formTeacher = (object)[
+                'name' => 'Class Teacher',
+                'staffId' => '',
+            ];
         }
 
         // Fetch Behavioral & Psychomotor Skills
@@ -453,6 +478,14 @@ class ReportCardService
         $chartSvgLine = $this->generateSubjectComparisonSvg($chartItems);
         $chartSvgDoughnut = $this->generateSubjectDoughnutSvg($chartItems);
 
+        // Aggregate calculations matching DOCX and PDF terminal summaries
+        $expectedScore = count($subjectAnalytics) * 100;
+        $totalObtained = 0.0;
+        foreach ($subjectAnalytics as $sa) {
+            $totalObtained += (float)($sa['pupil_score'] ?? 0);
+        }
+        $pupilAverage = count($subjectAnalytics) > 0 ? round($totalObtained / count($subjectAnalytics), 1) : (float)($summary?->averageScore ?? 0.0);
+
         return [
             'student' => $student,
             'class' => $class,
@@ -478,6 +511,10 @@ class ReportCardService
             'form_teacher' => $formTeacher,
             'psychomotor_ratings' => $psychomotorRatings,
             'affective_ratings' => $affectiveRatings,
+            'is_final_term' => $isFinalTerm,
+            'expected_score' => $expectedScore,
+            'total_obtained' => $totalObtained,
+            'pupil_average' => $pupilAverage,
             'is_promotion_visible' => $isPromotionVisible,
             'promotion_data' => $promotionData,
             'generated_at' => date('Y-m-d H:i:s'),

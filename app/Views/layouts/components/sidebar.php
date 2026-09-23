@@ -201,6 +201,7 @@ $navConfig = [
         ['label' => 'Student Invoices', 'route' => '/admin/fees/invoices', 'icon' => 'document-text'],
         ['label' => 'Payments & Revenue', 'route' => '/admin/payments', 'icon' => 'chart'],
         ['category' => 'System & Security'],
+        ['label' => 'School Settings', 'route' => '/admin/settings', 'icon' => 'academic'],
         ['label' => 'System Health', 'route' => '/admin/health', 'icon' => 'shield'],
         ['label' => 'Database Backups', 'route' => '/admin/backups', 'icon' => 'database'],
         ['label' => 'Audit Trail', 'route' => '/admin/audit-logs', 'icon' => 'audit'],

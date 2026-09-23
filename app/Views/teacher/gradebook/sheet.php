@@ -214,5 +214,47 @@
                 </div>
             <?php endif; ?>
         </form>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const form = document.getElementById('gradebook-form');
+                if (!form) return;
+
+                function recalculateRow(row) {
+                    const inputs = row.querySelectorAll('input[type="number"][data-max]');
+                    let total = 0;
+                    let hasInput = false;
+
+                    inputs.forEach(input => {
+                        const maxVal = parseFloat(input.dataset.max) || 100;
+                        let val = parseFloat(input.value);
+
+                        if (!isNaN(val)) {
+                            hasInput = true;
+                            if (val > maxVal) {
+                                input.classList.add('border-red-500', 'bg-red-50', 'text-red-700');
+                                input.title = 'Score cannot exceed ' + maxVal + ' PTS';
+                            } else {
+                                input.classList.remove('border-red-500', 'bg-red-50', 'text-red-700');
+                                input.removeAttribute('title');
+                            }
+                            total += Math.min(val, maxVal);
+                        }
+                    });
+
+                    const totalCell = row.querySelector('td:nth-last-child(2) span');
+                    if (totalCell && hasInput) {
+                        totalCell.textContent = total.toFixed(2);
+                    }
+                }
+
+                form.addEventListener('input', function(e) {
+                    if (e.target.matches('input[type="number"][data-max]')) {
+                        const row = e.target.closest('tr');
+                        if (row) recalculateRow(row);
+                    }
+                });
+            });
+        </script>
     <?php endif; ?>
 </div>

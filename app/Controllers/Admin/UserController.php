@@ -138,6 +138,11 @@ class UserController extends Controller
                 'date_of_birth' => $request->post('date_of_birth'),
                 'gender' => $request->post('gender'),
                 'current_class_id' => $request->post('current_class_id'),
+                'state_of_origin' => $request->post('state_of_origin'),
+                'lga' => $request->post('lga'),
+                'nationality' => $request->post('nationality') ?: 'Nigerian',
+                'religion' => $request->post('religion'),
+                'admission_date' => $request->post('admission_date'),
             ], $userContext);
 
             $createdUser = $result->data;
@@ -241,6 +246,11 @@ class UserController extends Controller
                 'admission_number' => $request->post('admission_number'),
                 'staff_id' => $request->post('staff_id'),
                 'date_of_birth' => $request->post('date_of_birth'),
+                'state_of_origin' => $request->post('state_of_origin'),
+                'lga' => $request->post('lga'),
+                'nationality' => $request->post('nationality') ?: 'Nigerian',
+                'religion' => $request->post('religion'),
+                'admission_date' => $request->post('admission_date'),
             ];
 
             if ($roles !== null) {

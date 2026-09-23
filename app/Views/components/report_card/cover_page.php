@@ -32,13 +32,13 @@ $sessionTitle = strtoupper($session->name ?? '2025/2026') . ' ACADEMIC SESSION';
     <!-- Header & Brand Crest -->
     <div class="relative z-10 pt-10 px-12 text-center">
         <div class="flex items-center justify-center gap-6 mb-2">
-            <img src="/assets/img/logo.png" alt="Claret Crest" class="h-24 w-auto object-contain drop-shadow-sm">
+            <img src="<?= htmlspecialchars(!empty($school['logo']) ? $school['logo'] : '/assets/img/logo.png') ?>" alt="Claret Crest" class="h-24 w-auto object-contain drop-shadow-sm">
             <div class="text-left">
                 <h1 class="text-6xl sm:text-7xl font-black tracking-tight text-[#0C9DD5] font-sans leading-none">
                     CLARET
                 </h1>
                 <p class="text-xl sm:text-2xl font-black tracking-wider text-slate-900 uppercase font-sans mt-1">
-                    INTERNATIONAL SCHOOL
+                    <?= htmlspecialchars(strtoupper($school['name'] ?? 'INTERNATIONAL SCHOOL')) ?>
                 </p>
                 <div class="flex items-center gap-3 text-base sm:text-lg font-serif italic text-slate-700 mt-1">
                     <span class="text-amber-800">Crèche</span>
@@ -79,7 +79,7 @@ $sessionTitle = strtoupper($session->name ?? '2025/2026') . ' ACADEMIC SESSION';
                          class="h-56 w-44 object-cover rounded">
                 <?php else: ?>
                     <div class="h-56 w-44 bg-slate-100 flex flex-col items-center justify-center rounded border border-slate-200">
-                        <img src="/assets/img/logo.png" alt="Claret Logo" class="h-20 w-20 object-contain opacity-40 mb-2">
+                        <img src="<?= htmlspecialchars(!empty($school['logo']) ? $school['logo'] : '/assets/img/logo.png') ?>" alt="Claret Logo" class="h-20 w-20 object-contain opacity-40 mb-2">
                         <span class="text-xs font-bold text-slate-600 px-2 text-center"><?= $studentName ?></span>
                     </div>
                 <?php endif; ?>
@@ -103,13 +103,17 @@ $sessionTitle = strtoupper($session->name ?? '2025/2026') . ' ACADEMIC SESSION';
         </div>
 
         <h4 class="text-base font-black tracking-wider text-slate-900 uppercase">
-            CLARET INTERNATIONAL SCHOOL
+            <?= htmlspecialchars(strtoupper($school['name'] ?? 'CLARET INTERNATIONAL SCHOOL')) ?>
         </h4>
         <p class="text-xs font-medium text-slate-600 mt-1">
-            Claret House, Plot 700 Gitto Street, After Zeus Paradise Hotel & Mall, Mabushi Abuja, Nigeria.
+            <?= htmlspecialchars($school['address'] ?? 'Plot 700 Gitto Street, Mabushi, Abuja, Nigeria.') ?>
         </p>
         <p class="text-[11px] font-semibold text-slate-700 mt-1 tracking-tight">
-            Tel: +234(0)8123574983 &bull; E-mail: claretschs@gmail.com &bull; Website: www.claretschools.org
+            Tel: <?= htmlspecialchars($school['phone'] ?? '+234 803 788 1737') ?> &bull; 
+            E-mail: <?= htmlspecialchars($school['email'] ?? 'info@claret.edu') ?>
+            <?php if (!empty($school['website'])): ?>
+                &bull; Website: <?= htmlspecialchars($school['website']) ?>
+            <?php endif; ?>
         </p>
     </div>
 </div>

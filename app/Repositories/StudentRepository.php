@@ -85,19 +85,56 @@ class StudentRepository
         return Student::fromArray($row);
     }
 
+    private ?array $studentColumns = null;
+
+    private function getStudentColumns(): array
+    {
+        if ($this->studentColumns !== null) {
+            return $this->studentColumns;
+        }
+
+        $cols = [];
+        try {
+            $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+            if ($driver === 'sqlite') {
+                $stmt = $this->pdo->query("PRAGMA table_info(`students`)");
+                if ($stmt) {
+                    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                        $cols[] = $row['name'];
+                    }
+                }
+            } else {
+                $stmt = $this->pdo->query("SHOW COLUMNS FROM `students`");
+                if ($stmt) {
+                    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                        $cols[] = $row['Field'];
+                    }
+                }
+            }
+        } catch (\Throwable) {
+        }
+
+        return $this->studentColumns = $cols;
+    }
+
     public function create(
         int $userId,
         string $admissionNumber,
         ?string $dateOfBirth = null,
         ?string $gender = null,
-        ?int $currentClassId = null
+        ?int $currentClassId = null,
+        ?string $stateOfOrigin = null,
+        ?string $lga = null,
+        string $nationality = 'Nigerian',
+        ?string $religion = null,
+        ?string $admissionDate = null
     ): Student {
         $now = date('Y-m-d H:i:s');
-        $sql = 'INSERT INTO `students` (`user_id`, `admission_number`, `date_of_birth`, `gender`, `current_class_id`, `created_at`, `updated_at`)
-                VALUES (:user_id, :admission_number, :date_of_birth, :gender, :current_class_id, :created_at, :updated_at)';
+        $available = $this->getStudentColumns();
 
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([
+        $cols = ['`user_id`', '`admission_number`', '`date_of_birth`', '`gender`', '`current_class_id`', '`created_at`', '`updated_at`'];
+        $placeholders = [':user_id', ':admission_number', ':date_of_birth', ':gender', ':current_class_id', ':created_at', ':updated_at'];
+        $params = [
             ':user_id' => $userId,
             ':admission_number' => trim($admissionNumber),
             ':date_of_birth' => $dateOfBirth ?: null,
@@ -105,7 +142,27 @@ class StudentRepository
             ':current_class_id' => $currentClassId ?: null,
             ':created_at' => $now,
             ':updated_at' => $now,
-        ]);
+        ];
+
+        $optionals = [
+            'state_of_origin' => $stateOfOrigin ?: null,
+            'lga' => $lga ?: null,
+            'nationality' => $nationality ?: 'Nigerian',
+            'religion' => $religion ?: null,
+            'admission_date' => $admissionDate ?: null,
+        ];
+
+        foreach ($optionals as $colName => $colVal) {
+            if (empty($available) || in_array($colName, $available, true)) {
+                $cols[] = "`{$colName}`";
+                $placeholders[] = ":{$colName}";
+                $params[":{$colName}"] = $colVal;
+            }
+        }
+
+        $sql = 'INSERT INTO `students` (' . implode(', ', $cols) . ') VALUES (' . implode(', ', $placeholders) . ')';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
 
         $studentId = (int)$this->pdo->lastInsertId();
 
@@ -117,9 +174,15 @@ class StudentRepository
         ?string $admissionNumber = null,
         ?string $dateOfBirth = null,
         ?string $gender = null,
-        ?int $currentClassId = null
+        ?int $currentClassId = null,
+        ?string $stateOfOrigin = null,
+        ?string $lga = null,
+        ?string $nationality = null,
+        ?string $religion = null,
+        ?string $admissionDate = null
     ): bool {
         $now = date('Y-m-d H:i:s');
+        $available = $this->getStudentColumns();
         $fields = ['`updated_at` = :updated_at'];
         $params = [
             ':id' => $studentId,
@@ -137,6 +200,26 @@ class StudentRepository
         if ($gender !== null) {
             $fields[] = '`gender` = :gender';
             $params[':gender'] = $gender ?: null;
+        }
+        if ($stateOfOrigin !== null && (empty($available) || in_array('state_of_origin', $available, true))) {
+            $fields[] = '`state_of_origin` = :state_of_origin';
+            $params[':state_of_origin'] = $stateOfOrigin ?: null;
+        }
+        if ($lga !== null && (empty($available) || in_array('lga', $available, true))) {
+            $fields[] = '`lga` = :lga';
+            $params[':lga'] = $lga ?: null;
+        }
+        if ($nationality !== null && (empty($available) || in_array('nationality', $available, true))) {
+            $fields[] = '`nationality` = :nationality';
+            $params[':nationality'] = $nationality ?: 'Nigerian';
+        }
+        if ($religion !== null && (empty($available) || in_array('religion', $available, true))) {
+            $fields[] = '`religion` = :religion';
+            $params[':religion'] = $religion ?: null;
+        }
+        if ($admissionDate !== null && (empty($available) || in_array('admission_date', $available, true))) {
+            $fields[] = '`admission_date` = :admission_date';
+            $params[':admission_date'] = $admissionDate ?: null;
         }
         if ($currentClassId !== null) {
             $fields[] = '`current_class_id` = :current_class_id';

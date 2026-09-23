@@ -306,6 +306,60 @@ $hasOtherRoles = !empty(array_diff($oldRoles, ['student']));
                     <?php endif; ?>
                 </div>
             </div>
+
+            <!-- Student Demographics & Institutional Records -->
+            <div id="student_demographics_container" class="<?= $isStudentSelected ? '' : 'hidden' ?> p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-4">
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">Student Demographics & Origin</h4>
+                    <p class="text-[11px] text-slate-500">Official demographic data for statutory records, transcripts, and terminal report cards.</p>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label for="user_date_of_birth" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Date of Birth</label>
+                        <input type="date" name="date_of_birth" id="user_date_of_birth"
+                               value="<?= e(old('date_of_birth', '')) ?>"
+                               class="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 bg-white text-slate-800 shadow-xs focus:ring-2 focus:ring-brand-500 focus:outline-hidden">
+                    </div>
+                    <div>
+                        <label for="user_admission_date" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Admission Date</label>
+                        <input type="date" name="admission_date" id="user_admission_date"
+                               value="<?= e(old('admission_date', date('Y-m-d'))) ?>"
+                               class="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 bg-white text-slate-800 shadow-xs focus:ring-2 focus:ring-brand-500 focus:outline-hidden">
+                    </div>
+                    <div>
+                        <label for="user_nationality" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Nationality</label>
+                        <input type="text" name="nationality" id="user_nationality"
+                               value="<?= e(old('nationality', 'Nigerian')) ?>"
+                               placeholder="e.g. Nigerian"
+                               class="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 bg-white text-slate-800 shadow-xs focus:ring-2 focus:ring-brand-500 focus:outline-hidden">
+                    </div>
+                    <div>
+                        <label for="user_state_of_origin" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">State of Origin</label>
+                        <input type="text" name="state_of_origin" id="user_state_of_origin"
+                               value="<?= e(old('state_of_origin', '')) ?>"
+                               placeholder="e.g. Imo, Lagos, Abuja FCT"
+                               class="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 bg-white text-slate-800 shadow-xs focus:ring-2 focus:ring-brand-500 focus:outline-hidden">
+                    </div>
+                    <div>
+                        <label for="user_lga" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">L.G.A.</label>
+                        <input type="text" name="lga" id="user_lga"
+                               value="<?= e(old('lga', '')) ?>"
+                               placeholder="e.g. Owerri Municipal, Ikeja"
+                               class="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 bg-white text-slate-800 shadow-xs focus:ring-2 focus:ring-brand-500 focus:outline-hidden">
+                    </div>
+                    <div>
+                        <label for="user_religion" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Religion</label>
+                        <select name="religion" id="user_religion"
+                                class="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 bg-white text-slate-800 shadow-xs focus:ring-2 focus:ring-brand-500 focus:outline-hidden">
+                            <?php $currRel = old('religion', 'Christianity'); ?>
+                            <option value="">-- Select Religion --</option>
+                            <option value="Christianity" <?= $currRel === 'Christianity' ? 'selected' : '' ?>>Christianity</option>
+                            <option value="Islam" <?= $currRel === 'Islam' ? 'selected' : '' ?>>Islam</option>
+                            <option value="Other" <?= $currRel === 'Other' ? 'selected' : '' ?>>Other</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Form Actions -->
@@ -347,12 +401,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const admFieldWrapper = document.getElementById('student_adm_field');
     const admInput = document.getElementById('user_admission_number');
+    const demoContainer = document.getElementById('student_demographics_container');
     const staffFieldWrapper = document.getElementById('teacher_staff_field');
     const staffInput = document.getElementById('user_staff_id');
 
     function syncRolesAndFields() {
         const isStudent = studentInput && studentInput.checked;
         const isTeacher = teacherInput && teacherInput.checked;
+
+        if (demoContainer) {
+            if (isStudent) {
+                demoContainer.classList.remove('hidden');
+            } else {
+                demoContainer.classList.add('hidden');
+            }
+        }
 
         // Current Class visibility & requirement
         if (classContainer && classSelect) {

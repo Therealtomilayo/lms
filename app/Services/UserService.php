@@ -139,7 +139,12 @@ class UserService
                 admissionNumber: $studentAdm,
                 dateOfBirth: $data['date_of_birth'] ?? null,
                 gender: $data['gender'] ?? null,
-                currentClassId: $classId
+                currentClassId: $classId,
+                stateOfOrigin: $data['state_of_origin'] ?? null,
+                lga: $data['lga'] ?? null,
+                nationality: $data['nationality'] ?? 'Nigerian',
+                religion: $data['religion'] ?? null,
+                admissionDate: $data['admission_date'] ?? null
             );
 
             if ($classId !== null && $classId > 0) {
@@ -269,7 +274,12 @@ class UserService
                     admissionNumber: $admNo,
                     dateOfBirth: $data['date_of_birth'] ?? null,
                     gender: $data['gender'] ?? null,
-                    currentClassId: $classId
+                    currentClassId: $classId,
+                    stateOfOrigin: $data['state_of_origin'] ?? null,
+                    lga: $data['lga'] ?? null,
+                    nationality: $data['nationality'] ?? 'Nigerian',
+                    religion: $data['religion'] ?? null,
+                    admissionDate: $data['admission_date'] ?? null
                 );
 
                 if ($classId !== null && $classId > 0) {
@@ -288,7 +298,12 @@ class UserService
                     admissionNumber: $admNo,
                     dateOfBirth: $dob,
                     gender: $gender,
-                    currentClassId: $classId
+                    currentClassId: $classId,
+                    stateOfOrigin: array_key_exists('state_of_origin', $data) ? $data['state_of_origin'] : $existingStudent->stateOfOrigin,
+                    lga: array_key_exists('lga', $data) ? $data['lga'] : $existingStudent->lga,
+                    nationality: array_key_exists('nationality', $data) ? $data['nationality'] : $existingStudent->nationality,
+                    religion: array_key_exists('religion', $data) ? $data['religion'] : $existingStudent->religion,
+                    admissionDate: array_key_exists('admission_date', $data) ? $data['admission_date'] : $existingStudent->admissionDate
                 );
 
                 if ($classId !== null && $classId > 0 && $classId !== (int)$existingStudent->currentClassId) {

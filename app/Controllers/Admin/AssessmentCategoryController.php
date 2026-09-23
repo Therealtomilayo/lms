@@ -86,7 +86,7 @@ class AssessmentCategoryController extends Controller
             'class_subject_id' => $request->input('class_subject_id'),
             'name' => trim((string)$request->input('name')),
             'weight_percentage' => (float)$request->input('weight_percentage'),
-            'max_points' => (float)($request->input('max_points') ?? 100.0),
+            'max_points' => (float)($request->input('max_points') ?: $request->input('weight_percentage')),
         ]);
 
         $redirectUrl = "/admin/assessment-categories?session_id={$sessionId}&term_id={$termId}" . ($academicLevelId ? "&academic_level_id={$academicLevelId}" : '');
@@ -109,7 +109,7 @@ class AssessmentCategoryController extends Controller
 
         $name = trim((string)$request->input('name'));
         $weight = (float)$request->input('weight_percentage');
-        $maxPoints = (float)($request->input('max_points') ?? 100.0);
+        $maxPoints = (float)($request->input('max_points') ?: $weight);
         $academicLevelId = $request->input('academic_level_id') !== null && $request->input('academic_level_id') !== ''
             ? (int)$request->input('academic_level_id')
             : null;

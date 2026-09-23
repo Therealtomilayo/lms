@@ -418,47 +418,84 @@ class AdmissionRepository
         return $wards;
     }
 
+    private ?array $wardColumns = null;
+
+    private function getWardColumns(): array
+    {
+        if ($this->wardColumns !== null) {
+            return $this->wardColumns;
+        }
+
+        $cols = [];
+        try {
+            $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+            if ($driver === 'sqlite') {
+                $stmt = $this->pdo->query("PRAGMA table_info(`admission_wards`)");
+                if ($stmt) {
+                    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                        $cols[] = $row['name'];
+                    }
+                }
+            } else {
+                $stmt = $this->pdo->query("SHOW COLUMNS FROM `admission_wards`");
+                if ($stmt) {
+                    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                        $cols[] = $row['Field'];
+                    }
+                }
+            }
+        } catch (\Throwable) {
+        }
+
+        return $this->wardColumns = $cols;
+    }
+
     public function addWard(int $applicationId, array $data): AdmissionWard
     {
         $now = date('Y-m-d H:i:s');
-        $sql = 'INSERT INTO `admission_wards` (
-                    `application_id`, `first_name`, `middle_name`, `last_name`, 
-                    `date_of_birth`, `gender`, `applying_for_level_id`, `class_grade`, 
-                    `curriculum_choice`, `use_school_bus`, `previous_school`, 
-                    `last_grade_passed`, `medical_notes`, `passport_photo_file_id`, 
-                    `birth_certificate_file_id`, `previous_report_file_id`, 
-                    `payment_status`, `created_at`, `updated_at`
-                ) VALUES (
-                    :application_id, :first_name, :middle_name, :last_name,
-                    :date_of_birth, :gender, :applying_for_level_id, :class_grade,
-                    :curriculum_choice, :use_school_bus, :previous_school,
-                    :last_grade_passed, :medical_notes, :passport_photo_file_id,
-                    :birth_certificate_file_id, :previous_report_file_id,
-                    :payment_status, :created_at, :updated_at
-                )';
+        $available = $this->getWardColumns();
 
+        $allData = [
+            'application_id' => $applicationId,
+            'first_name' => trim((string)$data['first_name']),
+            'middle_name' => isset($data['middle_name']) && $data['middle_name'] !== '' ? trim((string)$data['middle_name']) : null,
+            'last_name' => trim((string)$data['last_name']),
+            'date_of_birth' => (string)$data['date_of_birth'],
+            'gender' => strtolower((string)$data['gender']),
+            'state_of_origin' => !empty($data['state_of_origin']) ? trim((string)$data['state_of_origin']) : null,
+            'lga' => !empty($data['lga']) ? trim((string)$data['lga']) : null,
+            'nationality' => !empty($data['nationality']) ? trim((string)$data['nationality']) : 'Nigerian',
+            'religion' => !empty($data['religion']) ? trim((string)$data['religion']) : null,
+            'applying_for_level_id' => (int)$data['applying_for_level_id'],
+            'class_grade' => trim((string)$data['class_grade']),
+            'curriculum_choice' => !empty($data['curriculum_choice']) ? trim((string)$data['curriculum_choice']) : null,
+            'use_school_bus' => !empty($data['use_school_bus']) ? 1 : 0,
+            'previous_school' => !empty($data['previous_school']) ? trim((string)$data['previous_school']) : null,
+            'last_grade_passed' => !empty($data['last_grade_passed']) ? trim((string)$data['last_grade_passed']) : null,
+            'medical_notes' => !empty($data['medical_notes']) ? trim((string)$data['medical_notes']) : null,
+            'passport_photo_file_id' => !empty($data['passport_photo_file_id']) ? (int)$data['passport_photo_file_id'] : null,
+            'birth_certificate_file_id' => !empty($data['birth_certificate_file_id']) ? (int)$data['birth_certificate_file_id'] : null,
+            'previous_report_file_id' => !empty($data['previous_report_file_id']) ? (int)$data['previous_report_file_id'] : null,
+            'payment_status' => AdmissionWard::PAYMENT_UNPAID,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ];
+
+        $cols = [];
+        $placeholders = [];
+        $params = [];
+
+        foreach ($allData as $col => $val) {
+            if (empty($available) || in_array($col, $available, true)) {
+                $cols[] = "`{$col}`";
+                $placeholders[] = ":{$col}";
+                $params[":{$col}"] = $val;
+            }
+        }
+
+        $sql = 'INSERT INTO `admission_wards` (' . implode(', ', $cols) . ') VALUES (' . implode(', ', $placeholders) . ')';
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([
-            ':application_id' => $applicationId,
-            ':first_name' => trim((string)$data['first_name']),
-            ':middle_name' => isset($data['middle_name']) && $data['middle_name'] !== '' ? trim((string)$data['middle_name']) : null,
-            ':last_name' => trim((string)$data['last_name']),
-            ':date_of_birth' => (string)$data['date_of_birth'],
-            ':gender' => strtolower((string)$data['gender']),
-            ':applying_for_level_id' => (int)$data['applying_for_level_id'],
-            ':class_grade' => trim((string)$data['class_grade']),
-            ':curriculum_choice' => !empty($data['curriculum_choice']) ? trim((string)$data['curriculum_choice']) : null,
-            ':use_school_bus' => !empty($data['use_school_bus']) ? 1 : 0,
-            ':previous_school' => !empty($data['previous_school']) ? trim((string)$data['previous_school']) : null,
-            ':last_grade_passed' => !empty($data['last_grade_passed']) ? trim((string)$data['last_grade_passed']) : null,
-            ':medical_notes' => !empty($data['medical_notes']) ? trim((string)$data['medical_notes']) : null,
-            ':passport_photo_file_id' => !empty($data['passport_photo_file_id']) ? (int)$data['passport_photo_file_id'] : null,
-            ':birth_certificate_file_id' => !empty($data['birth_certificate_file_id']) ? (int)$data['birth_certificate_file_id'] : null,
-            ':previous_report_file_id' => !empty($data['previous_report_file_id']) ? (int)$data['previous_report_file_id'] : null,
-            ':payment_status' => AdmissionWard::PAYMENT_UNPAID,
-            ':created_at' => $now,
-            ':updated_at' => $now,
-        ]);
+        $stmt->execute($params);
 
         $id = (int)$this->pdo->lastInsertId();
         return $this->findWardById($id);
@@ -479,9 +516,11 @@ class AdmissionRepository
     public function updateWard(int $wardId, array $data): bool
     {
         $now = date('Y-m-d H:i:s');
+        $available = $this->getWardColumns();
         $allowed = [
             'first_name', 'middle_name', 'last_name', 'date_of_birth',
-            'gender', 'applying_for_level_id', 'class_grade', 'curriculum_choice',
+            'gender', 'state_of_origin', 'lga', 'nationality', 'religion',
+            'applying_for_level_id', 'class_grade', 'curriculum_choice',
             'use_school_bus', 'previous_school', 'last_grade_passed', 'medical_notes',
             'passport_photo_file_id', 'birth_certificate_file_id', 'previous_report_file_id',
             'payment_status', 'converted_student_id'
@@ -494,7 +533,7 @@ class AdmissionRepository
         ];
 
         foreach ($allowed as $col) {
-            if (array_key_exists($col, $data)) {
+            if (array_key_exists($col, $data) && (empty($available) || in_array($col, $available, true))) {
                 $fields[] = "`{$col}` = :{$col}";
                 $params[":{$col}"] = $data[$col];
             }

@@ -1,21 +1,22 @@
 <?php
 /**
  * Claret International School Report Card Dossier — Page 2 (Academic & Behavioral Record)
- * Exact replica of Claret report card sample.pdf Page 2
+ * Enhanced replica supporting both Terminal Progress Report (DOCX) and Cumulative Dossier (PDF)
  */
 
 $studentUser = $student->user ?? null;
 $studentFullName = strtoupper($studentUser?->name ?? $student->name ?? 'STUDENT');
 $admissionNo = $student->admissionNumber ?? 'N/A';
-$dob = !empty($student->dateOfBirth) ? date('d/m/Y', strtotime($student->dateOfBirth)) : '12/04/2018';
-$admissionDate = !empty($student->enrollmentDate) ? date('d/m/Y', strtotime($student->enrollmentDate)) : '15/09/2023';
-$state = $student->stateOfOrigin ?? 'Imo';
-$lga = $student->lga ?? 'Owerri Municipal';
+$dob = !empty($student->dateOfBirth) ? date('d/m/Y', strtotime($student->dateOfBirth)) : 'N/A';
+$admissionDate = !empty($student->admissionDate) ? date('d/m/Y', strtotime($student->admissionDate)) : (!empty($student->enrollmentDate) ? date('d/m/Y', strtotime($student->enrollmentDate)) : 'N/A');
+$state = $student->stateOfOrigin ?? 'N/A';
+$lga = $student->lga ?? 'N/A';
 $nationality = $student->nationality ?? 'Nigerian';
-$religion = $student->religion ?? 'Christianity';
-$homeroom = $class?->name ?? 'Year 1';
-$homeroomTeacher = $formTeacher?->name ?? 'Mrs. N. Okon';
-$resumptionDate = $next_resumption_date ?? '07/09/2026';
+$religion = $student->religion ?? 'N/A';
+$homeroom = $class?->name ?? 'Class Assigned';
+$homeroomTeacher = !empty($formTeacher?->name) ? $formTeacher->name : 'Class Teacher';
+$resumptionDate = $next_resumption_date ?? '7th SEPTEMBER, 2026';
+$isFinalTerm = !empty($is_final_term);
 
 $demographics = $demographics ?? ['boys' => 7, 'girls' => 6, 'total' => 13];
 $attendanceStats = $attendance_stats ?? ['opened' => 120, 'present' => 116, 'absent' => 4];
@@ -69,16 +70,16 @@ if (!empty($affective_ratings)) {
     <div class="relative z-10 flex flex-col gap-2.5">
         
         <!-- Top Running Header -->
-        <div class="flex items-center justify-between border-b-2 border-[#0C9DD5] pb-1.5">
+        <div class="flex items-center justify-between border-b-2 border-[#E28BE2] pb-1.5">
             <div class="flex items-center gap-2">
-                <img src="/assets/img/logo.png" alt="Claret Logo" class="h-8 w-auto object-contain">
+                <img src="<?= htmlspecialchars(!empty($school['logo']) ? $school['logo'] : '/assets/img/logo.png') ?>" alt="Claret Logo" class="h-8 w-auto object-contain">
                 <div>
-                    <span class="text-xs font-black tracking-wider text-[#0C9DD5] uppercase font-sans">Claret International School</span>
+                    <span class="text-xs font-black tracking-wider text-[#7B3046] uppercase font-sans"><?= htmlspecialchars($school['name'] ?? 'Claret International School') ?></span>
                     <span class="text-[9px] font-semibold text-slate-500 block leading-none">Comprehensive Academic & Domain Performance Dossier</span>
                 </div>
             </div>
             <div class="text-right">
-                <span class="inline-block bg-[#0C9DD5] text-white text-[9px] font-black uppercase px-2 py-0.5 rounded tracking-wide">
+                <span class="inline-block bg-[#7B3046] text-white text-[9px] font-black uppercase px-2 py-0.5 rounded tracking-wide">
                     <?= strtoupper($term->name ?? 'Term') ?> &bull; <?= htmlspecialchars($session->name ?? '2025/2026') ?>
                 </span>
             </div>
@@ -147,27 +148,30 @@ if (!empty($affective_ratings)) {
             </div>
         </div>
 
-        <!-- Cognitive Domain / Subject Assessment Table -->
-        <div class="border border-slate-300 rounded overflow-hidden shadow-xs">
+        <!-- Cognitive Domain / Subject Assessment Table with Authentic Claret DOCX Palette -->
+        <div class="border border-[#E28BE2] rounded overflow-hidden shadow-xs">
             <table class="w-full text-center border-collapse text-[7.5px] leading-tight">
                 <thead>
-                    <tr class="bg-[#0C9DD5] text-white font-extrabold uppercase">
-                        <th class="py-1 px-1.5 text-left border-r border-sky-400 min-w-[95px]">Subject</th>
-                        <th class="py-1 px-0.5 border-r border-sky-400">Class Act.<br><span class="text-[6.5px] font-normal">(20%)</span></th>
-                        <th class="py-1 px-0.5 border-r border-sky-400">Unit Test<br><span class="text-[6.5px] font-normal">(20%)</span></th>
-                        <th class="py-1 px-0.5 border-r border-sky-400">SPAT<br><span class="text-[6.5px] font-normal">(10%)</span></th>
-                        <th class="py-1 px-0.5 border-r border-sky-400">Home Fun<br><span class="text-[6.5px] font-normal">(10%)</span></th>
-                        <th class="py-1 px-0.5 border-r border-sky-400">Term Test<br><span class="text-[6.5px] font-normal">(40%)</span></th>
-                        <th class="py-1 px-0.5 border-r border-sky-400 bg-sky-700 font-black">Total<br><span class="text-[6.5px] font-normal">(100%)</span></th>
-                        <th class="py-1 px-0.5 border-r border-sky-400 bg-sky-600/90">Class<br>Total</th>
-                        <th class="py-1 px-0.5 border-r border-sky-400">Class<br>Lowest</th>
-                        <th class="py-1 px-0.5 border-r border-sky-400">Class<br>Highest</th>
-                        <th class="py-1 px-0.5 border-r border-sky-400">Class<br>Avg</th>
-                        <th class="py-1 px-0.5 border-r border-sky-400">Cum.<br>Total</th>
-                        <th class="py-1 px-0.5 border-r border-sky-400">Terms</th>
-                        <th class="py-1 px-0.5 border-r border-sky-400 bg-sky-700 font-black">Cum.<br>Avg</th>
-                        <th class="py-1 px-0.5 border-r border-sky-400">Grd</th>
-                        <th class="py-1 px-0.5 border-r border-sky-400">Pos</th>
+                    <tr class="bg-[#FFABFF] text-[#2A0845] font-extrabold uppercase">
+                        <th class="py-1 px-1 text-center border-r border-[#E28BE2] w-6">S/N</th>
+                        <th class="py-1 px-1.5 text-left border-r border-[#E28BE2] min-w-[90px]">Subjects</th>
+                        <th class="py-1 px-0.5 border-r border-[#E28BE2]">Class Act.<br><span class="text-[6.5px] font-normal">(20%)</span></th>
+                        <th class="py-1 px-0.5 border-r border-[#E28BE2]">Unit Test<br><span class="text-[6.5px] font-normal">(20%)</span></th>
+                        <th class="py-1 px-0.5 border-r border-[#E28BE2]">SPAT<br><span class="text-[6.5px] font-normal">(10%)</span></th>
+                        <th class="py-1 px-0.5 border-r border-[#E28BE2]">Home Fun<br><span class="text-[6.5px] font-normal">(10%)</span></th>
+                        <th class="py-1 px-0.5 border-r border-[#E28BE2]">Term Test<br><span class="text-[6.5px] font-normal">(40%)</span></th>
+                        <th class="py-1 px-0.5 border-r border-[#385D8A] bg-[#4F81BD] text-white font-black">Total<br><span class="text-[6.5px] font-normal">(100%)</span></th>
+                        <th class="py-1 px-0.5 border-r border-[#E28BE2]">Class<br>Total</th>
+                        <th class="py-1 px-0.5 border-r border-[#D97D33] bg-[#F79646] text-white font-extrabold">Class<br>Min</th>
+                        <th class="py-1 px-0.5 border-r border-[#7F9B43] bg-[#9BBB59] text-white font-extrabold">Class<br>Max</th>
+                        <th class="py-1 px-0.5 border-r border-[#E28BE2]">Pupil Class<br>Average</th>
+                        <?php if ($isFinalTerm): ?>
+                            <th class="py-1 px-0.5 border-r border-[#E28BE2]">Cum.<br>Total</th>
+                            <th class="py-1 px-0.5 border-r border-[#E28BE2]">Terms</th>
+                            <th class="py-1 px-0.5 border-r border-[#385D8A] bg-[#4F81BD] text-white font-black">Cum.<br>Avg</th>
+                        <?php endif; ?>
+                        <th class="py-1 px-0.5 border-r border-[#E28BE2]">Rating</th>
+                        <th class="py-1 px-0.5 border-r border-[#E28BE2]">Position</th>
                         <th class="py-1 px-1 text-left min-w-[65px]">Remarks</th>
                     </tr>
                 </thead>
@@ -179,24 +183,27 @@ if (!empty($affective_ratings)) {
                     foreach ($items as $idx => $row): 
                         $subCount++;
                         $totalPupilScore += (float)$row['pupil_score'];
-                        $bgClass = ($idx % 2 === 0) ? 'bg-white' : 'bg-slate-50/80';
+                        $bgClass = ($idx % 2 === 0) ? 'bg-white' : 'bg-slate-50/70';
                         $ca = $row['ca_scores'] ?? [];
                     ?>
-                        <tr class="<?= $bgClass ?> hover:bg-sky-50/50">
+                        <tr class="<?= $bgClass ?> hover:bg-pink-50/40">
+                            <td class="py-1 px-1 text-center font-bold text-slate-600 border-r border-slate-200"><?= $subCount ?></td>
                             <td class="py-1 px-1.5 text-left font-bold text-slate-900 border-r border-slate-200"><?= htmlspecialchars($row['name']) ?></td>
                             <td class="py-1 px-0.5 border-r border-slate-200 font-mono"><?= number_format((float)($ca['activity'] ?? 0), 1) ?></td>
                             <td class="py-1 px-0.5 border-r border-slate-200 font-mono"><?= number_format((float)($ca['unit_test'] ?? 0), 1) ?></td>
                             <td class="py-1 px-0.5 border-r border-slate-200 font-mono"><?= number_format((float)($ca['spat'] ?? 0), 1) ?></td>
                             <td class="py-1 px-0.5 border-r border-slate-200 font-mono"><?= number_format((float)($ca['home_fun'] ?? 0), 1) ?></td>
                             <td class="py-1 px-0.5 border-r border-slate-200 font-mono"><?= number_format((float)($ca['term_test'] ?? 0), 1) ?></td>
-                            <td class="py-1 px-0.5 border-r border-slate-200 font-black text-slate-900 bg-sky-50 font-mono"><?= number_format((float)$row['pupil_score'], 1) ?></td>
+                            <td class="py-1 px-0.5 border-r border-slate-200 font-black text-[#2B4B75] bg-[#EDF2F8] font-mono"><?= number_format((float)$row['pupil_score'], 1) ?></td>
                             <td class="py-1 px-0.5 border-r border-slate-200 font-mono text-slate-600"><?= number_format((float)$row['class_total'], 1) ?></td>
-                            <td class="py-1 px-0.5 border-r border-slate-200 font-mono text-rose-600"><?= number_format((float)$row['class_min'], 1) ?></td>
-                            <td class="py-1 px-0.5 border-r border-slate-200 font-mono text-emerald-600"><?= number_format((float)$row['class_max'], 1) ?></td>
+                            <td class="py-1 px-0.5 border-r border-slate-200 font-mono text-[#D9531E] font-bold"><?= number_format((float)$row['class_min'], 1) ?></td>
+                            <td class="py-1 px-0.5 border-r border-slate-200 font-mono text-[#3C763D] font-bold"><?= number_format((float)$row['class_max'], 1) ?></td>
                             <td class="py-1 px-0.5 border-r border-slate-200 font-mono text-slate-700"><?= number_format((float)$row['class_avg'], 1) ?></td>
-                            <td class="py-1 px-0.5 border-r border-slate-200 font-mono"><?= number_format((float)$row['cum_total'], 1) ?></td>
-                            <td class="py-1 px-0.5 border-r border-slate-200 font-mono"><?= (int)$row['cum_terms'] ?></td>
-                            <td class="py-1 px-0.5 border-r border-slate-200 font-black text-slate-900 bg-sky-50 font-mono"><?= number_format((float)$row['cum_avg'], 1) ?></td>
+                            <?php if ($isFinalTerm): ?>
+                                <td class="py-1 px-0.5 border-r border-slate-200 font-mono"><?= number_format((float)$row['cum_total'], 1) ?></td>
+                                <td class="py-1 px-0.5 border-r border-slate-200 font-mono"><?= (int)$row['cum_terms'] ?></td>
+                                <td class="py-1 px-0.5 border-r border-slate-200 font-black text-[#2B4B75] bg-[#EDF2F8] font-mono"><?= number_format((float)$row['cum_avg'], 1) ?></td>
+                            <?php endif; ?>
                             <td class="py-1 px-0.5 border-r border-slate-200 font-bold text-slate-800"><?= htmlspecialchars($row['grade']) ?></td>
                             <td class="py-1 px-0.5 border-r border-slate-200 font-bold text-slate-800"><?= htmlspecialchars($row['position']) ?></td>
                             <td class="py-1 px-1 text-left font-semibold text-slate-700 uppercase text-[7px] truncate max-w-[85px]"><?= htmlspecialchars($row['remark']) ?></td>
@@ -204,6 +211,13 @@ if (!empty($affective_ratings)) {
                     <?php endforeach; ?>
                 </tbody>
             </table>
+        </div>
+
+        <!-- Terminal Performance Benchmark Summary Banner (Authentic to Claret DOCX Reference) -->
+        <div class="flex items-center justify-between bg-[#FFABFF]/25 border border-[#E28BE2] rounded px-4 py-1.5 text-[8.5px] font-black text-[#2A0845] shadow-2xs">
+            <span>Expected Score: <strong class="font-mono text-slate-900 text-[9px]"><?= $expected_score ?? ($subCount * 100) ?></strong></span>
+            <span>Pupil Average: <strong class="font-mono text-slate-900 text-[9px]"><?= number_format($pupil_average ?? ($subCount > 0 ? $totalPupilScore / $subCount : 0), 1) ?>%</strong></span>
+            <span>Total Score Obtained: <strong class="font-mono text-slate-900 text-[9px]"><?= number_format($total_obtained ?? $totalPupilScore, 1) ?></strong></span>
         </div>
 
         <!-- Four Sub-Tables Grid (Attendance, Class Demographics, Grading Scale, Behavioral Domain) -->
@@ -214,7 +228,7 @@ if (!empty($affective_ratings)) {
                 
                 <!-- Attendance Table -->
                 <div class="border border-slate-300 rounded overflow-hidden">
-                    <div class="bg-slate-800 text-white font-bold text-[8px] uppercase px-2 py-0.5 tracking-wider">
+                    <div class="bg-[#FFABFF] text-[#2A0845] font-black text-[8px] uppercase px-2 py-0.5 tracking-wider border-b border-[#E28BE2]">
                         Attendance Record
                     </div>
                     <table class="w-full text-center border-collapse text-[7.5px]">
@@ -237,7 +251,7 @@ if (!empty($affective_ratings)) {
 
                 <!-- Class Population Demographics -->
                 <div class="border border-slate-300 rounded overflow-hidden">
-                    <div class="bg-slate-800 text-white font-bold text-[8px] uppercase px-2 py-0.5 tracking-wider">
+                    <div class="bg-[#FFABFF] text-[#2A0845] font-black text-[8px] uppercase px-2 py-0.5 tracking-wider border-b border-[#E28BE2]">
                         Class Population
                     </div>
                     <table class="w-full text-center border-collapse text-[7.5px]">
@@ -260,7 +274,7 @@ if (!empty($affective_ratings)) {
 
                 <!-- Grading Scale Key -->
                 <div class="border border-slate-300 rounded overflow-hidden">
-                    <div class="bg-slate-800 text-white font-bold text-[8px] uppercase px-2 py-0.5 tracking-wider">
+                    <div class="bg-[#FFABFF] text-[#2A0845] font-black text-[8px] uppercase px-2 py-0.5 tracking-wider border-b border-[#E28BE2]">
                         Grading Scale Interpretation
                     </div>
                     <table class="w-full text-center border-collapse text-[7.5px]">
@@ -305,7 +319,7 @@ if (!empty($affective_ratings)) {
 
             <!-- Column 2: Psychomotor Skills (3 cols) -->
             <div class="col-span-3 border border-slate-300 rounded overflow-hidden">
-                <div class="bg-slate-800 text-white font-bold text-[8px] uppercase px-2 py-0.5 tracking-wider text-center">
+                <div class="bg-[#FFABFF] text-[#2A0845] font-black text-[8px] uppercase px-2 py-0.5 tracking-wider text-center border-b border-[#E28BE2]">
                     Psychomotor Skills
                 </div>
                 <table class="w-full text-center border-collapse text-[7px]">
@@ -336,7 +350,7 @@ if (!empty($affective_ratings)) {
 
             <!-- Column 3: Affective Domain Traits (4 cols) -->
             <div class="col-span-4 border border-slate-300 rounded overflow-hidden">
-                <div class="bg-slate-800 text-white font-bold text-[8px] uppercase px-2 py-0.5 tracking-wider text-center">
+                <div class="bg-[#FFABFF] text-[#2A0845] font-black text-[8px] uppercase px-2 py-0.5 tracking-wider text-center border-b border-[#E28BE2]">
                     Affective Traits
                 </div>
                 <table class="w-full text-center border-collapse text-[7px]">
@@ -369,7 +383,7 @@ if (!empty($affective_ratings)) {
 
         <!-- Footer Page Marker -->
         <div class="flex items-center justify-between text-[7.5px] text-slate-400 border-t border-slate-200 pt-1">
-            <span>Claret International School &bull; Continuous Assessment & Terminal Record</span>
+            <span><?= htmlspecialchars($school['name'] ?? 'Claret International School') ?> &bull; Continuous Assessment & Terminal Record</span>
             <span class="font-mono">Page 2 of 3</span>
         </div>
 

@@ -101,6 +101,10 @@ class ApplicationController extends Controller
                 'previous_school' => 'max:255',
                 'last_grade_passed' => 'max:50',
                 'medical_notes' => 'max:1000',
+                'state_of_origin' => 'max:100',
+                'lga' => 'max:100',
+                'nationality' => 'max:100',
+                'religion' => 'max:100',
             ]);
         } catch (ValidationException $e) {
             return $this->redirectWithErrors('/applicant/wards/create', $e->getErrors(), $request->all());
@@ -172,6 +176,10 @@ class ApplicationController extends Controller
                 'previous_school' => 'max:255',
                 'last_grade_passed' => 'max:50',
                 'medical_notes' => 'max:1000',
+                'state_of_origin' => 'max:100',
+                'lga' => 'max:100',
+                'nationality' => 'max:100',
+                'religion' => 'max:100',
             ]);
         } catch (ValidationException $e) {
             return $this->redirectWithErrors("/applicant/wards/{$wardId}/edit", $e->getErrors(), $request->all());

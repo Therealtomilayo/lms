@@ -141,6 +141,63 @@ $actionUrl = $isEdit ? "/applicant/wards/{$ward->id}" : "/applicant/wards";
                         <?php endif; ?>
                     </div>
                 </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+                    <!-- Nationality -->
+                    <div>
+                        <label for="nationality" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                            Nationality
+                        </label>
+                        <input id="nationality" 
+                               name="nationality" 
+                               type="text" 
+                               value="<?= e(old('nationality', $ward?->nationality ?? 'Nigerian')) ?>" 
+                               placeholder="e.g. Nigerian"
+                               class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 focus:bg-white focus:border-[#7B3046] focus:ring-4 focus:ring-[#7B3046]/10 outline-none transition-all">
+                    </div>
+
+                    <!-- State of Origin -->
+                    <div>
+                        <label for="state_of_origin" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                            State of Origin
+                        </label>
+                        <input id="state_of_origin" 
+                               name="state_of_origin" 
+                               type="text" 
+                               value="<?= e(old('state_of_origin', $ward?->stateOfOrigin ?? '')) ?>" 
+                               placeholder="e.g. Imo, Lagos, Abuja FCT"
+                               class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 focus:bg-white focus:border-[#7B3046] focus:ring-4 focus:ring-[#7B3046]/10 outline-none transition-all">
+                    </div>
+
+                    <!-- LGA -->
+                    <div>
+                        <label for="lga" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                            L.G.A.
+                        </label>
+                        <input id="lga" 
+                               name="lga" 
+                               type="text" 
+                               value="<?= e(old('lga', $ward?->lga ?? '')) ?>" 
+                               placeholder="e.g. Owerri Municipal, Ikeja"
+                               class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 focus:bg-white focus:border-[#7B3046] focus:ring-4 focus:ring-[#7B3046]/10 outline-none transition-all">
+                    </div>
+
+                    <!-- Religion -->
+                    <div>
+                        <label for="religion" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                            Religion
+                        </label>
+                        <select id="religion" 
+                                name="religion" 
+                                class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 focus:bg-white focus:border-[#7B3046] focus:ring-4 focus:ring-[#7B3046]/10 outline-none transition-all">
+                            <?php $currRel = old('religion', $ward?->religion ?? ''); ?>
+                            <option value="">Select Religion</option>
+                            <option value="Christianity" <?= $currRel === 'Christianity' ? 'selected' : '' ?>>Christianity</option>
+                            <option value="Islam" <?= $currRel === 'Islam' ? 'selected' : '' ?>>Islam</option>
+                            <option value="Other" <?= $currRel === 'Other' ? 'selected' : '' ?>>Other</option>
+                        </select>
+                    </div>
+                </div>
             </div>
 
             <!-- Section 2: Enrollment & Academics -->

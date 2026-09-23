@@ -101,7 +101,7 @@ $backUrl = !empty($isParentPortal)
         .watermark-bg {
             position: absolute;
             inset: 0;
-            background-image: url('/assets/img/logo.png');
+            background-image: url('<?= htmlspecialchars(!empty($school['logo']) ? $school['logo'] : '/assets/img/logo.png') ?>');
             background-position: center 48%;
             background-repeat: no-repeat;
             background-size: 380px;
@@ -140,6 +140,20 @@ $backUrl = !empty($isParentPortal)
                 </div>
             </div>
 
+            <!-- Multi-Term Quick Switcher -->
+            <?php if (!empty($session_terms)): ?>
+                <div class="hidden lg:flex items-center gap-1 bg-slate-800/90 p-1 rounded-lg border border-slate-700">
+                    <?php foreach ($session_terms as $st): 
+                        $isCur = (int)$st->id === (int)($term->id ?? 0);
+                    ?>
+                        <a href="?term_id=<?= (int)$st->id ?>" 
+                           class="px-2.5 py-1 rounded text-[11px] font-bold transition <?= $isCur ? 'bg-[#7B3046] text-white shadow-xs' : 'text-slate-400 hover:text-white hover:bg-slate-700' ?>">
+                            <?= htmlspecialchars($st->name) ?>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+
             <!-- PIN Usage Badge (if applicable) -->
             <?php if (!empty($pin)): ?>
                 <div class="hidden sm:inline-flex items-center gap-2 px-3 py-1 rounded-md bg-sky-950/80 border border-sky-600/40 text-[11px]">
@@ -157,7 +171,7 @@ $backUrl = !empty($isParentPortal)
 
                 <!-- Print Action Button -->
                 <button onclick="window.print()" 
-                        class="inline-flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-black bg-[#0C9DD5] hover:bg-sky-400 text-white shadow-lg shadow-sky-500/20 transition transform active:scale-95 cursor-pointer">
+                        class="inline-flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-black bg-[#7B3046] hover:bg-[#8D3850] text-white shadow-lg transition transform active:scale-95 cursor-pointer">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
                     </svg>

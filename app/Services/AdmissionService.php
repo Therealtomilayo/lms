@@ -822,7 +822,12 @@ class AdmissionService
                     admissionNumber: $admNumber,
                     dateOfBirth: $ward->dateOfBirth,
                     gender: $ward->gender,
-                    currentClassId: $classId
+                    currentClassId: $classId,
+                    stateOfOrigin: $ward->stateOfOrigin,
+                    lga: $ward->lga,
+                    nationality: $ward->nationality ?: 'Nigerian',
+                    religion: $ward->religion,
+                    admissionDate: date('Y-m-d')
                 );
 
                 // Link parent and student

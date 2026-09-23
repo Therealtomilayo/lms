@@ -119,8 +119,79 @@ $fullClassName = $childClass . $arm;
                     Results Processing
                 </span>
             <?php endif; ?>
-        </div>
     </div>
+
+    <!-- Multi-Term Result Access & Clearance Hub -->
+    <?php if (!empty($termsData)): ?>
+        <div class="space-y-3">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <span>Term-by-Term Official Report Card Access</span>
+                </h2>
+                <span class="text-xs text-slate-500 font-medium hidden sm:inline">Per-term bursary clearance &amp; scratch PIN security</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <?php foreach ($termsData as $td): 
+                    $tObj = $td['term'];
+                    $isCur = (int)$tObj->id === (int)$selectedTermId;
+                ?>
+                    <div class="bg-white rounded-2xl border <?= $isCur ? 'border-brand-500 ring-2 ring-brand-500/10' : 'border-slate-200' ?> p-5 shadow-xs flex flex-col justify-between transition hover:shadow-sm">
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-extrabold uppercase tracking-wider text-slate-800"><?= htmlspecialchars($tObj->name) ?></span>
+                                <?php if ($td['isPublished']): ?>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Published</span>
+                                <?php else: ?>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">In Review</span>
+                                <?php endif; ?>
+                            </div>
+
+                            <div class="space-y-2 pt-1 border-t border-slate-100 text-xs">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-slate-500 flex items-center gap-1.5">
+                                        <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                                        School Fees:
+                                    </span>
+                                    <?php if ($td['isCleared']): ?>
+                                        <span class="font-bold text-emerald-600">Cleared &check;</span>
+                                    <?php else: ?>
+                                        <span class="font-bold text-red-600">Pending Bursary</span>
+                                    <?php endif; ?>
+                                </div>
+
+                                <div class="flex items-center justify-between">
+                                    <span class="text-slate-500 flex items-center gap-1.5">
+                                        <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                                        Result PIN:
+                                    </span>
+                                    <?php if ($td['isPinUnlocked']): ?>
+                                        <span class="font-bold text-emerald-600">Unlocked &check;</span>
+                                    <?php else: ?>
+                                        <span class="font-semibold text-slate-500">PIN Required</span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2">
+                            <a href="<?= $td['reportUrl'] ?>" target="_blank"
+                               class="flex-1 text-center py-2 px-3 rounded-xl text-xs font-bold transition <?= $td['isCleared'] && $td['isPublished'] ? 'bg-brand-600 hover:bg-brand-700 text-white shadow-xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-700' ?>">
+                                <?= !$td['isCleared'] ? 'Clear Fees &amp; View' : ($td['isPinUnlocked'] ? 'View Report Card' : 'Unlock &amp; View Report') ?>
+                            </a>
+                            <?php if (!$isCur): ?>
+                                <a href="/parent/children/<?= (int)$student->id ?>/grades?term_id=<?= (int)$tObj->id ?>" 
+                                   class="px-2.5 py-2 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200" title="Switch overview to this term">
+                                    &rarr;
+                                </a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    <?php endif; ?>
 
     <?php if (!$isPublished): ?>
         <!-- Unpublished Alert Banner -->

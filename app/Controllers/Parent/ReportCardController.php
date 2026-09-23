@@ -97,11 +97,26 @@ class ReportCardController extends Controller
         Session::start();
         Session::set('_selected_child_id', $sId);
 
+        $termsData = [];
+        foreach ($terms as $t) {
+            $tPub = $this->publicationRepo->isPublished($t->id);
+            $tCleared = $this->feeRepo->isStudentClearedForResult($sId, $t->sessionId, $t->id);
+            $tPinUnlocked = !empty(Session::get("_unlocked_pin_{$sId}_{$t->id}"));
+            $termsData[] = [
+                'term' => $t,
+                'isPublished' => $tPub,
+                'isCleared' => $tCleared,
+                'isPinUnlocked' => $tPinUnlocked,
+                'reportUrl' => "/parent/children/{$sId}/grades/report-card?term_id={$t->id}",
+            ];
+        }
+
         return Response::html($this->render('parent/grades/index', [
             'student' => $student,
             'selectedChild' => $student,
             'children' => $children,
             'terms' => $terms,
+            'termsData' => $termsData,
             'selectedTermId' => $termId,
             'isPublished' => $isPublished,
             'subjectResults' => $subjectResults,
