@@ -160,17 +160,21 @@
                                             </td>
                                         <?php endforeach; ?>
 
-                                        <td class="py-3.5 px-4 text-center">
+                                        <td class="py-3.5 px-4 text-center score-total-cell">
                                             <span class="font-extrabold text-slate-900 text-xs">
                                                 <?= $result ? number_format((float)$result->computedScore, 2) : '&mdash;' ?>
                                             </span>
                                         </td>
 
-                                        <td class="py-3.5 px-4 text-center">
+                                        <td class="py-3.5 px-4 text-center grade-cell">
                                             <?php if ($result && !empty($result->gradeLetter)): ?>
                                                 <?php 
                                                     $gl = strtoupper($result->gradeLetter);
-                                                    $v = in_array($gl, ['A', 'B']) ? 'success' : (in_array($gl, ['C', 'D']) ? 'info' : 'danger');
+                                                    $v = (str_starts_with($gl, 'A') || str_starts_with($gl, 'B')) 
+                                                        ? 'success' 
+                                                        : (str_starts_with($gl, 'C') 
+                                                            ? 'info' 
+                                                            : ((str_starts_with($gl, 'D') || str_starts_with($gl, 'E')) ? 'warning' : 'danger'));
                                                 ?>
                                                 <?php $this->include('components/badge', [
                                                     'label' => $result->gradeLetter,
@@ -215,18 +219,69 @@
             <?php endif; ?>
         </form>
 
+        <?php
+            $scaleBoundaries = [];
+            if (!empty($gradingScale?->boundaries)) {
+                foreach ($gradingScale->boundaries as $b) {
+                    $scaleBoundaries[] = [
+                        'letter' => $b->letter,
+                        'minScore' => (float)$b->minScore,
+                        'maxScore' => (float)$b->maxScore,
+                        'remark' => $b->remark,
+                    ];
+                }
+            }
+        ?>
+
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 const form = document.getElementById('gradebook-form');
                 if (!form) return;
 
+                const gradingBoundaries = <?= json_encode($scaleBoundaries) ?>;
+
+                function getGradeBadge(letter) {
+                    const gl = (letter || '').toUpperCase();
+                    let variantClass = 'bg-danger-100 text-danger-700 border-red-200';
+                    if (gl.startsWith('A') || gl.startsWith('B')) {
+                        variantClass = 'bg-success-100 text-success-700 border-green-200';
+                    } else if (gl.startsWith('C')) {
+                        variantClass = 'bg-info-100 text-info-700 border-blue-200';
+                    } else if (gl.startsWith('D') || gl.startsWith('E')) {
+                        variantClass = 'bg-warning-100 text-warning-800 border-amber-200';
+                    }
+                    return `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${variantClass}">${letter}</span>`;
+                }
+
+                function resolveGradeLetter(score) {
+                    if (!gradingBoundaries || gradingBoundaries.length === 0) {
+                        if (score >= 70) return 'A';
+                        if (score >= 60) return 'B';
+                        if (score >= 50) return 'C';
+                        if (score >= 45) return 'D';
+                        if (score >= 40) return 'E';
+                        return 'F';
+                    }
+                    for (let i = 0; i < gradingBoundaries.length; i++) {
+                        const b = gradingBoundaries[i];
+                        if (score >= b.minScore && score <= b.maxScore) {
+                            return b.letter;
+                        }
+                    }
+                    if (score > 100 && gradingBoundaries.length > 0) {
+                        return gradingBoundaries[0].letter;
+                    }
+                    return gradingBoundaries[gradingBoundaries.length - 1].letter;
+                }
+
                 function recalculateRow(row) {
                     const inputs = row.querySelectorAll('input[type="number"][data-max]');
-                    let total = 0;
+                    let totalWeighted = 0;
                     let hasInput = false;
 
                     inputs.forEach(input => {
                         const maxVal = parseFloat(input.dataset.max) || 100;
+                        const weight = parseFloat(input.dataset.weight) || maxVal;
                         let val = parseFloat(input.value);
 
                         if (!isNaN(val)) {
@@ -238,13 +293,27 @@
                                 input.classList.remove('border-red-500', 'bg-red-50', 'text-red-700');
                                 input.removeAttribute('title');
                             }
-                            total += Math.min(val, maxVal);
+                            const contribution = maxVal > 0 ? (Math.min(val, maxVal) / maxVal) * weight : 0;
+                            totalWeighted += contribution;
                         }
                     });
 
-                    const totalCell = row.querySelector('td:nth-last-child(2) span');
+                    const totalCell = row.querySelector('.score-total-cell span');
+                    const gradeCell = row.querySelector('.grade-cell');
+
                     if (totalCell && hasInput) {
-                        totalCell.textContent = total.toFixed(2);
+                        const finalScore = Math.max(0, Math.min(100, Math.round(totalWeighted * 100) / 100));
+                        totalCell.textContent = finalScore.toFixed(2);
+
+                        if (gradeCell) {
+                            const letter = resolveGradeLetter(finalScore);
+                            gradeCell.innerHTML = getGradeBadge(letter);
+                        }
+                    } else if (totalCell && !hasInput) {
+                        totalCell.innerHTML = '&mdash;';
+                        if (gradeCell) {
+                            gradeCell.innerHTML = '<span class="text-slate-300">&mdash;</span>';
+                        }
                     }
                 }
 

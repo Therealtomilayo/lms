@@ -169,6 +169,7 @@ class GradebookController extends Controller
             'scoreMatrix' => $scoreMatrix,
             'resultMap' => $resultMap,
             'isLocked' => $isLocked,
+            'gradingScale' => $this->gradingScaleRepo->getDefaultScale(),
         ], 'layouts/teacher'));
     }
 

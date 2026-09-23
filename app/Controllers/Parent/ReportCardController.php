@@ -79,6 +79,7 @@ class ReportCardController extends Controller
 
         $activeTerm = $this->academicRepo->getCurrentTerm();
         $termId = (int)($request->query('term_id', 0) ?: ($activeTerm ? $activeTerm->id : 0));
+        $activeStartDate = $activeTerm ? $activeTerm->startDate : date('Y-m-d');
 
         $terms = $this->academicRepo->getAllTerms();
         $isPublished = $termId > 0 && $this->publicationRepo->isPublished($termId);
@@ -102,11 +103,13 @@ class ReportCardController extends Controller
             $tPub = $this->publicationRepo->isPublished($t->id);
             $tCleared = $this->feeRepo->isStudentClearedForResult($sId, $t->sessionId, $t->id);
             $tPinUnlocked = !empty(Session::get("_unlocked_pin_{$sId}_{$t->id}"));
+            $isFuture = ($t->startDate > $activeStartDate) && !in_array($t->status, ['active', 'grading_open', 'completed', 'archived'], true);
             $termsData[] = [
                 'term' => $t,
                 'isPublished' => $tPub,
                 'isCleared' => $tCleared,
                 'isPinUnlocked' => $tPinUnlocked,
+                'isFuture' => $isFuture,
                 'reportUrl' => "/parent/children/{$sId}/grades/report-card?term_id={$t->id}",
             ];
         }
@@ -117,6 +120,7 @@ class ReportCardController extends Controller
             'children' => $children,
             'terms' => $terms,
             'termsData' => $termsData,
+            'activeTerm' => $activeTerm,
             'selectedTermId' => $termId,
             'isPublished' => $isPublished,
             'subjectResults' => $subjectResults,
@@ -202,6 +206,7 @@ class ReportCardController extends Controller
         $reportData = $this->reportCardService->getReportCardData($sId, $tId);
         $reportData['user'] = $userContext;
         $reportData['isParentPortal'] = true;
+        $reportData['backUrl'] = "/parent/children/{$sId}/grades";
         $reportData['pin'] = $activePin;
         $reportData['remainingUses'] = $activePin->getRemainingUses();
 
@@ -244,6 +249,8 @@ class ReportCardController extends Controller
         }
 
         $reportData = $this->reportCardService->getReportCardData($sId, $tId);
+        $reportData['isParentPortal'] = true;
+        $reportData['backUrl'] = "/parent/children/{$sId}/grades";
         $reportData['pin'] = $activePin;
         $reportData['remainingUses'] = $activePin->getRemainingUses();
 

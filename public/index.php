@@ -458,6 +458,7 @@ try {
     $router->post('/teacher/badges/award', [\App\Controllers\Teacher\BadgeController::class, 'award'], $teacherFormAuth);
 
     // Teacher Class Discussions Routes (SRS §47, §57 Phase 3)
+    $router->get('/teacher/discussions', [\App\Controllers\Teacher\DiscussionController::class, 'hub'], $teacherAuth);
     $router->get('/teacher/subjects/{classSubjectId}/discussions', [\App\Controllers\Teacher\DiscussionController::class, 'index'], $teacherAuth);
     $router->post('/teacher/subjects/{classSubjectId}/discussions', [\App\Controllers\Teacher\DiscussionController::class, 'store'], $teacherFormAuth);
     $router->get('/teacher/subjects/{classSubjectId}/discussions/{discussionId}', [\App\Controllers\Teacher\DiscussionController::class, 'show'], $teacherAuth);
@@ -514,6 +515,7 @@ try {
     $router->get('/student/badges', [\App\Controllers\Student\BadgeController::class, 'index'], $studentAuth);
 
     // Student Class Discussions Routes (SRS §47, §57 Phase 3)
+    $router->get('/student/discussions', [\App\Controllers\Student\DiscussionController::class, 'hub'], $studentAuth);
     $router->get('/student/subjects/{classSubjectId}/discussions', [\App\Controllers\Student\DiscussionController::class, 'index'], $studentAuth);
     $router->post('/student/subjects/{classSubjectId}/discussions', [\App\Controllers\Student\DiscussionController::class, 'store'], $studentFormAuth);
     $router->get('/student/subjects/{classSubjectId}/discussions/{discussionId}', [\App\Controllers\Student\DiscussionController::class, 'show'], $studentAuth);

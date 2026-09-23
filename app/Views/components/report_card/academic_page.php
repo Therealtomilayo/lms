@@ -12,9 +12,10 @@ $admissionDate = !empty($student->admissionDate) ? date('d/m/Y', strtotime($stud
 $state = $student->stateOfOrigin ?? 'N/A';
 $lga = $student->lga ?? 'N/A';
 $nationality = $student->nationality ?? 'Nigerian';
-$religion = $student->religion ?? 'N/A';
-$homeroom = $class?->name ?? 'Class Assigned';
-$homeroomTeacher = !empty($formTeacher?->name) ? $formTeacher->name : 'Class Teacher';
+$resolvedClass = $class_full_name ?? ($class ? (method_exists($class, 'getFullName') ? $class->getFullName() : ($class->name . (!empty($class->sectionArm) ? ' (' . $class->sectionArm . ')' : ''))) : 'Class Assigned');
+$homeroom = $resolvedClass;
+$resolvedTeacher = $formTeacher ?? $form_teacher ?? null;
+$homeroomTeacher = !empty($resolvedTeacher?->name) ? $resolvedTeacher->name : 'Class Teacher';
 $resumptionDate = $next_resumption_date ?? '7th SEPTEMBER, 2026';
 $isFinalTerm = !empty($is_final_term);
 

@@ -35,6 +35,37 @@ class DiscussionController extends Controller
     }
 
     /**
+     * Overview of all class discussions for the student's enrolled subjects.
+     * Route: GET /student/discussions
+     */
+    public function hub(Request $request): Response
+    {
+        $userContext = $this->requireAuthContext($request);
+        $student = $this->studentRepo->findByUserId($userContext->id);
+        if (!$student && !$userContext->isAdmin()) {
+            return Response::forbidden('Student profile required.');
+        }
+
+        $classId = $student ? (int)$student->currentClassId : 0;
+        $classSubjects = $classId > 0 ? $this->academicRepo->getAllClassSubjects(null, $classId) : [];
+
+        if (count($classSubjects) === 1) {
+            return Response::redirect("/student/subjects/{$classSubjects[0]->id}/discussions");
+        }
+
+        $activeSession = $this->academicRepo->findCurrentSession();
+
+        return Response::html($this->render('student/discussions/hub', [
+            'title' => 'Class Discussions — Student Portal',
+            'headerTitle' => 'My Class Discussions',
+            'student' => $student,
+            'classSubjects' => $classSubjects,
+            'activeSession' => $activeSession,
+            'user' => $userContext,
+        ], 'layouts/student'));
+    }
+
+    /**
      * Display discussion topics for an enrolled class subject.
      * Route: GET /student/subjects/{classSubjectId}/discussions
      */

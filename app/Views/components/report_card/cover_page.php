@@ -103,7 +103,7 @@ $sessionTitle = strtoupper($session->name ?? '2025/2026') . ' ACADEMIC SESSION';
             <h3 class="text-lg font-black text-slate-900 uppercase tracking-tight"><?= $studentName ?></h3>
             <p class="text-xs font-semibold text-slate-600 uppercase tracking-wider mt-0.5">
                 Adm No: <span class="font-mono text-slate-900"><?= htmlspecialchars($student->admissionNumber ?? 'N/A') ?></span>
-                &bull; Class: <span class="text-slate-900"><?= htmlspecialchars($class?->name ?? 'Primary') ?></span>
+                &bull; Class: <span class="text-slate-900"><?= htmlspecialchars($class_full_name ?? ($class?->getFullName() ?? ($class?->name ?? 'Primary'))) ?></span>
             </p>
         </div>
     </div>

@@ -172,6 +172,7 @@ class ReportCardController extends Controller
         $reportData['student'] = $student;
         $reportData['pin'] = $activePin;
         $reportData['remainingUses'] = $activePin->getRemainingUses();
+        $reportData['backUrl'] = '/student/grades';
 
         return Response::html($this->render('student/grades/report_card', $reportData));
     }

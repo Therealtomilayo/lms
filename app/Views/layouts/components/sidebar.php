@@ -137,6 +137,8 @@ if (!function_exists('get_sidebar_icon')) {
                 return '<svg class="' . $svgClass . '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>';
             case 'quiz':
                 return '<svg class="' . $svgClass . '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>';
+            case 'discussion':
+                return '<svg class="' . $svgClass . '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>';
             case 'announcement':
                 return '<svg class="' . $svgClass . '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>';
             case 'user-profile':
@@ -193,7 +195,7 @@ $navConfig = [
         ['label' => 'Badges & Honors', 'route' => '/admin/badges', 'icon' => 'award'],
         ['category' => 'Online Classes & Comms'],
         ['label' => 'Live Online Classes', 'route' => '/admin/live-classes', 'icon' => 'video'],
-        ['label' => 'Class Discussions', 'route' => '/admin/discussions', 'icon' => 'announcement'],
+        ['label' => 'Class Discussions', 'route' => '/admin/discussions', 'icon' => 'discussion'],
         ['label' => 'Announcements', 'route' => '/admin/announcements', 'icon' => 'announcement'],
         ['label' => 'Notification Gateway', 'route' => '/admin/notifications/gateway', 'icon' => 'bell'],
         ['category' => 'Finance & Payments'],
@@ -208,28 +210,35 @@ $navConfig = [
     ],
     'teacher' => [
         ['label' => 'Dashboard', 'route' => '/teacher/dashboard', 'icon' => 'home'],
+        ['category' => 'Main & Attendance'],
         ['label' => 'Staff Clock-In', 'route' => '/teacher/staff-attendance', 'icon' => 'clock'],
+        ['label' => 'Daily Attendance', 'route' => '/teacher/attendance', 'icon' => 'calendar'],
         ['label' => 'My Classes & Rosters', 'route' => '/teacher/classes', 'icon' => 'users'],
+        ['label' => 'My Timetable', 'route' => '/teacher/timetable', 'icon' => 'timetable'],
+        ['category' => 'Classrooms & Teaching'],
         ['label' => 'Live Online Classes', 'route' => '/teacher/live-classes', 'icon' => 'video'],
         ['label' => 'Learning Materials', 'route' => '/teacher/content', 'icon' => 'book'],
         ['label' => 'Course Modules', 'route' => '/teacher/modules', 'icon' => 'academic'],
         ['label' => 'Progression Reports', 'route' => '/teacher/modules?tab=progress', 'icon' => 'chart'],
-        ['label' => 'Badges & Rewards', 'route' => '/teacher/badges', 'icon' => 'award'],
+        ['category' => 'Tasks & Quizzes'],
         ['label' => 'Assignments', 'route' => '/teacher/assignments', 'icon' => 'clipboard'],
         ['label' => 'Question Bank', 'route' => '/teacher/question-bank', 'icon' => 'database'],
         ['label' => 'Quiz Management', 'route' => '/teacher/quizzes', 'icon' => 'quiz'],
+        ['category' => 'Grading & Assessment'],
         ['label' => 'Class Gradebooks', 'route' => '/teacher/gradebook', 'icon' => 'document-text'],
         ['label' => 'Batch Remarks & Traits', 'route' => '/teacher/results/comments', 'icon' => 'clipboard'],
         ['label' => 'Form Class Broadsheet', 'route' => '/teacher/results/overview', 'icon' => 'chart'],
-        ['label' => 'Daily Attendance', 'route' => '/teacher/attendance', 'icon' => 'calendar'],
+        ['label' => 'Badges & Rewards', 'route' => '/teacher/badges', 'icon' => 'award'],
+        ['category' => 'Communication'],
+        ['label' => 'Class Discussions', 'route' => '/teacher/discussions', 'icon' => 'discussion'],
         ['label' => 'Announcements', 'route' => '/teacher/announcements', 'icon' => 'announcement'],
-        ['label' => 'My Timetable', 'route' => '/teacher/timetable', 'icon' => 'timetable'],
     ],
     'student' => [
         ['label' => 'Dashboard', 'route' => '/student/dashboard', 'icon' => 'home'],
         ['label' => 'Live Online Classes', 'route' => '/student/live-classes', 'icon' => 'video'],
         ['label' => 'Enrolled Subjects', 'route' => '/student/subjects', 'icon' => 'academic'],
         ['label' => 'Learning Materials', 'route' => '/student/content', 'icon' => 'book'],
+        ['label' => 'Class Discussions', 'route' => '/student/discussions', 'icon' => 'discussion'],
         ['label' => 'My Achievements', 'route' => '/student/badges', 'icon' => 'award'],
         ['label' => 'Assignments', 'route' => '/student/assignments', 'icon' => 'clipboard'],
         ['label' => 'Online Quizzes', 'route' => '/student/quizzes', 'icon' => 'quiz'],
@@ -269,7 +278,7 @@ if ($role === 'parent' && $activeChildId > 0) {
     $menuItems[] = ['label' => 'Daily Attendance', 'route' => "/parent/children/{$activeChildId}/attendance", 'icon' => 'calendar'];
     $menuItems[] = ['label' => 'Achievements & Badges', 'route' => "/parent/children/{$activeChildId}/badges", 'icon' => 'award'];
     $menuItems[] = ['label' => 'Coursework & Tasks', 'route' => "/parent/children/{$activeChildId}/assignments", 'icon' => 'clipboard'];
-    $menuItems[] = ['label' => 'Class Discussions', 'route' => "/parent/children/{$activeChildId}/discussions", 'icon' => 'announcement'];
+    $menuItems[] = ['label' => 'Class Discussions', 'route' => "/parent/children/{$activeChildId}/discussions", 'icon' => 'discussion'];
     $menuItems[] = ['label' => 'Announcements', 'route' => "/parent/children/{$activeChildId}/announcements", 'icon' => 'announcement'];
     $menuItems[] = ['label' => 'Weekly Timetable', 'route' => "/parent/children/{$activeChildId}/timetable", 'icon' => 'timetable'];
 }
@@ -343,11 +352,60 @@ if ($role === 'parent' && $activeChildId > 0) {
         </div>
     <?php endif; ?>
 
+    <!-- Dynamic Quick Search for Admin Sidebar -->
+    <?php if ($role === 'admin'): ?>
+        <div class="px-4 pt-3 pb-2 border-b border-slate-800">
+            <div class="relative">
+                <input type="text" id="admin-sidebar-search" placeholder="Search menu..." 
+                       class="w-full bg-slate-800/90 border border-slate-700/80 rounded-lg px-2.5 py-1.5 pl-8 text-xs text-slate-200 placeholder-slate-400 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition">
+                <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+            </div>
+        </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const searchInput = document.getElementById('admin-sidebar-search');
+                if (!searchInput) return;
+                const nav = document.querySelector('#sidebar-navigation nav');
+                if (!nav) return;
+
+                searchInput.addEventListener('input', function() {
+                    const q = this.value.toLowerCase().trim();
+                    const links = nav.querySelectorAll('a');
+                    const categories = nav.querySelectorAll('div[data-sidebar-category]');
+
+                    links.forEach(link => {
+                        const text = link.textContent.toLowerCase();
+                        if (!q || text.includes(q)) {
+                            link.style.display = '';
+                        } else {
+                            link.style.display = 'none';
+                        }
+                    });
+
+                    categories.forEach(cat => {
+                        let next = cat.nextElementSibling;
+                        let hasVisible = false;
+                        while (next && !next.hasAttribute('data-sidebar-category')) {
+                            if (next.tagName === 'A' && next.style.display !== 'none') {
+                                hasVisible = true;
+                                break;
+                            }
+                            next = next.nextElementSibling;
+                        }
+                        cat.style.display = (!q || hasVisible) ? '' : 'none';
+                    });
+                });
+            });
+        </script>
+    <?php endif; ?>
+
     <!-- Navigation items list -->
     <nav class="flex-1 p-4 space-y-1.5 overflow-y-auto" aria-label="Main Navigation">
         <?php foreach ($menuItems as $item): ?>
             <?php if (isset($item['category'])): ?>
-                <div class="pt-4 pb-1 px-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                <div data-sidebar-category="true" class="pt-4 pb-1 px-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                     <?= e($item['category']) ?>
                 </div>
             <?php else: ?>
@@ -356,7 +414,7 @@ if ($role === 'parent' && $activeChildId > 0) {
                 $linkClasses = $isActive 
                     ? 'flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold text-white bg-slate-800 border-l-4 border-brand-600 transition' 
                     : 'flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition';
-                $isAnnouncementItem = ($item['icon'] === 'announcement' || str_contains($item['route'], 'announcements'));
+                $isAnnouncementItem = str_contains($item['route'], 'announcements');
                 ?>
                 <a href="<?= e($item['route']) ?>" class="<?= $linkClasses ?>">
                     <div class="flex items-center gap-3 min-w-0 truncate">

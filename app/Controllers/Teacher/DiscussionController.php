@@ -35,6 +35,34 @@ class DiscussionController extends Controller
     }
 
     /**
+     * Overview of all class discussions for the teacher's assigned subjects.
+     * Route: GET /teacher/discussions
+     */
+    public function hub(Request $request): Response
+    {
+        $userContext = $this->requireAuthContext($request);
+        $teacher = $this->teacherRepo->findTeacherByUserId($userContext->id);
+        if (!$teacher) {
+            return Response::redirect('/login');
+        }
+
+        $classSubjects = $this->academicRepo->findClassSubjectsByTeacherId($teacher->id);
+        if (count($classSubjects) === 1) {
+            return Response::redirect("/teacher/subjects/{$classSubjects[0]->id}/discussions");
+        }
+
+        $activeSession = $this->academicRepo->findCurrentSession();
+
+        return Response::html($this->render('teacher/discussions/hub', [
+            'title' => 'Class Discussions Overview — Faculty Portal',
+            'headerTitle' => 'Class Discussions',
+            'classSubjects' => $classSubjects,
+            'activeSession' => $activeSession,
+            'user' => $userContext,
+        ], 'layouts/teacher'));
+    }
+
+    /**
      * Display discussion topics for a class subject.
      * Route: GET /teacher/subjects/{classSubjectId}/discussions
      */

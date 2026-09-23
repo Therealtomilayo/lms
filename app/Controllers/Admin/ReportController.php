@@ -39,6 +39,14 @@ class ReportController extends Controller
 
         $reportData = $this->reportCardService->getReportCardData($sId, $tId);
         $reportData['isPdf'] = true;
+        $reportData['isAdmin'] = true;
+
+        $referer = $request->header('referer') ?? ($_SERVER['HTTP_REFERER'] ?? null);
+        $backUrl = '/admin/results/review';
+        if ($referer && (str_contains($referer, '/admin/results') || str_contains($referer, '/admin/reports') || str_contains($referer, '/admin/students') || str_contains($referer, '/admin/'))) {
+            $backUrl = $referer;
+        }
+        $reportData['backUrl'] = $backUrl;
 
         return $this->view('student/grades/report_card', $reportData);
     }

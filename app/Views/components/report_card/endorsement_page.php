@@ -6,9 +6,10 @@
 
 $studentUser = $student->user ?? null;
 $studentFullName = strtoupper($studentUser?->name ?? $student->name ?? 'STUDENT');
-$admissionNo = $student->admissionNumber ?? 'N/A';
-$homeroom = $class?->name ?? 'Class Assigned';
-$teacherName = !empty($formTeacher?->name) ? $formTeacher->name : 'Class Teacher';
+$resolvedClass = $class_full_name ?? ($class ? (method_exists($class, 'getFullName') ? $class->getFullName() : ($class->name . (!empty($class->sectionArm) ? ' (' . $class->sectionArm . ')' : ''))) : 'Class Assigned');
+$homeroom = $resolvedClass;
+$resolvedTeacher = $formTeacher ?? $form_teacher ?? null;
+$teacherName = !empty($resolvedTeacher?->name) ? $resolvedTeacher->name : 'Class Teacher';
 
 $teacherComment = !empty($summary?->teacherComment) 
     ? $summary->teacherComment 

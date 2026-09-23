@@ -10,9 +10,9 @@ $className = htmlspecialchars($class?->name ?? 'Primary');
 $termName = htmlspecialchars($term?->name ?? 'Term');
 $sessionName = htmlspecialchars($session?->name ?? '2025/2026');
 
-$backUrl = !empty($isParentPortal) 
+$backUrl = $backUrl ?? (!empty($isParentPortal) 
     ? "/parent/children/{$student->id}/grades" 
-    : "/student/grades";
+    : (!empty($isAdmin) || str_contains($_SERVER['REQUEST_URI'] ?? '', '/admin/') ? "/admin/results/review" : "/student/grades"));
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -141,15 +141,32 @@ $backUrl = !empty($isParentPortal)
             </div>
 
             <!-- Multi-Term Quick Switcher -->
-            <?php if (!empty($session_terms)): ?>
+            <?php if (!empty($session_terms)): 
+                $activeTermObj = null;
+                foreach ($session_terms as $sTerm) {
+                    if (in_array($sTerm->status, ['active', 'grading_open'], true)) {
+                        $activeTermObj = $sTerm;
+                        break;
+                    }
+                }
+                $activeStartDate = $activeTermObj ? $activeTermObj->startDate : date('Y-m-d');
+            ?>
                 <div class="hidden lg:flex items-center gap-1 bg-slate-800/90 p-1 rounded-lg border border-slate-700">
                     <?php foreach ($session_terms as $st): 
                         $isCur = (int)$st->id === (int)($term->id ?? 0);
+                        $isFuture = ($st->startDate > $activeStartDate) && !in_array($st->status, ['active', 'grading_open', 'completed', 'archived'], true);
                     ?>
-                        <a href="?term_id=<?= (int)$st->id ?>" 
-                           class="px-2.5 py-1 rounded text-[11px] font-bold transition <?= $isCur ? 'bg-[#7B3046] text-white shadow-xs' : 'text-slate-400 hover:text-white hover:bg-slate-700' ?>">
-                            <?= htmlspecialchars($st->name) ?>
-                        </a>
+                        <?php if ($isFuture): ?>
+                            <span class="px-2.5 py-1 rounded text-[11px] font-semibold text-slate-500 bg-slate-800/40 cursor-not-allowed flex items-center gap-1 opacity-60" title="This academic term has not yet commenced">
+                                <svg class="w-3 h-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                <?= htmlspecialchars($st->name) ?>
+                            </span>
+                        <?php else: ?>
+                            <a href="?term_id=<?= (int)$st->id ?>" 
+                               class="px-2.5 py-1 rounded text-[11px] font-bold transition <?= $isCur ? 'bg-[#7B3046] text-white shadow-xs' : 'text-slate-400 hover:text-white hover:bg-slate-700' ?>">
+                                <?= htmlspecialchars($st->name) ?>
+                            </a>
+                        <?php endif; ?>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>

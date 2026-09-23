@@ -95,14 +95,19 @@ $fullClassName = $childClass . $arm;
     </div>
 
     <!-- Academic Term Selector Toolbar -->
+    <!-- Academic Term Selector Toolbar -->
     <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <form method="GET" action="/parent/children/<?= (int)$student->id ?>/grades" class="flex items-center gap-3 w-full sm:w-auto">
             <label for="term_id" class="text-xs font-bold text-slate-700 uppercase tracking-wider whitespace-nowrap">Academic Term:</label>
             <select name="term_id" id="term_id" onchange="this.form.submit()" 
                     class="px-3.5 py-2 text-xs font-bold rounded-xl border border-slate-300 bg-slate-50 text-slate-800 focus:bg-white focus:border-brand-500 focus:ring-brand-500 transition">
-                <?php foreach ($terms as $t): ?>
-                    <option value="<?= (int)$t->id ?>" <?= (int)$t->id === (int)$selectedTermId ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($t->name) ?>
+                <?php 
+                $activeStartDate = !empty($activeTerm) ? $activeTerm->startDate : date('Y-m-d');
+                foreach ($terms as $t): 
+                    $isFuture = ($t->startDate > $activeStartDate) && !in_array($t->status, ['active', 'grading_open', 'completed', 'archived'], true);
+                ?>
+                    <option value="<?= (int)$t->id ?>" <?= (int)$t->id === (int)$selectedTermId ? 'selected' : '' ?> <?= $isFuture ? 'disabled' : '' ?>>
+                        <?= htmlspecialchars($t->name) ?><?= $isFuture ? ' (Upcoming Term)' : '' ?>
                     </option>
                 <?php endforeach; ?>
             </select>
@@ -119,6 +124,7 @@ $fullClassName = $childClass . $arm;
                     Results Processing
                 </span>
             <?php endif; ?>
+        </div>
     </div>
 
     <!-- Multi-Term Result Access & Clearance Hub -->
@@ -136,12 +142,15 @@ $fullClassName = $childClass . $arm;
                 <?php foreach ($termsData as $td): 
                     $tObj = $td['term'];
                     $isCur = (int)$tObj->id === (int)$selectedTermId;
+                    $isFuture = !empty($td['isFuture']);
                 ?>
-                    <div class="bg-white rounded-2xl border <?= $isCur ? 'border-brand-500 ring-2 ring-brand-500/10' : 'border-slate-200' ?> p-5 shadow-xs flex flex-col justify-between transition hover:shadow-sm">
+                    <div class="bg-white rounded-2xl border <?= $isCur ? 'border-brand-500 ring-2 ring-brand-500/10' : 'border-slate-200' ?> p-5 shadow-xs flex flex-col justify-between transition hover:shadow-sm <?= $isFuture ? 'opacity-70 bg-slate-50/50' : '' ?>">
                         <div class="space-y-3">
                             <div class="flex items-center justify-between">
                                 <span class="text-xs font-extrabold uppercase tracking-wider text-slate-800"><?= htmlspecialchars($tObj->name) ?></span>
-                                <?php if ($td['isPublished']): ?>
+                                <?php if ($isFuture): ?>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">Upcoming Term</span>
+                                <?php elseif ($td['isPublished']): ?>
                                     <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Published</span>
                                 <?php else: ?>
                                     <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">In Review</span>
@@ -149,42 +158,58 @@ $fullClassName = $childClass . $arm;
                             </div>
 
                             <div class="space-y-2 pt-1 border-t border-slate-100 text-xs">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-slate-500 flex items-center gap-1.5">
-                                        <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                                        School Fees:
-                                    </span>
-                                    <?php if ($td['isCleared']): ?>
-                                        <span class="font-bold text-emerald-600">Cleared &check;</span>
-                                    <?php else: ?>
-                                        <span class="font-bold text-red-600">Pending Bursary</span>
-                                    <?php endif; ?>
-                                </div>
+                                <?php if ($isFuture): ?>
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-slate-500 flex items-center gap-1.5">
+                                            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            Status:
+                                        </span>
+                                        <span class="font-bold text-slate-500">Not Commenced</span>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-slate-500 flex items-center gap-1.5">
+                                            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                                            School Fees:
+                                        </span>
+                                        <?php if ($td['isCleared']): ?>
+                                            <span class="font-bold text-emerald-600">Cleared &check;</span>
+                                        <?php else: ?>
+                                            <span class="font-bold text-red-600">Pending Bursary</span>
+                                        <?php endif; ?>
+                                    </div>
 
-                                <div class="flex items-center justify-between">
-                                    <span class="text-slate-500 flex items-center gap-1.5">
-                                        <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
-                                        Result PIN:
-                                    </span>
-                                    <?php if ($td['isPinUnlocked']): ?>
-                                        <span class="font-bold text-emerald-600">Unlocked &check;</span>
-                                    <?php else: ?>
-                                        <span class="font-semibold text-slate-500">PIN Required</span>
-                                    <?php endif; ?>
-                                </div>
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-slate-500 flex items-center gap-1.5">
+                                            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                                            Result PIN:
+                                        </span>
+                                        <?php if ($td['isPinUnlocked']): ?>
+                                            <span class="font-bold text-emerald-600">Unlocked &check;</span>
+                                        <?php else: ?>
+                                            <span class="font-semibold text-slate-500">PIN Required</span>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
 
                         <div class="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2">
-                            <a href="<?= $td['reportUrl'] ?>" target="_blank"
-                               class="flex-1 text-center py-2 px-3 rounded-xl text-xs font-bold transition <?= $td['isCleared'] && $td['isPublished'] ? 'bg-brand-600 hover:bg-brand-700 text-white shadow-xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-700' ?>">
-                                <?= !$td['isCleared'] ? 'Clear Fees &amp; View' : ($td['isPinUnlocked'] ? 'View Report Card' : 'Unlock &amp; View Report') ?>
-                            </a>
-                            <?php if (!$isCur): ?>
-                                <a href="/parent/children/<?= (int)$student->id ?>/grades?term_id=<?= (int)$tObj->id ?>" 
-                                   class="px-2.5 py-2 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200" title="Switch overview to this term">
-                                    &rarr;
+                            <?php if ($isFuture): ?>
+                                <span class="flex-1 text-center py-2 px-3 rounded-xl text-xs font-bold bg-slate-100 text-slate-400 cursor-not-allowed">
+                                    Term Inactive
+                                </span>
+                            <?php else: ?>
+                                <a href="<?= $td['reportUrl'] ?>" target="_blank"
+                                   class="flex-1 text-center py-2 px-3 rounded-xl text-xs font-bold transition <?= $td['isCleared'] && $td['isPublished'] ? 'bg-brand-600 hover:bg-brand-700 text-white shadow-xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-700' ?>">
+                                    <?= !$td['isCleared'] ? 'Clear Fees &amp; View' : ($td['isPinUnlocked'] ? 'View Report Card' : 'Unlock &amp; View Report') ?>
                                 </a>
+                                <?php if (!$isCur): ?>
+                                    <a href="/parent/children/<?= (int)$student->id ?>/grades?term_id=<?= (int)$tObj->id ?>" 
+                                       class="px-2.5 py-2 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200" title="Switch overview to this term">
+                                        &rarr;
+                                    </a>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -235,6 +260,15 @@ $fullClassName = $childClass . $arm;
             </div>
 
             <!-- Average Score -->
+            <?php
+            $displayAvg = 0.0;
+            if ($summary && (float)$summary->averageScore > 0) {
+                $displayAvg = (float)$summary->averageScore;
+            } elseif (!empty($results)) {
+                $scores = array_map(fn($r) => (float)$r->computedScore, $results);
+                $displayAvg = round(array_sum($scores) / count($scores), 2);
+            }
+            ?>
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Average Score</span>
@@ -247,7 +281,7 @@ $fullClassName = $childClass . $arm;
                 <div class="mt-3">
                     <div class="flex items-baseline gap-1.5">
                         <h3 class="text-2xl font-extrabold text-slate-900">
-                            <?= $summary ? number_format((float)$summary->averageScore, 2) : '0.00' ?>%
+                            <?= number_format($displayAvg, 2) ?>%
                         </h3>
                     </div>
                     <p class="text-xs text-slate-500 mt-1.5">

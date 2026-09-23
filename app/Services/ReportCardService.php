@@ -167,6 +167,27 @@ class ReportCardService
                 }
             }
         }
+        if ((!$formTeacher || $formTeacher->name === 'Class Teacher') && $classId) {
+            try {
+                $stmt = $pdo->prepare('
+                    SELECT t.id, u.name as teacher_name, t.staff_id 
+                    FROM class_subjects cs
+                    JOIN teachers t ON t.id = cs.teacher_id
+                    JOIN users u ON u.id = t.user_id
+                    WHERE cs.class_id = :cid AND cs.status = "active"
+                    ORDER BY cs.id ASC
+                    LIMIT 1
+                ');
+                $stmt->execute([':cid' => $classId]);
+                $csTeacher = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($csTeacher && !empty($csTeacher['teacher_name'])) {
+                    $formTeacher = (object)[
+                        'name' => $csTeacher['teacher_name'],
+                        'staffId' => $csTeacher['staff_id'] ?? '',
+                    ];
+                }
+            } catch (\Throwable) {}
+        }
         if (!$formTeacher) {
             $formTeacher = (object)[
                 'name' => 'Class Teacher',
@@ -509,6 +530,8 @@ class ReportCardService
             'cumulative_results' => $cumulativeResults,
             'cumulative_summaries' => $cumulativeSummaries,
             'form_teacher' => $formTeacher,
+            'formTeacher' => $formTeacher,
+            'class_full_name' => $class ? (method_exists($class, 'getFullName') ? $class->getFullName() : ($class->name . (!empty($class->sectionArm) ? ' (' . $class->sectionArm . ')' : ''))) : 'Class Assigned',
             'psychomotor_ratings' => $psychomotorRatings,
             'affective_ratings' => $affectiveRatings,
             'is_final_term' => $isFinalTerm,

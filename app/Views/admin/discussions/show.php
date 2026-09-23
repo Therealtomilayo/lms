@@ -106,12 +106,16 @@ $discId = (int)$discussion->id;
                 No replies have been posted to this topic yet.
             </div>
         <?php else: ?>
-            <div class="space-y-3">
+            <div class="relative pl-6 md:pl-8 space-y-4 before:absolute before:left-3 md:before:left-4 before:top-2 before:bottom-6 before:w-0.5 before:bg-brand-200">
                 <?php foreach ($replies as $reply): ?>
-                    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3 hover:border-slate-300 transition">
+                    <div class="relative bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3 hover:border-brand-300 transition">
+                        <!-- Connector Node & Horizontal Link -->
+                        <div class="absolute -left-6 md:-left-8 top-5 w-3 h-3 rounded-full bg-brand-500 border-2 border-white shadow-xs"></div>
+                        <div class="absolute -left-3 md:-left-4 top-6 w-3 md:w-4 h-0.5 bg-brand-200"></div>
+
                         <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
                             <div class="flex items-center gap-2.5">
-                                <div class="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center">
+                                <div class="w-8 h-8 rounded-lg bg-brand-100 text-brand-800 font-bold text-xs flex items-center justify-center">
                                     <?= strtoupper(substr($reply->author?->name ?? 'U', 0, 1)) ?>
                                 </div>
                                 <div>

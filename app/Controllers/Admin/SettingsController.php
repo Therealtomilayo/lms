@@ -10,6 +10,7 @@ use App\Core\Database;
 use App\Core\Exceptions\AuthorizationException;
 use App\Core\Request;
 use App\Core\Response;
+use App\Core\Session;
 use App\Core\UserContext;
 use PDO;
 
@@ -59,8 +60,8 @@ class SettingsController extends Controller
             'headerTitle' => 'Institutional Identity & Settings',
             'user' => $userContext,
             'settings' => $settings,
-            'success' => $this->getFlash('success'),
-            'error' => $this->getFlash('error'),
+            'success' => Session::getFlash('success'),
+            'error' => Session::getFlash('error'),
         ], 'layouts/admin'));
     }
 
@@ -150,7 +151,7 @@ class SettingsController extends Controller
             }
         }
 
-        $this->setFlash('success', 'Institutional settings and report card credentials updated successfully.');
+        Session::setFlash('success', 'Institutional settings and report card credentials updated successfully.');
         return Response::redirect('/admin/settings');
     }
 }
