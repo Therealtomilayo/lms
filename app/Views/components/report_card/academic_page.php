@@ -12,6 +12,7 @@ $admissionDate = !empty($student->admissionDate) ? date('d/m/Y', strtotime($stud
 $state = $student->stateOfOrigin ?? 'N/A';
 $lga = $student->lga ?? 'N/A';
 $nationality = $student->nationality ?? 'Nigerian';
+$religion = !empty($student->religion) ? $student->religion : ($religion ?? 'Christianity');
 $resolvedClass = $class_full_name ?? ($class ? (method_exists($class, 'getFullName') ? $class->getFullName() : ($class->name . (!empty($class->sectionArm) ? ' (' . $class->sectionArm . ')' : ''))) : 'Class Assigned');
 $homeroom = $resolvedClass;
 $resolvedTeacher = $formTeacher ?? $form_teacher ?? null;
@@ -104,21 +105,21 @@ if (!empty($affective_ratings)) {
                     </tr>
                     <tr class="border-b border-slate-200">
                         <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">State:</td>
-                        <td class="py-1 px-2.5 font-medium text-slate-800"><?= htmlspecialchars($state) ?></td>
+                        <td class="py-1 px-2.5 font-medium text-slate-800"><?= htmlspecialchars((string)$state) ?></td>
                         <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">L.G.A:</td>
-                        <td class="py-1 px-2.5 font-medium text-slate-800"><?= htmlspecialchars($lga) ?></td>
+                        <td class="py-1 px-2.5 font-medium text-slate-800"><?= htmlspecialchars((string)$lga) ?></td>
                     </tr>
                     <tr class="border-b border-slate-200">
                         <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">Nationality:</td>
-                        <td class="py-1 px-2.5 font-medium text-slate-800"><?= htmlspecialchars($nationality) ?></td>
+                        <td class="py-1 px-2.5 font-medium text-slate-800"><?= htmlspecialchars((string)$nationality) ?></td>
                         <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">Religion:</td>
-                        <td class="py-1 px-2.5 font-medium text-slate-800"><?= htmlspecialchars($religion) ?></td>
+                        <td class="py-1 px-2.5 font-medium text-slate-800"><?= htmlspecialchars((string)$religion) ?></td>
                     </tr>
                     <tr>
                         <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">Homeroom:</td>
-                        <td class="py-1 px-2.5 font-black text-slate-900"><?= htmlspecialchars($homeroom) ?></td>
+                        <td class="py-1 px-2.5 font-black text-slate-900"><?= htmlspecialchars((string)$homeroom) ?></td>
                         <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">Homeroom Teacher:</td>
-                        <td class="py-1 px-2.5 font-extrabold text-slate-900"><?= htmlspecialchars($homeroomTeacher) ?></td>
+                        <td class="py-1 px-2.5 font-extrabold text-slate-900"><?= htmlspecialchars((string)$homeroomTeacher) ?></td>
                     </tr>
                 </tbody>
             </table>

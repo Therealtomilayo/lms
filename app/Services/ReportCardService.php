@@ -531,6 +531,7 @@ class ReportCardService
             'cumulative_summaries' => $cumulativeSummaries,
             'form_teacher' => $formTeacher,
             'formTeacher' => $formTeacher,
+            'religion' => !empty($student->religion) ? $student->religion : 'Christianity',
             'class_full_name' => $class ? (method_exists($class, 'getFullName') ? $class->getFullName() : ($class->name . (!empty($class->sectionArm) ? ' (' . $class->sectionArm . ')' : ''))) : 'Class Assigned',
             'psychomotor_ratings' => $psychomotorRatings,
             'affective_ratings' => $affectiveRatings,

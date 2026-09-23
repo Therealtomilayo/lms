@@ -151,6 +151,22 @@ class SettingsController extends Controller
             }
         }
 
+        if (!empty($files['logo_file']) && $files['logo_file']['error'] === UPLOAD_ERR_OK) {
+            $f = $files['logo_file'];
+            $ext = strtolower(pathinfo($f['name'], PATHINFO_EXTENSION));
+            if (in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'svg'], true)) {
+                $destName = 'school_logo_' . time() . '.' . $ext;
+                if (move_uploaded_file($f['tmp_name'], $uploadDir . '/' . $destName)) {
+                    $upsertStmt->execute([
+                        ':key' => 'school_logo_url',
+                        ':value' => '/assets/uploads/' . $destName,
+                        ':admin_id' => $userContext->id,
+                        ':updated_at' => $now,
+                    ]);
+                }
+            }
+        }
+
         Session::setFlash('success', 'Institutional settings and report card credentials updated successfully.');
         return Response::redirect('/admin/settings');
     }
