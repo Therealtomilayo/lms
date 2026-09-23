@@ -465,14 +465,13 @@ class ReportCardService
         }
 
         // Attendance calculations
-        $attendanceDaysOpened = (int)($summary?->totalAttendanceDays ?? 120);
-        $attendanceDaysPresent = (int)($summary?->daysPresent ?? 116);
-        $attendanceDaysAbsent = (int)($summary?->daysAbsent ?? max(0, $attendanceDaysOpened - $attendanceDaysPresent));
+        $attendanceDaysOpened = (int)($summary?->attendanceTotalCount ?? ($summary?->totalAttendanceDays ?? 120));
+        $attendanceDaysPresent = (int)($summary?->attendancePresentCount ?? ($summary?->daysPresent ?? 116));
         if ($attendanceDaysOpened <= 0) {
             $attendanceDaysOpened = 120;
             $attendanceDaysPresent = 116;
-            $attendanceDaysAbsent = 4;
         }
+        $attendanceDaysAbsent = max(0, $attendanceDaysOpened - $attendanceDaysPresent);
 
         // Next Term Resumption Date calculation
         $nextResumptionDate = '7th SEPTEMBER, 2026';

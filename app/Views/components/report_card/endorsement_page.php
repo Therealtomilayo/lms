@@ -11,13 +11,17 @@ $homeroom = $resolvedClass;
 $resolvedTeacher = $formTeacher ?? $form_teacher ?? null;
 $teacherName = !empty($resolvedTeacher?->name) ? $resolvedTeacher->name : 'Class Teacher';
 
-$teacherComment = !empty($summary?->teacherComment) 
-    ? $summary->teacherComment 
-    : 'A very brilliant, hardworking and well-behaved pupil. Shows great enthusiasm in classroom participation and exhibits high moral and intellectual standard.';
+$teacherComment = !empty($summary?->classTeacherRemark)
+    ? $summary->classTeacherRemark
+    : (!empty($summary?->teacherComment) 
+        ? $summary->teacherComment 
+        : 'A very brilliant, hardworking and well-behaved pupil. Shows great enthusiasm in classroom participation and exhibits high moral and intellectual standard.');
 
-$principalComment = !empty($summary?->principalComment) 
-    ? $summary->principalComment 
-    : 'An outstanding and commendable performance. Keep maintaining this exemplary standard of excellence!';
+$principalComment = !empty($summary?->principalRemark)
+    ? $summary->principalRemark
+    : (!empty($summary?->principalComment) 
+        ? $summary->principalComment 
+        : 'An outstanding and commendable performance. Keep maintaining this exemplary standard of excellence!');
 
 $resumptionDate = $next_resumption_date ?? '7th SEPTEMBER, 2026';
 
