@@ -191,6 +191,7 @@ $navConfig = [
         ['label' => 'Grading Scales', 'route' => '/admin/grading-scales', 'icon' => 'scale'],
         ['label' => 'Assessment Config', 'route' => '/admin/assessment-categories', 'icon' => 'clipboard'],
         ['label' => 'Results Review', 'route' => '/admin/results/review', 'icon' => 'document-text'],
+        ['label' => 'Student Transcripts', 'route' => '/admin/transcripts', 'icon' => 'document-text'],
         ['label' => 'Student Promotions', 'route' => '/admin/promotions', 'icon' => 'academic'],
         ['label' => 'Badges & Honors', 'route' => '/admin/badges', 'icon' => 'award'],
         ['category' => 'Online Classes & Comms'],

@@ -103,6 +103,9 @@ try {
     $router->post('/results/check', [\App\Controllers\PublicResultCheckerController::class, 'verify'], [CsrfMiddleware::class]);
     $router->get('/results/view', [\App\Controllers\PublicResultCheckerController::class, 'viewReport']);
 
+    // Public Official Academic Transcript Verification Portal (SRS §26, §51)
+    $router->get('/verify/transcript/{reference}', [\App\Controllers\PublicTranscriptVerificationController::class, 'verify']);
+
     // Online Admission & Prospective Student Gateway (SRS §10, §57 Phase 4)
     $router->get('/apply', [\App\Controllers\AdmissionController::class, 'showApply']);
     $router->get('/apply/register', [\App\Controllers\AdmissionController::class, 'showRegister']);
@@ -225,6 +228,11 @@ try {
     $router->post('/admin/results/unpublish', [\App\Controllers\Admin\ResultPublicationController::class, 'unpublish'], $adminFormAuth);
     $router->post('/admin/results/approve-submission', [\App\Controllers\Admin\ResultReviewController::class, 'approveSubmission'], $adminFormAuth);
     $router->get('/admin/reports/student/{studentId}/{termId}.pdf', [\App\Controllers\Admin\ReportController::class, 'pdf'], $adminAuth);
+
+    // Admin Cumulative Student Transcripts & Dossier Generator (SRS §26, §51)
+    $router->get('/admin/transcripts', [\App\Controllers\Admin\TranscriptController::class, 'index'], $adminAuth);
+    $router->get('/admin/transcripts/{studentId}', [\App\Controllers\Admin\TranscriptController::class, 'show'], $adminAuth);
+
     $router->get('/admin/gradebook', [\App\Controllers\Admin\GradebookController::class, 'index'], $adminAuth);
     $router->get('/admin/gradebook/class/{classId}', [\App\Controllers\Admin\GradebookController::class, 'showClass'], $adminAuth);
     $router->post('/admin/gradebook/{id}/lock', [\App\Controllers\Admin\GradebookController::class, 'lock'], $adminFormAuth);
