@@ -262,11 +262,17 @@ $fullClassName = $childClass . $arm;
             <!-- Average Score -->
             <?php
             $displayAvg = 0.0;
+            $displayTotal = null;
             if ($summary && (float)$summary->averageScore > 0) {
                 $displayAvg = (float)$summary->averageScore;
             } elseif (!empty($results)) {
                 $scores = array_map(fn($r) => (float)$r->computedScore, $results);
                 $displayAvg = round(array_sum($scores) / count($scores), 2);
+            }
+            if ($summary && (float)$summary->totalScore > 0) {
+                $displayTotal = (float)$summary->totalScore;
+            } elseif (!empty($results)) {
+                $displayTotal = array_sum(array_map(fn($r) => (float)$r->computedScore, $results));
             }
             ?>
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
@@ -290,26 +296,25 @@ $fullClassName = $childClass . $arm;
                 </div>
             </div>
 
-            <!-- GPA -->
+            <!-- Total Marks -->
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Grade Point Average</span>
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Marks</span>
                     <span class="p-2 rounded-xl bg-emerald-50 text-emerald-700">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5z"/>
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                         </svg>
                     </span>
                 </div>
                 <div class="mt-3">
                     <div class="flex items-baseline gap-1.5">
                         <h3 class="text-2xl font-extrabold text-slate-900">
-                            <?= ($summary && $summary->gpa !== null) ? number_format((float)$summary->gpa, 2) : 'N/A' ?>
+                            <?= $displayTotal !== null ? number_format($displayTotal, 1) : 'N/A' ?>
                         </h3>
-                        <span class="text-xs font-semibold text-slate-500">/ 5.0</span>
+                        <span class="text-xs font-semibold text-slate-500">PTS</span>
                     </div>
                     <p class="text-xs text-slate-500 mt-1.5">
-                        GPA Rating
+                        Total Points Obtained
                     </p>
                 </div>
             </div>

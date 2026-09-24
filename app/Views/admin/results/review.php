@@ -198,7 +198,6 @@ foreach ($classes as $c) {
                                 <th class="py-3 px-3">Admission No.</th>
                                 <th class="py-3 px-3 text-center">Total Score</th>
                                 <th class="py-3 px-3 text-center">Average (%)</th>
-                                <th class="py-3 px-3 text-center">GPA</th>
                                 <th class="py-3 px-3 text-right">Report Card</th>
                             </tr>
                         </thead>
@@ -223,9 +222,6 @@ foreach ($classes as $c) {
                                     </td>
                                     <td class="py-3 px-3 text-center font-bold text-slate-900 font-mono">
                                         <?= number_format((float)$s->averageScore, 2) ?>%
-                                    </td>
-                                    <td class="py-3 px-3 text-center font-semibold font-mono">
-                                        <?= $s->gpa !== null ? number_format((float)$s->gpa, 2) : '&mdash;' ?>
                                     </td>
                                     <td class="py-3 px-3 text-right">
                                         <a href="/admin/reports/student/<?= $s->studentId ?>/<?= $selectedTermId ?>.pdf"

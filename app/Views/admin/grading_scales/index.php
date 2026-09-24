@@ -2,7 +2,7 @@
 $this->layout('layouts/admin', [
     'title' => 'Grading Scales & Boundaries — Claret LMS',
     'headerTitle' => 'Grading Scales & Boundaries',
-    'headerSubtitle' => 'Configure GPA point scales, letter boundaries, and academic remarks.'
+    'headerSubtitle' => 'Configure letter grade boundaries, score ranges, and academic remarks.'
 ]);
 ?>
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -36,7 +36,6 @@ $this->layout('layouts/admin', [
                                 <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase text-xs tracking-wider">
                                     <th class="py-3 px-4">Grade</th>
                                     <th class="py-3 px-4">Score Range</th>
-                                    <th class="py-3 px-4">Grade Point</th>
                                     <th class="py-3 px-4">Remark</th>
                                 </tr>
                             </thead>
@@ -45,7 +44,6 @@ $this->layout('layouts/admin', [
                                     <tr class="hover:bg-slate-50/50 transition">
                                         <td class="py-3 px-4 font-bold text-slate-900"><?= e($b->letter) ?></td>
                                         <td class="py-3 px-4 text-slate-600 font-normal font-mono"><?= number_format($b->minScore, 1) ?>% &ndash; <?= number_format($b->maxScore, 1) ?>%</td>
-                                        <td class="py-3 px-4 text-slate-600 font-bold font-mono"><?= $b->gradePoint !== null ? number_format($b->gradePoint, 2) : '&mdash;' ?></td>
                                         <td class="py-3 px-4 text-slate-600 font-normal"><?= e($b->remark ?? '&mdash;') ?></td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -86,30 +84,28 @@ $this->layout('layouts/admin', [
                 <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Grade Boundaries</h4>
                 
                 <!-- Column Titles -->
-                <div class="grid grid-cols-5 gap-1.5 mb-2 text-[10px] font-bold text-slate-500 uppercase text-center">
+                <div class="grid grid-cols-4 gap-1.5 mb-2 text-[10px] font-bold text-slate-500 uppercase text-center">
                     <div>Grade</div>
                     <div>Min %</div>
                     <div>Max %</div>
-                    <div>GP</div>
                     <div>Remark</div>
                 </div>
 
                 <div class="space-y-2">
                     <?php 
                     $defaults = [
-                        ['letter' => 'A', 'min' => 70, 'max' => 100, 'gp' => 5.0, 'remark' => 'Excellent'],
-                        ['letter' => 'B', 'min' => 60, 'max' => 69.99, 'gp' => 4.0, 'remark' => 'Very Good'],
-                        ['letter' => 'C', 'min' => 50, 'max' => 59.99, 'gp' => 3.0, 'remark' => 'Credit'],
-                        ['letter' => 'D', 'min' => 45, 'max' => 49.99, 'gp' => 2.0, 'remark' => 'Pass'],
-                        ['letter' => 'E', 'min' => 40, 'max' => 44.99, 'gp' => 1.0, 'remark' => 'Fair'],
-                        ['letter' => 'F', 'min' => 0, 'max' => 39.99, 'gp' => 0.0, 'remark' => 'Fail'],
+                        ['letter' => 'A', 'min' => 70, 'max' => 100, 'remark' => 'Excellent'],
+                        ['letter' => 'B', 'min' => 60, 'max' => 69.99, 'remark' => 'Very Good'],
+                        ['letter' => 'C', 'min' => 50, 'max' => 59.99, 'remark' => 'Credit'],
+                        ['letter' => 'D', 'min' => 45, 'max' => 49.99, 'remark' => 'Pass'],
+                        ['letter' => 'E', 'min' => 40, 'max' => 44.99, 'remark' => 'Fair'],
+                        ['letter' => 'F', 'min' => 0, 'max' => 39.99, 'remark' => 'Fail'],
                     ];
                     foreach ($defaults as $i => $d): ?>
-                        <div class="grid grid-cols-5 gap-1.5 items-center text-xs">
+                        <div class="grid grid-cols-4 gap-1.5 items-center text-xs">
                             <input type="text" name="boundaries[<?= $i ?>][letter]" value="<?= $d['letter'] ?>" class="px-1.5 py-1.5 bg-white border border-slate-300 rounded text-center font-bold focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
                             <input type="number" step="0.01" name="boundaries[<?= $i ?>][min_score]" value="<?= $d['min'] ?>" placeholder="Min" class="px-1.5 py-1.5 bg-white border border-slate-300 rounded text-center focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
                             <input type="number" step="0.01" name="boundaries[<?= $i ?>][max_score]" value="<?= $d['max'] ?>" placeholder="Max" class="px-1.5 py-1.5 bg-white border border-slate-300 rounded text-center focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
-                            <input type="number" step="0.1" name="boundaries[<?= $i ?>][grade_point]" value="<?= $d['gp'] ?>" placeholder="GP" class="px-1.5 py-1.5 bg-white border border-slate-300 rounded text-center focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
                             <input type="text" name="boundaries[<?= $i ?>][remark]" value="<?= $d['remark'] ?>" placeholder="Remark" class="px-1.5 py-1.5 bg-white border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
                         </div>
                     <?php endforeach; ?>

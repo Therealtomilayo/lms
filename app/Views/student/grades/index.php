@@ -108,16 +108,16 @@
                 </span>
             </div>
 
-            <!-- GPA -->
+            <!-- Total Marks -->
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-                <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Grade Point</p>
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Marks</p>
                 <div class="flex items-baseline gap-1 mt-1">
                     <h3 class="text-2xl font-extrabold text-slate-900">
-                        <?= ($summary && $summary->gpa !== null) ? number_format((float)$summary->gpa, 2) : '—' ?>
+                        <?= ($summary && $summary->totalScore !== null) ? number_format((float)$summary->totalScore, 1) : '—' ?>
                     </h3>
                 </div>
                 <span class="text-[11px] font-medium text-slate-500 mt-1 block">
-                    GPA Rating
+                    Points Obtained
                 </span>
             </div>
 

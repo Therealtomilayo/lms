@@ -164,9 +164,9 @@ $fullClassName = $childClass . $arm;
                         <h3 class="text-2xl font-extrabold text-brand-700">
                             <?= number_format((float)($ts->averageScore ?? 0), 1) ?>%
                         </h3>
-                        <?php if ($ts->gpa !== null): ?>
+                        <?php if (!empty($ts->rankInClass)): ?>
                             <span class="text-xs font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">
-                                GPA <?= number_format((float)$ts->gpa, 2) ?>
+                                Rank #<?= e((string)$ts->rankInClass) ?>
                             </span>
                         <?php endif; ?>
                     <?php else: ?>
