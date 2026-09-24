@@ -7,6 +7,7 @@ namespace App\Repositories;
 use App\Core\Database;
 use App\Models\AcademicLevel;
 use App\Models\AcademicSession;
+use App\Models\AcademicStage;
 use App\Models\ClassSubject;
 use App\Models\GradingScale;
 use App\Models\SchoolClass;
@@ -394,9 +395,54 @@ class AcademicRepository
     /**
      * @return AcademicLevel[]
      */
-    public function getAllAcademicLevels(): array
+     public function getAllAcademicLevels(): array
+     {
+         return $this->getAllLevels();
+     }
+
+    /**
+     * @return AcademicStage[]
+     */
+    public function getAllStages(): array
     {
-        return $this->getAllLevels();
+        try {
+            $stmt = $this->pdo->query('SELECT * FROM `academic_stages` ORDER BY `rank_order` ASC, `id` ASC');
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            if (!empty($rows)) {
+                return array_map(fn(array $r) => AcademicStage::fromArray($r), $rows);
+            }
+        } catch (\Throwable) {
+            // Fallback if table does not exist yet
+        }
+
+        return [
+            AcademicStage::fromArray(['id' => 1, 'key' => 'creche', 'name' => 'Creche / Daycare', 'rank_order' => 1]),
+            AcademicStage::fromArray(['id' => 2, 'key' => 'nursery', 'name' => 'Nursery', 'rank_order' => 2]),
+            AcademicStage::fromArray(['id' => 3, 'key' => 'Pre Nusery', 'name' => 'Pre-Nursery', 'rank_order' => 3]),
+            AcademicStage::fromArray(['id' => 4, 'key' => 'primary', 'name' => 'Primary', 'rank_order' => 4]),
+            AcademicStage::fromArray(['id' => 5, 'key' => 'junior_secondary', 'name' => 'Junior Secondary', 'rank_order' => 5]),
+            AcademicStage::fromArray(['id' => 6, 'key' => 'senior_secondary', 'name' => 'Senior Secondary', 'rank_order' => 6]),
+        ];
+    }
+
+    public function createStage(string $key, string $name, int $rankOrder = 0): void
+    {
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO `academic_stages` (`stage_key`, `name`, `rank_order`)
+             VALUES (:stage_key, :name, :rank_order)
+             ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `rank_order` = VALUES(`rank_order`)'
+        );
+        $stmt->execute([
+            ':stage_key' => trim($key),
+            ':name' => trim($name),
+            ':rank_order' => $rankOrder,
+        ]);
+    }
+
+    public function deleteStage(string $key): bool
+    {
+        $stmt = $this->pdo->prepare('DELETE FROM `academic_stages` WHERE `stage_key` = :key');
+        return $stmt->execute([':key' => $key]);
     }
 
     public function createLevel(array $data): AcademicLevel

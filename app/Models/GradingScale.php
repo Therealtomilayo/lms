@@ -15,6 +15,7 @@ final class GradingScale
     public function __construct(
         public readonly int $id,
         public readonly string $name,
+        public readonly ?string $stage = null,
         public readonly ?string $description = null,
         public readonly bool $isDefault = false,
         public readonly ?string $createdAt = null,
@@ -38,6 +39,7 @@ final class GradingScale
         return new self(
             id: (int)($data['id'] ?? 0),
             name: (string)($data['name'] ?? ''),
+            stage: isset($data['stage']) && $data['stage'] !== '' ? (string)$data['stage'] : null,
             description: isset($data['description']) && $data['description'] !== '' ? (string)$data['description'] : null,
             isDefault: (bool)($data['is_default'] ?? false),
             createdAt: isset($data['created_at']) ? (string)$data['created_at'] : null,
@@ -73,6 +75,7 @@ final class GradingScale
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'stage' => $this->stage,
             'description' => $this->description,
             'is_default' => $this->isDefault,
             'created_at' => $this->createdAt,

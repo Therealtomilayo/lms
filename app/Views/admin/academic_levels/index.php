@@ -4,20 +4,38 @@ $this->layout('layouts/admin', [
     'headerTitle' => $headerTitle ?? 'Academic Levels'
 ]);
 
+// Build stage options & lookup map
+$stageOptions = [];
+$stageNameLookup = [];
+if (!empty($stages)) {
+    foreach ($stages as $stg) {
+        $stageOptions[$stg->key] = $stg->name;
+        $stageNameLookup[$stg->key] = $stg->name;
+    }
+}
+
 // Build grading scale options for the select components
-$scaleOptions = ['' => 'Default Scale'];
+$scaleOptions = ['' => 'Stage Default Scale'];
 foreach ($gradingScales as $scale) {
-    $scaleOptions[$scale->id] = e($scale->name);
+    $stageTag = !empty($scale->stage) ? ' [' . ($stageNameLookup[$scale->stage] ?? ucwords(str_replace('_', ' ', $scale->stage))) . ']' : '';
+    $scaleOptions[$scale->id] = e($scale->name) . $stageTag;
 }
 ?>
 <div class="space-y-6">
-    <!-- Page Header -->
+    <!-- Page Header & Stage Summary -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h2 class="text-2xl font-bold text-slate-900">Academic Levels</h2>
-            <p class="text-sm text-slate-500 mt-1">Configure institutional stages (e.g. Primary, Junior Secondary) and grading scales.</p>
+            <h2 class="text-2xl font-bold text-slate-900">Academic Levels & Educational Stages</h2>
+            <p class="text-sm text-slate-500 mt-1">Configure institutional stages (Primary, Junior Secondary, etc.) and level grading scales.</p>
         </div>
-        <div>
+        <div class="flex items-center gap-2.5 flex-wrap">
+            <?php $this->include('components/button', [
+                'type' => 'button',
+                'variant' => 'secondary',
+                'label' => '+ Add Stage',
+                'icon' => '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>',
+                'attributes' => 'onclick="window.LMS.showModal(\'stage-modal\')"'
+            ]); ?>
             <?php $this->include('components/button', [
                 'type' => 'button',
                 'variant' => 'primary',
@@ -25,6 +43,31 @@ foreach ($gradingScales as $scale) {
                 'icon' => '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>',
                 'attributes' => 'onclick="window.LMS.showModal(\'create-modal\')"'
             ]); ?>
+        </div>
+    </div>
+
+    <!-- Educational Stages Overview Bar -->
+    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div>
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Configured Educational Stages:</span>
+                <div class="flex flex-wrap items-center gap-2 mt-1.5">
+                    <?php if (!empty($stages)): ?>
+                        <?php foreach ($stages as $stg): ?>
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-brand-500"></span>
+                                <?= e($stg->name) ?>
+                                <span class="text-[10px] text-slate-400 font-mono">(<?= e($stg->key) ?>)</span>
+                            </span>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <span class="text-xs text-slate-400 italic">No stages configured.</span>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <a href="/admin/grading-scales" class="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline shrink-0">
+                <span>Manage Stage Grading Scales &rarr;</span>
+            </a>
         </div>
     </div>
 
@@ -42,13 +85,16 @@ foreach ($gradingScales as $scale) {
                         <tr>
                             <th scope="col" class="px-6 py-3.5">Rank</th>
                             <th scope="col" class="px-6 py-3.5">Level Name</th>
-                            <th scope="col" class="px-6 py-3.5">Stage</th>
+                            <th scope="col" class="px-6 py-3.5">Educational Stage</th>
                             <th scope="col" class="px-6 py-3.5">Grading Scale</th>
                             <th scope="col" class="px-6 py-3.5 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-200">
                         <?php foreach ($levels as $lvl): ?>
+                            <?php 
+                            $stageLabel = $stageNameLookup[$lvl->stage] ?? ucwords(str_replace('_', ' ', $lvl->stage));
+                            ?>
                             <tr class="hover:bg-slate-50/50 transition">
                                 <td class="px-6 py-4">
                                     <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-600 text-xs font-bold font-mono">
@@ -59,7 +105,7 @@ foreach ($gradingScales as $scale) {
                                     <?= e($lvl->name) ?>
                                 </td>
                                 <td class="px-6 py-4">
-                                    <?php $this->include('components/badge', ['label' => $lvl->stage, 'variant' => 'info']); ?>
+                                    <?php $this->include('components/badge', ['label' => $stageLabel, 'variant' => 'info']); ?>
                                 </td>
                                 <td class="px-6 py-4 text-slate-600">
                                     <?php if ($lvl->gradingScaleId): ?>
@@ -72,9 +118,13 @@ foreach ($gradingScales as $scale) {
                                             }
                                         }
                                         ?>
-                                        <span class="text-sm font-medium text-slate-700"><?= $scaleName ?></span>
+                                        <span class="text-sm font-medium text-slate-800"><?= $scaleName ?></span>
+                                        <span class="text-[10px] text-brand-600 font-semibold block">Level Override</span>
                                     <?php else: ?>
-                                        <span class="text-xs text-slate-400 italic">Default Scale</span>
+                                        <span class="inline-flex items-center gap-1 text-xs text-slate-600 font-medium">
+                                            <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                            Stage Default
+                                        </span>
                                     <?php endif; ?>
                                 </td>
                                 <td class="px-6 py-4 text-right">
@@ -95,7 +145,63 @@ foreach ($gradingScales as $scale) {
     <?php endif; ?>
 </div>
 
-<!-- Create Modal -->
+<!-- Add Stage Modal -->
+<?php ob_start(); ?>
+<form method="POST" action="/admin/academic-levels/stages" class="space-y-4" novalidate>
+    <?= csrf_field() ?>
+
+    <?php $this->include('components/input', [
+        'name' => 'name',
+        'id' => 'stage_name',
+        'label' => 'Stage Display Name',
+        'placeholder' => 'e.g. Early Years, Primary, Junior Secondary',
+        'required' => true,
+        'helpText' => 'The human-readable label shown across the system.'
+    ]); ?>
+
+    <?php $this->include('components/input', [
+        'name' => 'key',
+        'id' => 'stage_key',
+        'label' => 'Stage Code / Key (Optional)',
+        'placeholder' => 'e.g. early_years, primary, junior_secondary',
+        'required' => false,
+        'helpText' => 'Leave blank to automatically generate from name.'
+    ]); ?>
+
+    <?php $this->include('components/input', [
+        'name' => 'rank_order',
+        'id' => 'stage_rank_order',
+        'label' => 'Sort Order',
+        'type' => 'number',
+        'value' => '10',
+        'required' => true,
+        'helpText' => 'Ordering index for listing educational stages.'
+    ]); ?>
+
+    <div class="pt-4 border-t border-slate-200 flex justify-end gap-3">
+        <?php $this->include('components/button', [
+            'type' => 'button',
+            'variant' => 'secondary',
+            'label' => 'Cancel',
+            'attributes' => 'onclick="window.LMS.hideModal(\'stage-modal\')"'
+        ]); ?>
+        <?php $this->include('components/button', [
+            'type' => 'submit',
+            'variant' => 'primary',
+            'label' => 'Save Stage'
+        ]); ?>
+    </div>
+</form>
+<?php $stageModalBody = ob_get_clean(); ?>
+
+<?php $this->include('components/modal', [
+    'id' => 'stage-modal',
+    'title' => 'Configure Educational Stage',
+    'body' => $stageModalBody,
+    'size' => 'md'
+]); ?>
+
+<!-- Create Level Modal -->
 <?php ob_start(); ?>
 <form method="POST" action="/admin/academic-levels" class="space-y-4" novalidate>
     <?= csrf_field() ?>
@@ -108,12 +214,14 @@ foreach ($gradingScales as $scale) {
         'required' => true
     ]); ?>
 
-    <?php $this->include('components/input', [
+    <?php $this->include('components/select', [
         'name' => 'stage',
         'id' => 'create_level_stage',
-        'label' => 'Stage',
-        'placeholder' => 'e.g. Junior Secondary, Primary',
-        'required' => true
+        'label' => 'Educational Stage',
+        'options' => $stageOptions,
+        'selected' => 'junior_secondary',
+        'required' => true,
+        'helpText' => 'Select educational stage for stage-wide grading scales and settings.'
     ]); ?>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -124,7 +232,7 @@ foreach ($gradingScales as $scale) {
             'type' => 'number',
             'value' => '1',
             'required' => true,
-            'helpText' => 'Determines the sort position in lists.'
+            'helpText' => 'Determines sort position in lists.'
         ]); ?>
 
         <?php $this->include('components/select', [
@@ -133,7 +241,8 @@ foreach ($gradingScales as $scale) {
             'label' => 'Grading Scale',
             'options' => $scaleOptions,
             'selected' => '',
-            'placeholder' => ''
+            'placeholder' => '',
+            'helpText' => 'Leave as "Stage Default" to inherit stage scale.'
         ]); ?>
     </div>
 
@@ -160,7 +269,7 @@ foreach ($gradingScales as $scale) {
     'size' => 'md'
 ]); ?>
 
-<!-- Edit Modal -->
+<!-- Edit Level Modal -->
 <?php ob_start(); ?>
 <form id="edit-form" method="POST" action="" class="space-y-4" novalidate>
     <?= csrf_field() ?>
@@ -172,11 +281,13 @@ foreach ($gradingScales as $scale) {
         'required' => true
     ]); ?>
 
-    <?php $this->include('components/input', [
+    <?php $this->include('components/select', [
         'name' => 'stage',
         'id' => 'edit_level_stage',
-        'label' => 'Stage',
-        'required' => true
+        'label' => 'Educational Stage',
+        'options' => $stageOptions,
+        'required' => true,
+        'helpText' => 'Select educational stage for stage-wide grading scales and settings.'
     ]); ?>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -186,7 +297,7 @@ foreach ($gradingScales as $scale) {
             'label' => 'Rank Order',
             'type' => 'number',
             'required' => true,
-            'helpText' => 'Determines the sort position in lists.'
+            'helpText' => 'Determines sort position in lists.'
         ]); ?>
 
         <?php $this->include('components/select', [
@@ -195,7 +306,8 @@ foreach ($gradingScales as $scale) {
             'label' => 'Grading Scale',
             'options' => $scaleOptions,
             'selected' => '',
-            'placeholder' => ''
+            'placeholder' => '',
+            'helpText' => 'Leave as "Stage Default" to inherit stage scale.'
         ]); ?>
     </div>
 

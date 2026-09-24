@@ -218,7 +218,9 @@ final class GradebookService
         $categories = $this->gradebookRepo->getCategoriesByContext($sessionId, $termId, $classSubjectId);
         $this->validateCategoryWeights($categories);
 
-        $gradingScale = $this->gradingScaleRepo->getDefaultScale();
+        $class = $this->academicRepo->findClassById($classSubject->classId);
+        $level = $class?->academicLevel;
+        $gradingScale = $this->gradingScaleRepo->getScaleForLevel($level?->id, $level?->stage);
         if (!$gradingScale) {
             throw new DomainRuleException('No grading scale configured in the system.');
         }

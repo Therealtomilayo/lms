@@ -155,6 +155,7 @@ try {
     // Academic Levels
     $router->get('/admin/academic-levels', [\App\Controllers\Admin\AcademicLevelController::class, 'index'], $adminAuth);
     $router->post('/admin/academic-levels', [\App\Controllers\Admin\AcademicLevelController::class, 'store'], $adminFormAuth);
+    $router->post('/admin/academic-levels/stages', [\App\Controllers\Admin\AcademicLevelController::class, 'storeStage'], $adminFormAuth);
     $router->post('/admin/academic-levels/{id}', [\App\Controllers\Admin\AcademicLevelController::class, 'update'], $adminFormAuth);
 
     // Classes
@@ -210,6 +211,8 @@ try {
     // Admin Grading Scales, Assessment Categories & Result Publication Routes
     $router->get('/admin/grading-scales', [\App\Controllers\Admin\GradingScaleController::class, 'index'], $adminAuth);
     $router->post('/admin/grading-scales', [\App\Controllers\Admin\GradingScaleController::class, 'store'], $adminFormAuth);
+    $router->post('/admin/grading-scales/{id}', [\App\Controllers\Admin\GradingScaleController::class, 'update'], $adminFormAuth);
+    $router->post('/admin/grading-scales/{id}/delete', [\App\Controllers\Admin\GradingScaleController::class, 'delete'], $adminFormAuth);
     $router->get('/admin/assessment-categories', [\App\Controllers\Admin\AssessmentCategoryController::class, 'index'], $adminAuth);
     $router->post('/admin/assessment-categories', [\App\Controllers\Admin\AssessmentCategoryController::class, 'store'], $adminFormAuth);
     $router->post('/admin/assessment-categories/{id}/update', [\App\Controllers\Admin\AssessmentCategoryController::class, 'update'], $adminFormAuth);

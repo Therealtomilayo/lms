@@ -28,6 +28,7 @@ final class AcademicStructureServiceTest extends TestCase
             CREATE TABLE `grading_scales` (
                 `id` INTEGER PRIMARY KEY AUTOINCREMENT,
                 `name` VARCHAR(100) NOT NULL,
+                `stage` VARCHAR(50) NULL,
                 `is_default` INTEGER NOT NULL DEFAULT 0,
                 `created_at` DATETIME NOT NULL,
                 `updated_at` DATETIME NOT NULL

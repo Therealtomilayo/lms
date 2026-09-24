@@ -127,4 +127,41 @@ final class GradingScaleTest extends TestCase
         $this->assertSame($this->scale->name, $hydrated->name);
         $this->assertCount(6, $hydrated->boundaries);
     }
+
+    public function testGradingScaleSupportsStageProperty(): void
+    {
+        $scale = new GradingScale(
+            id: 2,
+            name: 'Junior Secondary Scale',
+            stage: 'junior_secondary',
+            description: 'Scale for JSS',
+            isDefault: false
+        );
+
+        $this->assertSame('junior_secondary', $scale->stage);
+        $arr = $scale->toArray();
+        $this->assertSame('junior_secondary', $arr['stage']);
+
+        $hydrated = GradingScale::fromArray($arr);
+        $this->assertSame('junior_secondary', $hydrated->stage);
+    }
+
+    public function testAcademicStageEntity(): void
+    {
+        $stage = \App\Models\AcademicStage::fromArray([
+            'id' => 5,
+            'stage_key' => 'junior_secondary',
+            'name' => 'Junior Secondary',
+            'rank_order' => 5,
+        ]);
+
+        $this->assertSame(5, $stage->id);
+        $this->assertSame('junior_secondary', $stage->key);
+        $this->assertSame('Junior Secondary', $stage->name);
+        $this->assertSame(5, $stage->rankOrder);
+
+        $arr = $stage->toArray();
+        $this->assertSame('junior_secondary', $arr['key']);
+        $this->assertSame('Junior Secondary', $arr['name']);
+    }
 }

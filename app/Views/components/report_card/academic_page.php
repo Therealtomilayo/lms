@@ -288,31 +288,46 @@ if (!empty($affective_ratings)) {
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-200 bg-white">
-                            <tr>
-                                <td class="py-0.5 px-1 font-black text-emerald-700 border-r border-slate-200">A</td>
-                                <td class="py-0.5 px-1 font-mono border-r border-slate-200">85 &ndash; 100%</td>
-                                <td class="py-0.5 px-1 font-semibold text-slate-700">Distinction / Excellent</td>
-                            </tr>
-                            <tr>
-                                <td class="py-0.5 px-1 font-black text-sky-700 border-r border-slate-200">B</td>
-                                <td class="py-0.5 px-1 font-mono border-r border-slate-200">75 &ndash; 84%</td>
-                                <td class="py-0.5 px-1 font-semibold text-slate-700">Very Good</td>
-                            </tr>
-                            <tr>
-                                <td class="py-0.5 px-1 font-black text-amber-700 border-r border-slate-200">C</td>
-                                <td class="py-0.5 px-1 font-mono border-r border-slate-200">60 &ndash; 74%</td>
-                                <td class="py-0.5 px-1 font-semibold text-slate-700">Credit / Good</td>
-                            </tr>
-                            <tr>
-                                <td class="py-0.5 px-1 font-black text-orange-700 border-r border-slate-200">D</td>
-                                <td class="py-0.5 px-1 font-mono border-r border-slate-200">40 &ndash; 59%</td>
-                                <td class="py-0.5 px-1 font-semibold text-slate-700">Pass / Fair</td>
-                            </tr>
-                            <tr>
-                                <td class="py-0.5 px-1 font-black text-rose-700 border-r border-slate-200">E</td>
-                                <td class="py-0.5 px-1 font-mono border-r border-slate-200">0 &ndash; 39%</td>
-                                <td class="py-0.5 px-1 font-semibold text-slate-700">Fail / Unsatisfactory</td>
-                            </tr>
+                            <?php if (!empty($grading_scale) && !empty($grading_scale->boundaries)): ?>
+                                <?php foreach ($grading_scale->boundaries as $b): ?>
+                                    <tr>
+                                        <td class="py-0.5 px-1 font-black text-slate-800 border-r border-slate-200"><?= e($b->letter) ?></td>
+                                        <td class="py-0.5 px-1 font-mono border-r border-slate-200"><?= number_format($b->minScore, 0) ?> &ndash; <?= number_format($b->maxScore, 0) ?>%</td>
+                                        <td class="py-0.5 px-1 font-semibold text-slate-700"><?= e($b->remark ?? '') ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td class="py-0.5 px-1 font-black text-emerald-700 border-r border-slate-200">A</td>
+                                    <td class="py-0.5 px-1 font-mono border-r border-slate-200">70 &ndash; 100%</td>
+                                    <td class="py-0.5 px-1 font-semibold text-slate-700">Excellent</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-0.5 px-1 font-black text-sky-700 border-r border-slate-200">B</td>
+                                    <td class="py-0.5 px-1 font-mono border-r border-slate-200">60 &ndash; 69%</td>
+                                    <td class="py-0.5 px-1 font-semibold text-slate-700">Very Good</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-0.5 px-1 font-black text-amber-700 border-r border-slate-200">C</td>
+                                    <td class="py-0.5 px-1 font-mono border-r border-slate-200">50 &ndash; 59%</td>
+                                    <td class="py-0.5 px-1 font-semibold text-slate-700">Credit</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-0.5 px-1 font-black text-orange-700 border-r border-slate-200">D</td>
+                                    <td class="py-0.5 px-1 font-mono border-r border-slate-200">45 &ndash; 49%</td>
+                                    <td class="py-0.5 px-1 font-semibold text-slate-700">Pass</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-0.5 px-1 font-black text-rose-700 border-r border-slate-200">E</td>
+                                    <td class="py-0.5 px-1 font-mono border-r border-slate-200">40 &ndash; 44%</td>
+                                    <td class="py-0.5 px-1 font-semibold text-slate-700">Fair</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-0.5 px-1 font-black text-rose-900 border-r border-slate-200">F</td>
+                                    <td class="py-0.5 px-1 font-mono border-r border-slate-200">0 &ndash; 39%</td>
+                                    <td class="py-0.5 px-1 font-semibold text-slate-700">Fail</td>
+                                </tr>
+                            <?php endif; ?>
                         </tbody>
                     </table>
                 </div>

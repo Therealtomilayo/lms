@@ -27,6 +27,7 @@ class ReportCardService
     private readonly SkillRepository $skillRepo;
     private readonly PromotionService $promotionService;
     private readonly PromotionRepository $promotionRepo;
+    private readonly \App\Repositories\GradingScaleRepository $gradingScaleRepo;
 
     public function __construct(
         ?GradebookRepository $gradebookRepo = null,
@@ -35,7 +36,8 @@ class ReportCardService
         ?TeacherRepository $teacherRepo = null,
         ?SkillRepository $skillRepo = null,
         ?PromotionService $promotionService = null,
-        ?PromotionRepository $promotionRepo = null
+        ?PromotionRepository $promotionRepo = null,
+        ?\App\Repositories\GradingScaleRepository $gradingScaleRepo = null
     ) {
         $this->gradebookRepo = $gradebookRepo ?? new GradebookRepository();
         $this->studentRepo = $studentRepo ?? new StudentRepository();
@@ -44,6 +46,7 @@ class ReportCardService
         $this->skillRepo = $skillRepo ?? new SkillRepository();
         $this->promotionService = $promotionService ?? new PromotionService();
         $this->promotionRepo = $promotionRepo ?? new PromotionRepository();
+        $this->gradingScaleRepo = $gradingScaleRepo ?? new \App\Repositories\GradingScaleRepository();
     }
 
     public function getReportCardData(int $studentId, int $termId): array
@@ -108,6 +111,15 @@ class ReportCardService
             } catch (\Throwable) {
                 $class = null;
             }
+        }
+
+        $levelId = $class?->academicLevelId ?? $class?->academicLevel?->id;
+        $stage = $class?->academicLevel?->stage;
+        $gradingScale = null;
+        try {
+            $gradingScale = $this->gradingScaleRepo->getScaleForLevel($levelId, $stage);
+        } catch (\Throwable) {
+            $gradingScale = null;
         }
 
         if ($classId) {
@@ -403,9 +415,10 @@ class ReportCardService
             // Standardize 5-part CA breakdown (Activity 20%, Unit Test 20%, SPAT 10%, Home Fun 10%, Terminal Exam 40%)
             $caScores = $this->extractStandardCaScores($score, $breakdown);
 
-            // Determine standardized grade letter & remark
-            $gradeLetter = $res->gradeLetter ?: $this->resolveGradeLetter($score);
-            $remark = $res->remark ?: $this->resolveGradeRemark($score);
+            // Determine standardized grade letter & remark using stage grading scale
+            $matchedBoundary = $gradingScale?->resolveGrade($score);
+            $gradeLetter = $res->gradeLetter ?: ($matchedBoundary ? $matchedBoundary->letter : $this->resolveGradeLetter($score, $gradingScale));
+            $remark = $res->remark ?: ($matchedBoundary && $matchedBoundary->remark ? $matchedBoundary->remark : $this->resolveGradeRemark($score, $gradingScale));
 
             $itemData = [
                 'subject_id' => $res->classSubject?->subjectId ?? 0,
@@ -540,32 +553,47 @@ class ReportCardService
             'pupil_average' => $pupilAverage,
             'is_promotion_visible' => $isPromotionVisible,
             'promotion_data' => $promotionData,
+            'grading_scale' => $gradingScale,
             'generated_at' => date('Y-m-d H:i:s'),
         ];
     }
 
     /**
-     * Map numerical score to standard Claret grade letter
+     * Map numerical score to grade letter using active grading scale or default
      */
-    private function resolveGradeLetter(float $score): string
+    private function resolveGradeLetter(float $score, ?\App\Models\GradingScale $scale = null): string
     {
-        if ($score >= 85) return 'A';
-        if ($score >= 75) return 'B';
-        if ($score >= 60) return 'C';
-        if ($score >= 40) return 'D';
-        return 'E';
+        if ($scale) {
+            $matched = $scale->resolveGrade($score);
+            if ($matched) {
+                return $matched->letter;
+            }
+        }
+        if ($score >= 70) return 'A';
+        if ($score >= 60) return 'B';
+        if ($score >= 50) return 'C';
+        if ($score >= 45) return 'D';
+        if ($score >= 40) return 'E';
+        return 'F';
     }
 
     /**
-     * Map numerical score to standard Claret grade remark
+     * Map numerical score to grade remark using active grading scale or default
      */
-    private function resolveGradeRemark(float $score): string
+    private function resolveGradeRemark(float $score, ?\App\Models\GradingScale $scale = null): string
     {
-        if ($score >= 85) return 'EXCELLENT';
-        if ($score >= 75) return 'VERY GOOD';
-        if ($score >= 60) return 'GOOD';
+        if ($scale) {
+            $matched = $scale->resolveGrade($score);
+            if ($matched && $matched->remark) {
+                return $matched->remark;
+            }
+        }
+        if ($score >= 70) return 'EXCELLENT';
+        if ($score >= 60) return 'VERY GOOD';
+        if ($score >= 50) return 'CREDIT';
+        if ($score >= 45) return 'PASS';
         if ($score >= 40) return 'FAIR';
-        return 'STRUGGLING';
+        return 'FAIL';
     }
 
     /**

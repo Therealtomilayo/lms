@@ -223,6 +223,7 @@ final class GradebookAndReportCardLifecycleIntegrationTest extends TestCase
             CREATE TABLE `grading_scales` (
                 `id` INTEGER PRIMARY KEY AUTOINCREMENT,
                 `name` VARCHAR(100) NOT NULL,
+                `stage` VARCHAR(50) NULL,
                 `description` TEXT NULL,
                 `is_default` INTEGER NOT NULL DEFAULT 0,
                 `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

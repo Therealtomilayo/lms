@@ -40,13 +40,42 @@ class AcademicLevelController extends Controller
 
         $levels = $this->repository->getAllLevels();
         $gradingScales = $this->repository->getAllGradingScales();
+        $stages = $this->repository->getAllStages();
 
         return $this->view('admin/academic_levels/index', [
             'title' => 'Academic Levels — Claret LMS',
             'headerTitle' => 'Academic Levels',
             'levels' => $levels,
             'gradingScales' => $gradingScales,
+            'stages' => $stages,
         ]);
+    }
+
+    public function storeStage(Request $request): Response
+    {
+        $userContext = $request->getAttribute('user_context');
+        if (!$userContext instanceof UserContext || !AcademicPolicy::canManageAcademicStructure($userContext)) {
+            return $this->forbidden('You are not authorized to manage academic stages.');
+        }
+
+        $name = trim((string)$request->post('name', ''));
+        $key = trim((string)$request->post('key', ''));
+        $rankOrder = (int)$request->post('rank_order', 0);
+
+        if ($name === '') {
+            return $this->redirectWithError('/admin/academic-levels', 'Stage name is required.');
+        }
+
+        if ($key === '') {
+            $key = strtolower(trim((string)preg_replace('/[^a-zA-Z0-9]+/', '_', $name), '_'));
+        }
+
+        try {
+            $this->repository->createStage($key, $name, $rankOrder);
+            return $this->redirectWithSuccess('/admin/academic-levels', "Educational stage '{$name}' configured successfully.");
+        } catch (\Throwable $e) {
+            return $this->redirectWithError('/admin/academic-levels', 'Failed to configure stage: ' . $e->getMessage());
+        }
     }
 
     public function store(Request $request): Response
