@@ -228,7 +228,7 @@ class AdmissionRepository
     {
         $sql = 'SELECT a.*, 
                        u.name as applicant_name, u.email as applicant_email, u.phone as applicant_phone,
-                       s.title as session_title, s.application_fee, s.currency, s.opens_at, s.closes_at, s.is_active as session_is_active
+                       s.academic_session_id, s.title as session_title, s.application_fee, s.currency, s.opens_at, s.closes_at, s.is_active as session_is_active
                 FROM `admission_applications` a
                 JOIN `users` u ON u.id = a.applicant_user_id
                 JOIN `admission_sessions` s ON s.id = a.admission_session_id
@@ -251,7 +251,7 @@ class AdmissionRepository
 
         $session = AdmissionSession::fromArray([
             'id' => $row['admission_session_id'],
-            'academic_session_id' => 0,
+            'academic_session_id' => (int)($row['academic_session_id'] ?? 0),
             'title' => $row['session_title'],
             'application_fee' => $row['application_fee'],
             'currency' => $row['currency'],

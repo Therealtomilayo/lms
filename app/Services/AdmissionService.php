@@ -835,8 +835,11 @@ class AdmissionService
 
                 // Enroll student into active class enrollment & auto-enroll subjects for that class/arm
                 if ($classId) {
-                    $admissionSession = $this->admissionRepo->findSessionById($app->sessionId);
-                    $academicSessionId = $admissionSession?->academicSessionId ?? $this->academicRepo->findActiveSession()?->id;
+                    $admissionSessionId = $app->admissionSessionId ?? $app->sessionId ?? null;
+                    $admissionSession = $admissionSessionId ? $this->admissionRepo->findSessionById((int)$admissionSessionId) : null;
+                    $academicSessionId = ($admissionSession && $admissionSession->academicSessionId > 0)
+                        ? $admissionSession->academicSessionId
+                        : ($this->academicRepo->findActiveSession()?->id ?? $this->academicRepo->getAllSessions()[0]?->id ?? null);
                     if ($academicSessionId) {
                         try {
                             $this->enrollmentService->enrollStudentInClass(

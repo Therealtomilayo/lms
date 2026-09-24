@@ -26,6 +26,7 @@ class AdminAdmissionsManagementTest extends TestCase
     private UserRepository $userRepo;
     private StudentRepository $studentRepo;
     private ParentRepository $parentRepo;
+    private AcademicRepository $academicRepo;
     private AuthService $authService;
     private int $adminUserId;
     private int $applicantUserId;
@@ -36,14 +37,14 @@ class AdminAdmissionsManagementTest extends TestCase
         $this->db = Database::getConnection();
         $this->admissionRepo = new AdmissionRepository($this->db);
         $this->userRepo = new UserRepository($this->db);
-        $academicRepo = new AcademicRepository($this->db);
+        $this->academicRepo = new AcademicRepository($this->db);
         $this->studentRepo = new StudentRepository($this->db);
         $this->parentRepo = new ParentRepository($this->db);
         
         $this->admissionService = new AdmissionService(
             $this->admissionRepo,
             $this->userRepo,
-            $academicRepo,
+            $this->academicRepo,
             $this->studentRepo,
             $this->parentRepo,
             $this->db
@@ -91,6 +92,8 @@ class AdminAdmissionsManagementTest extends TestCase
 
             foreach ($studentIds as $stuId) {
                 $stu = $this->studentRepo->findById((int)$stuId);
+                $this->db->prepare("DELETE FROM student_subject_enrollments WHERE student_id = ?")->execute([$stuId]);
+                $this->db->prepare("DELETE FROM class_enrollments WHERE student_id = ?")->execute([$stuId]);
                 $this->db->prepare("DELETE FROM parent_student WHERE student_id = ?")->execute([$stuId]);
                 $this->db->prepare("DELETE FROM students WHERE id = ?")->execute([$stuId]);
                 if ($stu) {
@@ -213,11 +216,16 @@ class AdminAdmissionsManagementTest extends TestCase
         $refreshed = $this->admissionRepo->findApplicationById($appId);
         $this->assertEquals(AdmissionApplication::STATUS_UNDER_REVIEW, $refreshed->status);
 
-        // 5. Admin: Approve Application & Execute Student Matriculation Conversion
+        // 5. Admin: Approve Application & Execute Student Matriculation Conversion (with assigned class)
+        $classes = $this->academicRepo->getAllClasses();
+        $targetClass = !empty($classes) ? $classes[0] : null;
+        $wardAllocations = $targetClass ? [$wardId => $targetClass->id] : [];
+
         $approveRes = $this->admissionService->approveApplication(
             $appId,
             $this->adminUserId,
-            'Entrance criteria met with distinction. Admitted.'
+            'Entrance criteria met with distinction. Admitted.',
+            $wardAllocations
         );
         $this->assertTrue($approveRes->isSuccess(), $approveRes->getMessage() ?? '');
 
@@ -235,6 +243,12 @@ class AdminAdmissionsManagementTest extends TestCase
         $student = $this->studentRepo->findById((int)$wardAfterApproval->convertedStudentId);
         $this->assertNotNull($student);
         $this->assertMatchesRegularExpression('/^STD-\d{5}$/', $student->admissionNumber);
+        if ($targetClass) {
+            $this->assertEquals($targetClass->id, $student->currentClassId);
+            $enrStmt = $this->db->prepare("SELECT COUNT(*) FROM class_enrollments WHERE student_id = ? AND class_id = ?");
+            $enrStmt->execute([$student->id, $targetClass->id]);
+            $this->assertGreaterThan(0, (int)$enrStmt->fetchColumn());
+        }
 
         // Verify Student user exists
         $studentUser = $this->userRepo->findById($student->userId);

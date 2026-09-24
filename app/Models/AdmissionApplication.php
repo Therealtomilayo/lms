@@ -60,6 +60,19 @@ final class AdmissionApplication
         );
     }
 
+    public function __get(string $name): mixed
+    {
+        if ($name === 'sessionId') {
+            return $this->admissionSessionId;
+        }
+        return null;
+    }
+
+    public function __isset(string $name): bool
+    {
+        return $name === 'sessionId' || isset($this->{$name});
+    }
+
     public function isDraft(): bool
     {
         return $this->status === self::STATUS_DRAFT;
