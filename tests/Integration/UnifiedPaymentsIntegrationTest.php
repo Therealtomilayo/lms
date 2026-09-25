@@ -92,6 +92,8 @@ class UnifiedPaymentsIntegrationTest extends TestCase
             'date_of_birth' => '2012-05-15',
             'applying_for_level_id' => $levelId,
             'class_grade' => 'JSS 1',
+            'previous_school' => 'St. Jude Academy',
+            'last_grade_passed' => 'Primary 6',
         ]);
         $this->assertTrue($wardRes->isSuccess());
         $this->wardId = (int)$wardRes->getData()->id;

@@ -108,6 +108,7 @@ class AdminAdmissionsManagementTest extends TestCase
             $this->db->prepare("DELETE FROM admission_applications WHERE id = ?")->execute([$appId]);
         }
 
+        $this->db->prepare("DELETE FROM files WHERE uploaded_by IN (?, ?)")->execute([$this->applicantUserId, $this->adminUserId]);
         $this->db->prepare("DELETE FROM parent_student WHERE parent_id IN (SELECT id FROM parents WHERE user_id = ?)")->execute([$this->applicantUserId]);
         $this->db->prepare("DELETE FROM parents WHERE user_id = ?")->execute([$this->applicantUserId]);
         $this->db->prepare("DELETE FROM user_roles WHERE user_id IN (?, ?)")->execute([$this->applicantUserId, $this->adminUserId]);
@@ -135,7 +136,7 @@ class AdminAdmissionsManagementTest extends TestCase
             'applying_for_level_id' => $levelId,
             'class_grade' => 'JSS 1',
             'previous_school' => 'Holy Rosary Academy',
-            'previous_class' => 'Primary 6'
+            'last_grade_passed' => 'Primary 6'
         ];
         $addRes = $this->admissionService->addWard($this->applicantUserId, $wardData);
         $this->assertTrue($addRes->isSuccess());
@@ -147,33 +148,31 @@ class AdminAdmissionsManagementTest extends TestCase
         $sim = $this->admissionService->simulateSuccessfulWardPayment($payInit->getData()['reference'], $this->applicantUserId);
         $this->assertTrue($sim->isSuccess());
 
-        // Documents
+        // Documents (all 6 required documents)
         $fileRepo = new FileRepository($this->db);
-        $birthCert = $fileRepo->create(
-            uuid: 'tc-birth-' . uniqid(),
-            storageKey: 'storage/uploads/admissions/' . uniqid() . '_birth.pdf',
-            originalName: 'birth.pdf',
-            mimeType: 'application/pdf',
-            sizeBytes: 1024,
-            sha256: hash('sha256', 'dummy1' . uniqid()),
-            uploadedBy: $this->applicantUserId,
-            ownerType: 'admission_ward',
-            ownerId: $wardId
-        );
-        $passport = $fileRepo->create(
-            uuid: 'tc-passport-' . uniqid(),
-            storageKey: 'storage/uploads/admissions/' . uniqid() . '_passport.jpg',
-            originalName: 'passport.jpg',
-            mimeType: 'image/jpeg',
-            sizeBytes: 2048,
-            sha256: hash('sha256', 'dummy2' . uniqid()),
-            uploadedBy: $this->applicantUserId,
-            ownerType: 'admission_ward',
-            ownerId: $wardId
-        );
+        $docTypes = [
+            'birth_certificate' => 'application/pdf',
+            'passport_photo' => 'image/jpeg',
+            'previous_report' => 'application/pdf',
+            'parent_passport' => 'image/jpeg',
+            'authorized_picker_passport' => 'image/jpeg',
+            'immunization_record' => 'application/pdf',
+        ];
 
-        $this->admissionService->attachDocumentToWard($wardId, $this->applicantUserId, 'birth_certificate', (int)$birthCert->id);
-        $this->admissionService->attachDocumentToWard($wardId, $this->applicantUserId, 'passport_photo', (int)$passport->id);
+        foreach ($docTypes as $docType => $mime) {
+            $f = $fileRepo->create(
+                uuid: sprintf('%08x-%04x-%04x-%04x-%012x', mt_rand(), mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand()),
+                storageKey: 'storage/uploads/admissions/' . uniqid() . '_' . $docType,
+                originalName: $docType . ($mime === 'image/jpeg' ? '.jpg' : '.pdf'),
+                mimeType: $mime,
+                sizeBytes: 1024,
+                sha256: hash('sha256', $docType . uniqid()),
+                uploadedBy: $this->applicantUserId,
+                ownerType: 'admission_ward',
+                ownerId: $wardId
+            );
+            $this->admissionService->attachDocumentToWard($wardId, $this->applicantUserId, $docType, (int)$f->id);
+        }
 
         // Submit docket
         $sub = $this->admissionService->submitApplication($appId, $this->applicantUserId);

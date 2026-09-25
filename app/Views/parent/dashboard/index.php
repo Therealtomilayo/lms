@@ -75,6 +75,13 @@ foreach ($summaries as $cSummary) {
             </div>
 
             <div class="flex items-center gap-2.5 flex-wrap">
+                <a href="/applicant/application" 
+                   class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-[#7B3046] to-[#9B3B58] hover:from-[#6A293C] hover:to-[#88334D] shadow-xs transition cursor-pointer">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    <span>Enroll New Student</span>
+                </a>
                 <a href="/parent/announcements" 
                    class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition">
                     <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
@@ -187,7 +194,7 @@ foreach ($summaries as $cSummary) {
 
         <!-- Children Overview Cards Grid -->
         <div class="space-y-4">
-            <div class="flex items-center justify-between">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                     <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
                         <span class="w-2.5 h-2.5 rounded-full bg-brand-500"></span>
@@ -198,6 +205,13 @@ foreach ($summaries as $cSummary) {
                     </h2>
                     <p class="text-xs text-slate-500 mt-0.5">Select any student card to inspect detailed continuous assessments, attendance, and coursework.</p>
                 </div>
+                <a href="/applicant/application" 
+                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-[#7B3046] bg-rose-50 hover:bg-rose-100 border border-rose-200 transition shrink-0 self-start sm:self-auto">
+                    <svg class="w-3.5 h-3.5 text-[#7B3046]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    <span>Enroll Another Ward</span>
+                </a>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">

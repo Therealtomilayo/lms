@@ -594,8 +594,8 @@ try {
     $router->get('/student/dashboard', [\App\Controllers\Student\DashboardController::class, 'index'], $studentAuth);
 
     // Applicant Portal Routes (SRS §10, §57 Phase 4)
-    $applicantAuth = [AuthMiddleware::class, RoleMiddleware::allow(['applicant', 'admin', 'super_admin'])];
-    $applicantFormAuth = [AuthMiddleware::class, RoleMiddleware::allow(['applicant', 'admin', 'super_admin']), CsrfMiddleware::class];
+    $applicantAuth = [AuthMiddleware::class, RoleMiddleware::allow(['applicant', 'parent', 'admin', 'super_admin'])];
+    $applicantFormAuth = [AuthMiddleware::class, RoleMiddleware::allow(['applicant', 'parent', 'admin', 'super_admin']), CsrfMiddleware::class];
 
     // Dashboard & Overview
     $router->get('/applicant/dashboard', [\App\Controllers\Applicant\DashboardController::class, 'index'], $applicantAuth);

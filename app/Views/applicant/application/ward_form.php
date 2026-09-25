@@ -46,7 +46,7 @@ $actionUrl = $isEdit ? "/applicant/wards/{$ward->id}" : "/applicant/wards";
             </div>
         <?php endif; ?>
 
-        <form action="<?= $actionUrl ?>" method="POST" class="space-y-6" novalidate>
+        <form action="<?= $actionUrl ?>" method="POST" enctype="multipart/form-data" class="space-y-6" novalidate>
             <?= csrf_field() ?>
 
             <!-- Section 1: Basic Identity -->
@@ -217,7 +217,7 @@ $actionUrl = $isEdit ? "/applicant/wards/{$ward->id}" : "/applicant/wards";
                                 name="applying_for_level_id" 
                                 required 
                                 class="w-full px-3.5 py-2.5 text-sm rounded-xl border <?= !empty($errors['applying_for_level_id']) ? 'border-red-400 bg-red-50/30' : 'border-slate-200 bg-slate-50/50' ?> text-slate-900 focus:bg-white focus:border-[#7B3046] focus:ring-4 focus:ring-[#7B3046]/10 outline-none transition-all">
-                            <option value="">Select Level</option>
+                            <option value="">Select Academic Level</option>
                             <?php foreach ($levels as $lvl): ?>
                                 <option value="<?= $lvl->id ?>" <?= (int)old('applying_for_level_id', (string)($ward?->applyingForLevelId ?? '')) === $lvl->id ? 'selected' : '' ?>>
                                     <?= e($lvl->name) ?> (<?= e(ucfirst($lvl->stage)) ?>)
@@ -229,18 +229,47 @@ $actionUrl = $isEdit ? "/applicant/wards/{$ward->id}" : "/applicant/wards";
                         <?php endif; ?>
                     </div>
 
-                    <!-- Class Grade -->
+                    <!-- Class Grade (Dropdown Select) -->
                     <div>
                         <label for="class_grade" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                            Class Grade <span class="text-red-500">*</span>
+                            Class Grade / Class Year <span class="text-red-500">*</span>
                         </label>
-                        <input id="class_grade" 
-                               name="class_grade" 
-                               type="text" 
-                               value="<?= e(old('class_grade', $ward?->classGrade ?? '')) ?>" 
-                               required 
-                               placeholder="e.g. Primary 1, JSS 1, Nursery 2"
-                               class="w-full px-3.5 py-2.5 text-sm rounded-xl border <?= !empty($errors['class_grade']) ? 'border-red-400 bg-red-50/30' : 'border-slate-200 bg-slate-50/50' ?> text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-[#7B3046] focus:ring-4 focus:ring-[#7B3046]/10 outline-none transition-all">
+                        <?php $selectedGrade = old('class_grade', $ward?->classGrade ?? ''); ?>
+                        <select id="class_grade" 
+                                name="class_grade" 
+                                required 
+                                class="w-full px-3.5 py-2.5 text-sm rounded-xl border <?= !empty($errors['class_grade']) ? 'border-red-400 bg-red-50/30' : 'border-slate-200 bg-slate-50/50' ?> text-slate-900 focus:bg-white focus:border-[#7B3046] focus:ring-4 focus:ring-[#7B3046]/10 outline-none transition-all">
+                            <option value="">Select Grade to Enter</option>
+                            <optgroup label="Early Years Foundation (EYFS)">
+                                <option value="Creche" <?= $selectedGrade === 'Creche' ? 'selected' : '' ?>>Creche / Daycare</option>
+                                <option value="Pre-Nursery" <?= $selectedGrade === 'Pre-Nursery' ? 'selected' : '' ?>>Pre-Nursery</option>
+                                <option value="Nursery 1" <?= $selectedGrade === 'Nursery 1' ? 'selected' : '' ?>>Nursery 1</option>
+                                <option value="Nursery 2" <?= $selectedGrade === 'Nursery 2' ? 'selected' : '' ?>>Nursery 2</option>
+                            </optgroup>
+                            <optgroup label="Primary School">
+                                <option value="Primary 1" <?= $selectedGrade === 'Primary 1' ? 'selected' : '' ?>>Primary 1</option>
+                                <option value="Primary 2" <?= $selectedGrade === 'Primary 2' ? 'selected' : '' ?>>Primary 2</option>
+                                <option value="Primary 3" <?= $selectedGrade === 'Primary 3' ? 'selected' : '' ?>>Primary 3</option>
+                                <option value="Primary 4" <?= $selectedGrade === 'Primary 4' ? 'selected' : '' ?>>Primary 4</option>
+                                <option value="Primary 5" <?= $selectedGrade === 'Primary 5' ? 'selected' : '' ?>>Primary 5</option>
+                                <option value="Primary 6" <?= $selectedGrade === 'Primary 6' ? 'selected' : '' ?>>Primary 6</option>
+                            </optgroup>
+                            <optgroup label="Junior Secondary School">
+                                <option value="JSS 1" <?= $selectedGrade === 'JSS 1' ? 'selected' : '' ?>>JSS 1 (Grade 7 / Year 7)</option>
+                                <option value="JSS 2" <?= $selectedGrade === 'JSS 2' ? 'selected' : '' ?>>JSS 2 (Grade 8 / Year 8)</option>
+                                <option value="JSS 3" <?= $selectedGrade === 'JSS 3' ? 'selected' : '' ?>>JSS 3 (Grade 9 / Year 9)</option>
+                            </optgroup>
+                            <optgroup label="Senior Secondary School">
+                                <option value="SS 1" <?= $selectedGrade === 'SS 1' ? 'selected' : '' ?>>SS 1 (Grade 10 / Year 10)</option>
+                                <option value="SS 2" <?= $selectedGrade === 'SS 2' ? 'selected' : '' ?>>SS 2 (Grade 11 / Year 11)</option>
+                                <option value="SS 3" <?= $selectedGrade === 'SS 3' ? 'selected' : '' ?>>SS 3 (Grade 12 / Year 12)</option>
+                            </optgroup>
+                            <?php if (!empty($selectedGrade) && !in_array($selectedGrade, ['Creche', 'Pre-Nursery', 'Nursery 1', 'Nursery 2', 'Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'JSS 1', 'JSS 2', 'JSS 3', 'SS 1', 'SS 2', 'SS 3'])): ?>
+                                <optgroup label="Current Value">
+                                    <option value="<?= e($selectedGrade) ?>" selected><?= e($selectedGrade) ?></option>
+                                </optgroup>
+                            <?php endif; ?>
+                        </select>
                         <?php if (!empty($errors['class_grade'])): ?>
                             <p class="mt-1 text-xs text-red-600 font-medium"><?= e($errors['class_grade'][0]) ?></p>
                         <?php endif; ?>
@@ -248,24 +277,24 @@ $actionUrl = $isEdit ? "/applicant/wards/{$ward->id}" : "/applicant/wards";
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                    <!-- Curriculum Choice -->
+                    <!-- Curriculum Preference (Fixed Default Nigerian & British Integrated) -->
                     <div>
-                        <label for="curriculum_choice" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
                             Curriculum Preference
                         </label>
-                        <select id="curriculum_choice" 
-                                name="curriculum_choice" 
-                                class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 focus:bg-white focus:border-[#7B3046] focus:ring-4 focus:ring-[#7B3046]/10 outline-none transition-all">
-                            <option value="Dual Nigerian &amp; British Integrated" <?= old('curriculum_choice', $ward?->curriculumChoice) === 'Dual Nigerian & British Integrated' ? 'selected' : '' ?>>
-                                Dual Nigerian &amp; British Integrated (Recommended)
-                            </option>
-                            <option value="British / Cambridge International" <?= old('curriculum_choice', $ward?->curriculumChoice) === 'British / Cambridge International' ? 'selected' : '' ?>>
-                                British / Cambridge International
-                            </option>
-                            <option value="Nigerian National Standard" <?= old('curriculum_choice', $ward?->curriculumChoice) === 'Nigerian National Standard' ? 'selected' : '' ?>>
-                                Nigerian National Standard
-                            </option>
-                        </select>
+                        <input type="hidden" name="curriculum_choice" value="Dual Nigerian & British Integrated">
+                        <div class="px-3.5 py-3 rounded-xl border border-rose-200 bg-rose-50/40 text-slate-900 flex items-start gap-2.5">
+                            <i data-lucide="award" class="w-5 h-5 text-[#7B3046] shrink-0 mt-0.5" style="width:20px;height:20px;"></i>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold text-[#7B3046]">Dual Nigerian &amp; British Integrated</span>
+                                    <span class="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-[#7B3046] text-white">Default</span>
+                                </div>
+                                <p class="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                                    Claret International School operates exclusively on the unified Nigerian-British curriculum standard.
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- School Bus Requirement -->
@@ -282,7 +311,7 @@ $actionUrl = $isEdit ? "/applicant/wards/{$ward->id}" : "/applicant/wards";
                 </div>
             </div>
 
-            <!-- Section 3: Background & Medical Notes -->
+            <!-- Section 3: Educational Background & Health (Strictly Required) -->
             <div class="pt-4 border-t border-slate-100">
                 <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
                     <i data-lucide="book-open" class="w-3.5 h-3.5" style="width:14px;height:14px;"></i>
@@ -290,30 +319,42 @@ $actionUrl = $isEdit ? "/applicant/wards/{$ward->id}" : "/applicant/wards";
                 </h3>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <!-- Previous School -->
+                    <!-- Previous School (Required) -->
                     <div>
                         <label for="previous_school" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                            Previous School Attended (If any)
+                            Previous School Attended <span class="text-red-500">*</span>
                         </label>
                         <input id="previous_school" 
                                name="previous_school" 
                                type="text" 
                                value="<?= e(old('previous_school', $ward?->previousSchool ?? '')) ?>" 
-                               placeholder="e.g. St. Jude International Academy"
-                               class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-[#7B3046] focus:ring-4 focus:ring-[#7B3046]/10 outline-none transition-all">
+                               required
+                               placeholder="e.g. St. Jude Academy (or 'None - First School')"
+                               class="w-full px-3.5 py-2.5 text-sm rounded-xl border <?= !empty($errors['previous_school']) ? 'border-red-400 bg-red-50/30' : 'border-slate-200 bg-slate-50/50' ?> text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-[#7B3046] focus:ring-4 focus:ring-[#7B3046]/10 outline-none transition-all">
+                        <?php if (!empty($errors['previous_school'])): ?>
+                            <p class="mt-1 text-xs text-red-600 font-medium"><?= e($errors['previous_school'][0]) ?></p>
+                        <?php else: ?>
+                            <span class="text-[11px] text-slate-400 mt-1 block">Specify "None / First Entry" if applying for early childhood.</span>
+                        <?php endif; ?>
                     </div>
 
-                    <!-- Last Grade Passed -->
+                    <!-- Last Grade Passed (Required) -->
                     <div>
                         <label for="last_grade_passed" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                            Last Grade Completed
+                            Last Grade Completed <span class="text-red-500">*</span>
                         </label>
                         <input id="last_grade_passed" 
                                name="last_grade_passed" 
                                type="text" 
                                value="<?= e(old('last_grade_passed', $ward?->lastGradePassed ?? '')) ?>" 
-                               placeholder="e.g. Nursery 2 / Reception"
-                               class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-[#7B3046] focus:ring-4 focus:ring-[#7B3046]/10 outline-none transition-all">
+                               required
+                               placeholder="e.g. Primary 4, Nursery 2, or 'None'"
+                               class="w-full px-3.5 py-2.5 text-sm rounded-xl border <?= !empty($errors['last_grade_passed']) ? 'border-red-400 bg-red-50/30' : 'border-slate-200 bg-slate-50/50' ?> text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-[#7B3046] focus:ring-4 focus:ring-[#7B3046]/10 outline-none transition-all">
+                        <?php if (!empty($errors['last_grade_passed'])): ?>
+                            <p class="mt-1 text-xs text-red-600 font-medium"><?= e($errors['last_grade_passed'][0]) ?></p>
+                        <?php else: ?>
+                            <span class="text-[11px] text-slate-400 mt-1 block">Specify "None" for new early years entrants.</span>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -327,6 +368,88 @@ $actionUrl = $isEdit ? "/applicant/wards/{$ward->id}" : "/applicant/wards";
                               rows="2" 
                               placeholder="Describe any known medical conditions, severe allergies, or special learning accommodations needed..."
                               class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-[#7B3046] focus:ring-4 focus:ring-[#7B3046]/10 outline-none transition-all"><?= e(old('medical_notes', $ward?->medicalNotes ?? '')) ?></textarea>
+                </div>
+            </div>
+
+            <!-- Section 4: Initial Document Uploads (Ward Passport, Parent Passport, Immunization Record) -->
+            <div class="pt-4 border-t border-slate-100">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <i data-lucide="paperclip" class="w-3.5 h-3.5" style="width:14px;height:14px;"></i>
+                        <span>Immediate Document Attachments</span>
+                    </h3>
+                    <span class="text-[11px] text-slate-400">Can also be uploaded/updated in the documents step</span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <!-- Ward Passport Photograph -->
+                    <div class="p-3.5 rounded-xl border border-slate-200 bg-slate-50/40">
+                        <label for="passport_photo" class="block text-xs font-bold text-slate-800 mb-1 flex items-center justify-between">
+                            <span>Ward Passport</span>
+                            <?php if (!empty($ward?->passportPhotoFileId)): ?>
+                                <span class="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5">
+                                    <i data-lucide="check-circle" class="w-3 h-3" style="width:12px;height:12px;"></i> Uploaded
+                                </span>
+                            <?php endif; ?>
+                        </label>
+                        <p class="text-[11px] text-slate-500 mb-2">Student passport photo (JPG, PNG)</p>
+                        <input id="passport_photo" 
+                               name="passport_photo" 
+                               type="file" 
+                               accept=".jpg,.jpeg,.png"
+                               class="w-full text-[11px] text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-slate-200 file:text-slate-800 hover:file:bg-slate-300 cursor-pointer">
+                        <?php if (!empty($ward?->passportPhotoFileId)): ?>
+                            <a href="/files/<?= $ward->passportPhotoFileId ?>/stream" target="_blank" class="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-[#7B3046] hover:underline">
+                                <i data-lucide="eye" class="w-3 h-3" style="width:12px;height:12px;"></i> View Current
+                            </a>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Parent Passport Photograph -->
+                    <div class="p-3.5 rounded-xl border border-slate-200 bg-slate-50/40">
+                        <label for="parent_passport" class="block text-xs font-bold text-slate-800 mb-1 flex items-center justify-between">
+                            <span>Parent Passport</span>
+                            <?php if (!empty($ward?->parentPassportFileId)): ?>
+                                <span class="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5">
+                                    <i data-lucide="check-circle" class="w-3 h-3" style="width:12px;height:12px;"></i> Uploaded
+                                </span>
+                            <?php endif; ?>
+                        </label>
+                        <p class="text-[11px] text-slate-500 mb-2">Parent/Guardian photo (JPG, PNG)</p>
+                        <input id="parent_passport" 
+                               name="parent_passport" 
+                               type="file" 
+                               accept=".jpg,.jpeg,.png"
+                               class="w-full text-[11px] text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-slate-200 file:text-slate-800 hover:file:bg-slate-300 cursor-pointer">
+                        <?php if (!empty($ward?->parentPassportFileId)): ?>
+                            <a href="/files/<?= $ward->parentPassportFileId ?>/stream" target="_blank" class="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-[#7B3046] hover:underline">
+                                <i data-lucide="eye" class="w-3 h-3" style="width:12px;height:12px;"></i> View Current
+                            </a>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Immunization Record -->
+                    <div class="p-3.5 rounded-xl border border-slate-200 bg-slate-50/40">
+                        <label for="immunization_record" class="block text-xs font-bold text-slate-800 mb-1 flex items-center justify-between">
+                            <span>Immunization Card</span>
+                            <?php if (!empty($ward?->immunizationRecordFileId)): ?>
+                                <span class="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5">
+                                    <i data-lucide="check-circle" class="w-3 h-3" style="width:12px;height:12px;"></i> Uploaded
+                                </span>
+                            <?php endif; ?>
+                        </label>
+                        <p class="text-[11px] text-slate-500 mb-2">Vaccine record (PDF, JPG, PNG)</p>
+                        <input id="immunization_record" 
+                               name="immunization_record" 
+                               type="file" 
+                               accept=".pdf,.jpg,.jpeg,.png"
+                               class="w-full text-[11px] text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-slate-200 file:text-slate-800 hover:file:bg-slate-300 cursor-pointer">
+                        <?php if (!empty($ward?->immunizationRecordFileId)): ?>
+                            <a href="/files/<?= $ward->immunizationRecordFileId ?>/stream" target="_blank" class="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-[#7B3046] hover:underline">
+                                <i data-lucide="eye" class="w-3 h-3" style="width:12px;height:12px;"></i> View Current
+                            </a>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
 

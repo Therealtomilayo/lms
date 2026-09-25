@@ -476,6 +476,9 @@ class AdmissionRepository
             'passport_photo_file_id' => !empty($data['passport_photo_file_id']) ? (int)$data['passport_photo_file_id'] : null,
             'birth_certificate_file_id' => !empty($data['birth_certificate_file_id']) ? (int)$data['birth_certificate_file_id'] : null,
             'previous_report_file_id' => !empty($data['previous_report_file_id']) ? (int)$data['previous_report_file_id'] : null,
+            'parent_passport_file_id' => !empty($data['parent_passport_file_id']) ? (int)$data['parent_passport_file_id'] : null,
+            'authorized_picker_passport_file_id' => !empty($data['authorized_picker_passport_file_id']) ? (int)$data['authorized_picker_passport_file_id'] : null,
+            'immunization_record_file_id' => !empty($data['immunization_record_file_id']) ? (int)$data['immunization_record_file_id'] : null,
             'payment_status' => AdmissionWard::PAYMENT_UNPAID,
             'created_at' => $now,
             'updated_at' => $now,
@@ -523,6 +526,7 @@ class AdmissionRepository
             'applying_for_level_id', 'class_grade', 'curriculum_choice',
             'use_school_bus', 'previous_school', 'last_grade_passed', 'medical_notes',
             'passport_photo_file_id', 'birth_certificate_file_id', 'previous_report_file_id',
+            'parent_passport_file_id', 'authorized_picker_passport_file_id', 'immunization_record_file_id',
             'payment_status', 'converted_student_id'
         ];
 

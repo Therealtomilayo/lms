@@ -268,10 +268,10 @@ class AdmissionService
             return ServiceResult::error('Cannot add new wards to an application that has already been submitted.');
         }
 
-        $required = ['first_name', 'last_name', 'date_of_birth', 'gender', 'applying_for_level_id', 'class_grade'];
+        $required = ['first_name', 'last_name', 'date_of_birth', 'gender', 'applying_for_level_id', 'class_grade', 'previous_school', 'last_grade_passed'];
         foreach ($required as $field) {
             if (empty($data[$field])) {
-                return ServiceResult::error("The {$field} field is required.");
+                return ServiceResult::error("The " . str_replace('_', ' ', $field) . " field is required.");
             }
         }
 
@@ -563,6 +563,9 @@ class AdmissionService
             'birth_certificate' => 'birth_certificate_file_id',
             'passport_photo' => 'passport_photo_file_id',
             'previous_report' => 'previous_report_file_id',
+            'parent_passport' => 'parent_passport_file_id',
+            'authorized_picker_passport' => 'authorized_picker_passport_file_id',
+            'immunization_record' => 'immunization_record_file_id',
         ];
 
         if (!array_key_exists($documentType, $validDocTypes)) {
@@ -608,7 +611,23 @@ class AdmissionService
             }
 
             if (empty($ward->passportPhotoFileId)) {
-                return ServiceResult::error("Please upload the passport photograph for {$ward->getFullName()} before submitting.");
+                return ServiceResult::error("Please upload the student passport photograph for {$ward->getFullName()} before submitting.");
+            }
+
+            if (empty($ward->previousReportFileId)) {
+                return ServiceResult::error("Please upload the previous academic report / transcript for {$ward->getFullName()} before submitting.");
+            }
+
+            if (empty($ward->parentPassportFileId)) {
+                return ServiceResult::error("Please upload the parent / guardian passport photograph for {$ward->getFullName()} before submitting.");
+            }
+
+            if (empty($ward->authorizedPickerPassportFileId)) {
+                return ServiceResult::error("Please upload the authorized picker passport photograph for {$ward->getFullName()} before submitting.");
+            }
+
+            if (empty($ward->immunizationRecordFileId)) {
+                return ServiceResult::error("Please upload the immunization / vaccination record for {$ward->getFullName()} before submitting.");
             }
         }
 

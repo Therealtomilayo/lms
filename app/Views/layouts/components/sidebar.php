@@ -252,6 +252,7 @@ $navConfig = [
     ],
     'parent' => [
         ['label' => 'Overview Dashboard', 'route' => '/parent/dashboard', 'icon' => 'home'],
+        ['label' => 'Enroll New Student', 'route' => '/applicant/application', 'icon' => 'academic'],
         ['label' => 'School Fees & Invoices', 'route' => '/parent/fees', 'icon' => 'scale'],
         ['label' => 'Live Online Classes', 'route' => '/parent/live-classes', 'icon' => 'video'],
         ['label' => 'Payment History', 'route' => '/payments/history', 'icon' => 'document-text'],

@@ -95,11 +95,11 @@ class ApplicationController extends Controller
                 'date_of_birth' => 'required',
                 'gender' => 'required|in:male,female',
                 'applying_for_level_id' => 'required|integer',
-                'class_grade' => 'required|min:2|max:50',
-                'curriculum_choice' => 'max:50',
+                'class_grade' => 'required|min:1|max:50',
+                'curriculum_choice' => 'max:100',
                 'use_school_bus' => 'max:5',
-                'previous_school' => 'max:255',
-                'last_grade_passed' => 'max:50',
+                'previous_school' => 'required|min:2|max:255',
+                'last_grade_passed' => 'required|min:1|max:50',
                 'medical_notes' => 'max:1000',
                 'state_of_origin' => 'max:100',
                 'lga' => 'max:100',
@@ -116,6 +116,36 @@ class ApplicationController extends Controller
         }
 
         $ward = $result->getData();
+
+        // Process any direct document uploads from the ward creation form
+        $files = $request->files ?? $_FILES;
+        $directDocMap = [
+            'passport_photo' => 'passport_photo',
+            'parent_passport' => 'parent_passport',
+            'immunization_record' => 'immunization_record',
+        ];
+
+        foreach ($directDocMap as $inputName => $docType) {
+            if (!empty($files[$inputName]['tmp_name']) && $files[$inputName]['error'] === UPLOAD_ERR_OK) {
+                try {
+                    $fileRecord = $this->fileStorageService->storeUploadedFile(
+                        file: $files[$inputName],
+                        uploadedBy: $user->id,
+                        ownerType: 'admission_ward',
+                        ownerId: $ward->id
+                    );
+                    $this->admissionService->attachDocumentToWard(
+                        wardId: $ward->id,
+                        applicantUserId: $user->id,
+                        documentType: $docType,
+                        fileId: $fileRecord->id
+                    );
+                } catch (\Throwable) {
+                    // Suppress and allow re-upload on documents screen
+                }
+            }
+        }
+
         return $this->redirectWithSuccess(
             "/applicant/payment/{$ward->id}",
             "Prospective ward \"{$ward->getFullName()}\" added! Please complete the application fee payment to proceed."
@@ -170,11 +200,11 @@ class ApplicationController extends Controller
                 'date_of_birth' => 'required',
                 'gender' => 'required|in:male,female',
                 'applying_for_level_id' => 'required|integer',
-                'class_grade' => 'required|min:2|max:50',
-                'curriculum_choice' => 'max:50',
+                'class_grade' => 'required|min:1|max:50',
+                'curriculum_choice' => 'max:100',
                 'use_school_bus' => 'max:5',
-                'previous_school' => 'max:255',
-                'last_grade_passed' => 'max:50',
+                'previous_school' => 'required|min:2|max:255',
+                'last_grade_passed' => 'required|min:1|max:50',
                 'medical_notes' => 'max:1000',
                 'state_of_origin' => 'max:100',
                 'lga' => 'max:100',
@@ -183,6 +213,35 @@ class ApplicationController extends Controller
             ]);
         } catch (ValidationException $e) {
             return $this->redirectWithErrors("/applicant/wards/{$wardId}/edit", $e->getErrors(), $request->all());
+        }
+
+        // Process any direct document uploads from the ward edit form
+        $files = $request->files ?? $_FILES;
+        $directDocMap = [
+            'passport_photo' => 'passport_photo',
+            'parent_passport' => 'parent_passport',
+            'immunization_record' => 'immunization_record',
+        ];
+
+        foreach ($directDocMap as $inputName => $docType) {
+            if (!empty($files[$inputName]['tmp_name']) && $files[$inputName]['error'] === UPLOAD_ERR_OK) {
+                try {
+                    $fileRecord = $this->fileStorageService->storeUploadedFile(
+                        file: $files[$inputName],
+                        uploadedBy: $user->id,
+                        ownerType: 'admission_ward',
+                        ownerId: $wardId
+                    );
+                    $this->admissionService->attachDocumentToWard(
+                        wardId: $wardId,
+                        applicantUserId: $user->id,
+                        documentType: $docType,
+                        fileId: $fileRecord->id
+                    );
+                } catch (\Throwable) {
+                    // Suppress and allow re-upload on documents screen
+                }
+            }
         }
 
         $result = $this->admissionService->updateWard($wardId, $user->id, $validated);
@@ -249,7 +308,13 @@ class ApplicationController extends Controller
         $wardId = (int)$id;
         $ward = $this->admissionService->getWard($wardId, $user->id);
 
+        $isJson = str_contains($request->header('Accept') ?? '', 'application/json')
+            || $request->header('X-Requested-With') === 'XMLHttpRequest';
+
         if (!$ward) {
+            if ($isJson) {
+                return Response::json(['success' => false, 'message' => 'Ward record not found or access denied.'], 404);
+            }
             return $this->notFound('Ward record not found or access denied.');
         }
 
@@ -258,6 +323,9 @@ class ApplicationController extends Controller
         $file = $files['document'] ?? null;
 
         if (!$file || empty($file['tmp_name'])) {
+            if ($isJson) {
+                return Response::json(['success' => false, 'message' => 'Please select a file to upload.'], 422);
+            }
             return $this->redirectWithError("/applicant/wards/{$wardId}/documents", 'Please select a file to upload.');
         }
 
@@ -277,7 +345,20 @@ class ApplicationController extends Controller
             );
 
             if (!$result->isSuccess()) {
+                if ($isJson) {
+                    return Response::json(['success' => false, 'message' => $result->getMessage()], 422);
+                }
                 return $this->redirectWithError("/applicant/wards/{$wardId}/documents", $result->getMessage());
+            }
+
+            if ($isJson) {
+                return Response::json([
+                    'success' => true,
+                    'message' => ucwords(str_replace('_', ' ', $documentType)) . ' uploaded and attached successfully!',
+                    'file_id' => $fileRecord->id,
+                    'stream_url' => "/files/{$fileRecord->id}/stream",
+                    'document_type' => $documentType,
+                ]);
             }
 
             return $this->redirectWithSuccess(
@@ -285,8 +366,16 @@ class ApplicationController extends Controller
                 ucwords(str_replace('_', ' ', $documentType)) . ' uploaded and attached successfully!'
             );
         } catch (ValidationException $e) {
-            return $this->redirectWithErrors("/applicant/wards/{$wardId}/documents", $e->getErrors());
+            $errors = $e->getErrors();
+            $msg = !empty($errors) ? implode(' ', array_merge(...array_values($errors))) : 'Validation failed.';
+            if ($isJson) {
+                return Response::json(['success' => false, 'message' => $msg], 422);
+            }
+            return $this->redirectWithErrors("/applicant/wards/{$wardId}/documents", $errors);
         } catch (\Throwable $e) {
+            if ($isJson) {
+                return Response::json(['success' => false, 'message' => 'Upload failed: ' . $e->getMessage()], 500);
+            }
             return $this->redirectWithError("/applicant/wards/{$wardId}/documents", 'Upload failed: ' . $e->getMessage());
         }
     }

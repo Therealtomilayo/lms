@@ -127,112 +127,117 @@ $badge = $application ? $application->getStatusBadge() : ['label' => 'Draft', 'c
             Admissions Screening Pipeline
         </h2>
 
-        <div class="relative pl-6 space-y-8 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+        <div class="relative pl-10 space-y-8 before:absolute before:left-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
             
             <!-- Step 1: Account Setup -->
-            <div class="relative flex items-start gap-4">
-                <div class="absolute -left-6 mt-0.5 size-6 rounded-full bg-emerald-500 text-white flex items-center justify-center ring-4 ring-white shrink-0">
-                    <i data-lucide="check" class="w-3.5 h-3.5" style="width:14px;height:14px;"></i>
+            <div class="relative pl-4">
+                <div class="absolute -left-10 mt-0.5 size-8 rounded-full bg-emerald-500 text-white flex items-center justify-center ring-4 ring-white shrink-0 shadow-2xs">
+                    <i data-lucide="check" class="w-4 h-4" style="width:16px;height:16px;"></i>
                 </div>
                 <div>
                     <h3 class="text-sm font-bold text-slate-900">Guardian Account Registered</h3>
-                    <p class="text-xs text-slate-500 mt-0.5">
+                    <p class="text-xs text-slate-500 mt-1 leading-relaxed">
                         Applicant credentials established and application docket initialized.
                     </p>
-                    <span class="text-[10px] text-slate-400 font-mono mt-1 block">Completed</span>
+                    <span class="text-[10px] text-slate-400 font-mono mt-1.5 block">Completed</span>
                 </div>
             </div>
 
             <!-- Step 2: Wards & Application Fee -->
-            <div class="relative flex items-start gap-4">
+            <div class="relative pl-4">
                 <?php
                 $hasPaidWards = !empty($wards);
                 foreach ($wards as $w) {
                     if (!$w->isPaid()) { $hasPaidWards = false; break; }
                 }
                 ?>
-                <div class="absolute -left-6 mt-0.5 size-6 rounded-full <?= $hasPaidWards ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white animate-pulse' ?> flex items-center justify-center ring-4 ring-white shrink-0">
-                    <i data-lucide="<?= $hasPaidWards ? 'check' : 'clock' ?>" class="w-3.5 h-3.5" style="width:14px;height:14px;"></i>
+                <div class="absolute -left-10 mt-0.5 size-8 rounded-full <?= $hasPaidWards ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white animate-pulse' ?> flex items-center justify-center ring-4 ring-white shrink-0 shadow-2xs">
+                    <i data-lucide="<?= $hasPaidWards ? 'check' : 'clock' ?>" class="w-4 h-4" style="width:16px;height:16px;"></i>
                 </div>
                 <div>
                     <h3 class="text-sm font-bold text-slate-900">Ward Registration &amp; Fee Payment</h3>
-                    <p class="text-xs text-slate-500 mt-0.5">
+                    <p class="text-xs text-slate-500 mt-1 leading-relaxed">
                         Per-ward screening fee (<?= e($session ? $session->getFormattedFee() : '₦10,000.00') ?>) verified via Paystack.
                     </p>
-                    <span class="text-[10px] <?= $hasPaidWards ? 'text-emerald-600 font-semibold' : 'text-amber-600 font-semibold' ?> mt-1 block">
+                    <span class="text-[10px] <?= $hasPaidWards ? 'text-emerald-600 font-semibold' : 'text-amber-600 font-semibold' ?> mt-1.5 block">
                         <?= $hasPaidWards ? 'All Wards Paid' : 'Fee Payment Required' ?>
                     </span>
                 </div>
             </div>
 
             <!-- Step 3: Document Verification -->
-            <div class="relative flex items-start gap-4">
+            <div class="relative pl-4">
                 <?php
                 $allDocsUploaded = !empty($wards);
                 foreach ($wards as $w) {
-                    if (empty($w->birthCertificateFileId) || empty($w->passportPhotoFileId)) {
+                    if (empty($w->birthCertificateFileId) 
+                        || empty($w->passportPhotoFileId)
+                        || empty($w->previousReportFileId)
+                        || empty($w->parentPassportFileId)
+                        || empty($w->authorizedPickerPassportFileId)
+                        || empty($w->immunizationRecordFileId)) {
                         $allDocsUploaded = false;
                         break;
                     }
                 }
                 ?>
-                <div class="absolute -left-6 mt-0.5 size-6 rounded-full <?= $allDocsUploaded ? 'bg-emerald-500 text-white' : ($hasPaidWards ? 'bg-amber-500 text-white' : 'bg-slate-200 text-slate-400') ?> flex items-center justify-center ring-4 ring-white shrink-0">
-                    <i data-lucide="<?= $allDocsUploaded ? 'check' : 'file-text' ?>" class="w-3.5 h-3.5" style="width:14px;height:14px;"></i>
+                <div class="absolute -left-10 mt-0.5 size-8 rounded-full <?= $allDocsUploaded ? 'bg-emerald-500 text-white' : ($hasPaidWards ? 'bg-amber-500 text-white' : 'bg-slate-200 text-slate-400') ?> flex items-center justify-center ring-4 ring-white shrink-0 shadow-2xs">
+                    <i data-lucide="<?= $allDocsUploaded ? 'check' : 'file-text' ?>" class="w-4 h-4" style="width:16px;height:16px;"></i>
                 </div>
                 <div>
                     <h3 class="text-sm font-bold text-slate-900">Mandatory Document Uploads</h3>
-                    <p class="text-xs text-slate-500 mt-0.5">
-                        Birth certificate and passport photographs attached to prospective wards.
+                    <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                        Birth certificate, report cards, immunizations, and guardian/picker passport photographs.
                     </p>
-                    <span class="text-[10px] <?= $allDocsUploaded ? 'text-emerald-600 font-semibold' : 'text-slate-400' ?> mt-1 block">
-                        <?= $allDocsUploaded ? 'Completed' : 'Pending Document Uploads' ?>
+                    <span class="text-[10px] <?= $allDocsUploaded ? 'text-emerald-600 font-semibold' : 'text-slate-400' ?> mt-1.5 block">
+                        <?= $allDocsUploaded ? 'Completed (All 6 Documents Uploaded)' : 'Pending Document Uploads' ?>
                     </span>
                 </div>
             </div>
 
             <!-- Step 4: Final Submission -->
-            <div class="relative flex items-start gap-4">
-                <div class="absolute -left-6 mt-0.5 size-6 rounded-full <?= $isSubmitted ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400' ?> flex items-center justify-center ring-4 ring-white shrink-0">
-                    <i data-lucide="<?= $isSubmitted ? 'check' : 'send' ?>" class="w-3.5 h-3.5" style="width:14px;height:14px;"></i>
+            <div class="relative pl-4">
+                <div class="absolute -left-10 mt-0.5 size-8 rounded-full <?= $isSubmitted ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400' ?> flex items-center justify-center ring-4 ring-white shrink-0 shadow-2xs">
+                    <i data-lucide="<?= $isSubmitted ? 'check' : 'send' ?>" class="w-4 h-4" style="width:16px;height:16px;"></i>
                 </div>
                 <div>
                     <h3 class="text-sm font-bold text-slate-900">Final Docket Submission</h3>
-                    <p class="text-xs text-slate-500 mt-0.5">
+                    <p class="text-xs text-slate-500 mt-1 leading-relaxed">
                         Application finalized and transmitted to the Claret Admissions Committee.
                     </p>
-                    <span class="text-[10px] <?= $isSubmitted ? 'text-emerald-600 font-semibold' : 'text-slate-400' ?> mt-1 block">
+                    <span class="text-[10px] <?= $isSubmitted ? 'text-emerald-600 font-semibold' : 'text-slate-400' ?> mt-1.5 block">
                         <?= $isSubmitted ? 'Submitted on ' . date('M j, Y', strtotime($application->submittedAt ?? 'now')) : 'Pending Final Submission' ?>
                     </span>
                 </div>
             </div>
 
             <!-- Step 5: Review & Evaluation -->
-            <div class="relative flex items-start gap-4">
-                <div class="absolute -left-6 mt-0.5 size-6 rounded-full <?= ($isApproved || $isRejected) ? 'bg-emerald-500 text-white' : ($isUnderReview ? 'bg-blue-600 text-white animate-pulse' : 'bg-slate-200 text-slate-400') ?> flex items-center justify-center ring-4 ring-white shrink-0">
-                    <i data-lucide="<?= ($isApproved || $isRejected) ? 'check' : 'search' ?>" class="w-3.5 h-3.5" style="width:14px;height:14px;"></i>
+            <div class="relative pl-4">
+                <div class="absolute -left-10 mt-0.5 size-8 rounded-full <?= ($isApproved || $isRejected) ? 'bg-emerald-500 text-white' : ($isUnderReview ? 'bg-blue-600 text-white animate-pulse' : 'bg-slate-200 text-slate-400') ?> flex items-center justify-center ring-4 ring-white shrink-0 shadow-2xs">
+                    <i data-lucide="<?= ($isApproved || $isRejected) ? 'check' : 'search' ?>" class="w-4 h-4" style="width:16px;height:16px;"></i>
                 </div>
                 <div>
                     <h3 class="text-sm font-bold text-slate-900">Admissions Committee Screening</h3>
-                    <p class="text-xs text-slate-500 mt-0.5">
+                    <p class="text-xs text-slate-500 mt-1 leading-relaxed">
                         Academic records, grade suitability, and institutional entrance assessment.
                     </p>
-                    <span class="text-[10px] <?= $isUnderReview ? 'text-blue-600 font-semibold' : 'text-slate-400' ?> mt-1 block">
+                    <span class="text-[10px] <?= $isUnderReview ? 'text-blue-600 font-semibold' : 'text-slate-400' ?> mt-1.5 block">
                         <?= ($isApproved || $isRejected) ? 'Review Completed' : ($isUnderReview ? 'Under Active Assessment' : 'Awaiting Queue Ingestion') ?>
                     </span>
                 </div>
             </div>
 
             <!-- Step 6: Decision -->
-            <div class="relative flex items-start gap-4">
-                <div class="absolute -left-6 mt-0.5 size-6 rounded-full <?= $isApproved ? 'bg-emerald-500 text-white' : ($isRejected ? 'bg-red-500 text-white' : 'bg-slate-200 text-slate-400') ?> flex items-center justify-center ring-4 ring-white shrink-0">
-                    <i data-lucide="<?= $isApproved ? 'award' : ($isRejected ? 'x' : 'flag') ?>" class="w-3.5 h-3.5" style="width:14px;height:14px;"></i>
+            <div class="relative pl-4">
+                <div class="absolute -left-10 mt-0.5 size-8 rounded-full <?= $isApproved ? 'bg-emerald-500 text-white' : ($isRejected ? 'bg-red-500 text-white' : 'bg-slate-200 text-slate-400') ?> flex items-center justify-center ring-4 ring-white shrink-0 shadow-2xs">
+                    <i data-lucide="<?= $isApproved ? 'award' : ($isRejected ? 'x' : 'flag') ?>" class="w-4 h-4" style="width:16px;height:16px;"></i>
                 </div>
                 <div>
                     <h3 class="text-sm font-bold text-slate-900">Admission Decision &amp; Student ID</h3>
-                    <p class="text-xs text-slate-500 mt-0.5">
+                    <p class="text-xs text-slate-500 mt-1 leading-relaxed">
                         Formal notice of acceptance with generated student admission number.
                     </p>
-                    <span class="text-[10px] <?= $isApproved ? 'text-emerald-600 font-bold' : ($isRejected ? 'text-red-600 font-bold' : 'text-slate-400') ?> mt-1 block">
+                    <span class="text-[10px] <?= $isApproved ? 'text-emerald-600 font-bold' : ($isRejected ? 'text-red-600 font-bold' : 'text-slate-400') ?> mt-1.5 block">
                         <?= $isApproved ? 'Enrolled as Student' : ($isRejected ? 'Application Not Accepted' : 'Pending Review Outcome') ?>
                     </span>
                 </div>

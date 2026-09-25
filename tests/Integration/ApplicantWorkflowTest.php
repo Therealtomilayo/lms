@@ -82,7 +82,7 @@ class ApplicantWorkflowTest extends TestCase
             'applying_for_level_id' => $levelId,
             'class_grade' => 'JSS 1',
             'previous_school' => 'Claret Primary School',
-            'previous_class' => 'Primary 6'
+            'last_grade_passed' => 'Primary 6'
         ];
         $addResult = $this->admissionService->addWard($this->applicantUserId, $wardData);
         $this->assertTrue($addResult->isSuccess(), $addResult->getMessage() ?? '');
@@ -120,44 +120,43 @@ class ApplicantWorkflowTest extends TestCase
         $this->assertFalse($docFail->isSuccess());
         $this->assertStringContainsString('birth certificate', $docFail->getMessage() ?? '');
 
-        // 6. Attach documents
+        // 6. Attach all 6 required documents
         $fileRepo = new \App\Repositories\FileRepository($this->db);
-        $birthCert = $fileRepo->create(
-            uuid: 'test-birth-cert-' . uniqid(),
-            storageKey: 'storage/uploads/admissions/' . uniqid() . '_birth_cert.pdf',
-            originalName: 'birth_cert.pdf',
-            mimeType: 'application/pdf',
-            sizeBytes: 1024,
-            sha256: hash('sha256', 'dummy1' . uniqid()),
-            uploadedBy: $this->applicantUserId,
-            ownerType: 'admission_ward',
-            ownerId: $wardId
-        );
-        $birthCertFileId = (int)$birthCert->id;
+        $createdFileIds = [];
+        $docTypes = [
+            'birth_certificate' => 'application/pdf',
+            'passport_photo' => 'image/jpeg',
+            'previous_report' => 'application/pdf',
+            'parent_passport' => 'image/jpeg',
+            'authorized_picker_passport' => 'image/jpeg',
+            'immunization_record' => 'application/pdf',
+        ];
 
-        $passport = $fileRepo->create(
-            uuid: 'test-passport-' . uniqid(),
-            storageKey: 'storage/uploads/admissions/' . uniqid() . '_passport.jpg',
-            originalName: 'passport.jpg',
-            mimeType: 'image/jpeg',
-            sizeBytes: 2048,
-            sha256: hash('sha256', 'dummy2' . uniqid()),
-            uploadedBy: $this->applicantUserId,
-            ownerType: 'admission_ward',
-            ownerId: $wardId
-        );
-        $passportFileId = (int)$passport->id;
-
-        $attachBirth = $this->admissionService->attachDocumentToWard($wardId, $this->applicantUserId, 'birth_certificate', $birthCertFileId);
-        $this->assertTrue($attachBirth->isSuccess());
-
-        $attachPass = $this->admissionService->attachDocumentToWard($wardId, $this->applicantUserId, 'passport_photo', $passportFileId);
-        $this->assertTrue($attachPass->isSuccess());
+        foreach ($docTypes as $docType => $mime) {
+            $f = $fileRepo->create(
+                uuid: sprintf('%08x-%04x-%04x-%04x-%012x', mt_rand(), mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand()),
+                storageKey: 'storage/uploads/admissions/' . uniqid() . '_' . $docType,
+                originalName: $docType . ($mime === 'image/jpeg' ? '.jpg' : '.pdf'),
+                mimeType: $mime,
+                sizeBytes: 1024,
+                sha256: hash('sha256', $docType . uniqid()),
+                uploadedBy: $this->applicantUserId,
+                ownerType: 'admission_ward',
+                ownerId: $wardId
+            );
+            $createdFileIds[] = (int)$f->id;
+            $attachRes = $this->admissionService->attachDocumentToWard($wardId, $this->applicantUserId, $docType, (int)$f->id);
+            $this->assertTrue($attachRes->isSuccess());
+        }
 
         // Verify ward documents attached
         $wardWithDocs = $this->admissionService->getWard($wardId, $this->applicantUserId);
-        $this->assertEquals($birthCertFileId, $wardWithDocs->birthCertificateFileId);
-        $this->assertEquals($passportFileId, $wardWithDocs->passportPhotoFileId);
+        $this->assertNotNull($wardWithDocs->birthCertificateFileId);
+        $this->assertNotNull($wardWithDocs->passportPhotoFileId);
+        $this->assertNotNull($wardWithDocs->previousReportFileId);
+        $this->assertNotNull($wardWithDocs->parentPassportFileId);
+        $this->assertNotNull($wardWithDocs->authorizedPickerPassportFileId);
+        $this->assertNotNull($wardWithDocs->immunizationRecordFileId);
 
         // 7. Submit Application docket
         $submitSuccess = $this->admissionService->submitApplication($appId, $this->applicantUserId);
@@ -169,6 +168,9 @@ class ApplicantWorkflowTest extends TestCase
         $this->assertNotNull($refreshedApp->submittedAt);
 
         // Clean up dummy files
-        $this->db->prepare("DELETE FROM files WHERE id IN (?, ?)")->execute([$birthCertFileId, $passportFileId]);
+        if (!empty($createdFileIds)) {
+            $inClause = implode(',', array_fill(0, count($createdFileIds), '?'));
+            $this->db->prepare("DELETE FROM files WHERE id IN ($inClause)")->execute($createdFileIds);
+        }
     }
 }
