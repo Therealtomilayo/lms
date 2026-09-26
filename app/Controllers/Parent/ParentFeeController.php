@@ -56,6 +56,19 @@ class ParentFeeController extends Controller
         }
 
         $linkedStudents = $this->parentRepo->getLinkedStudents($parent->id);
+
+        // Ensure active term fee invoices are provisioned for all linked enrolled children
+        foreach ($linkedStudents as $child) {
+            $this->feeService->ensureInvoiceForStudent((int)$child->id);
+        }
+
+        // Heal any invoices for linked students where parent_id was null or 0
+        if (!empty($linkedStudents)) {
+            $childIds = array_map(fn($c) => (int)$c->id, $linkedStudents);
+            $inList = implode(',', $childIds);
+            \App\Core\Database::getInstance()->prepare("UPDATE `fee_invoices` SET `parent_id` = ? WHERE `student_id` IN ({$inList}) AND (`parent_id` IS NULL OR `parent_id` = 0)")->execute([$parent->id]);
+        }
+
         $invoices = $this->feeRepo->getInvoicesForParent($parent->id);
 
         $selectedStudentId = (int)$request->query('student_id', 0);

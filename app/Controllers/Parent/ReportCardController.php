@@ -158,8 +158,12 @@ class ReportCardController extends Controller
         // A parent who paid Term 1 can view Term 1 results indefinitely,
         // even if Term 2 is currently unpaid. Only the unpaid term is locked.
         if (!$this->feeRepo->isStudentClearedForResult($sId, $targetSessionId, $tId)) {
-            $unpaidItems = $this->feeRepo->getUnpaidRequiredFeeItems($sId, $targetSessionId, $tId);
             $invoice = $this->feeRepo->findInvoiceForStudentTerm($sId, $targetSessionId, $tId);
+            if (!$invoice) {
+                $feeInvoiceService = new \App\Services\FeeInvoiceService($this->feeRepo);
+                $invoice = $feeInvoiceService->ensureInvoiceForStudent($sId, $targetSessionId, $tId);
+            }
+            $unpaidItems = $this->feeRepo->getUnpaidRequiredFeeItems($sId, $targetSessionId, $tId);
             if (!$invoice && !empty($unpaidItems) && !empty($unpaidItems[0]['invoice_id'])) {
                 $invoice = $this->feeRepo->findInvoiceById((int)$unpaidItems[0]['invoice_id']);
             }

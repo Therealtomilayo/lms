@@ -809,7 +809,7 @@ class FeeRepository
             $levelId = $lvlStmt->fetchColumn() ?: null;
         }
 
-        $struct = $this->findMatchingStructure($sessionId, $termId, $classId ?: null, $levelId ? (int)$levelId : null);
+        $struct = $this->findMatchingStructure($sessionId, $termId, $levelId ? (int)$levelId : null, $classId ?: null);
         if ($struct && !empty($struct->items)) {
             foreach ($struct->items as $it) {
                 if (!empty($it->isRequiredForResult)) {
@@ -887,7 +887,7 @@ class FeeRepository
             $levelId = $lvlStmt->fetchColumn() ?: null;
         }
 
-        $struct = $this->findMatchingStructure($sessionId, $termId, $classId ?: null, $levelId ? (int)$levelId : null);
+        $struct = $this->findMatchingStructure($sessionId, $termId, $levelId ? (int)$levelId : null, $classId ?: null);
         if ($struct && !empty($struct->items)) {
             $structItems = [];
             foreach ($struct->items as $it) {

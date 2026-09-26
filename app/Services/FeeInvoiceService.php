@@ -583,4 +583,121 @@ class FeeInvoiceService
             'structure_id' => $structureId,
         ]);
     }
+
+    /**
+     * Ensure a student has an invoice provisioned for the given session and term.
+     * If session or term are not provided, defaults to the active academic session & term.
+     * If an invoice already exists, updates parent_id if previously unlinked, and returns the invoice.
+     */
+    public function ensureInvoiceForStudent(int $studentId, ?int $sessionId = null, ?int $termId = null, int $userId = 0): ?FeeInvoice
+    {
+        if ($sessionId === null) {
+            $activeSession = $this->academicRepo->findActiveSession();
+            $sessionId = $activeSession ? (int)$activeSession->id : null;
+        }
+
+        if ($termId === null && $sessionId !== null) {
+            $activeTerm = $this->academicRepo->findActiveTermForSession($sessionId);
+            if (!$activeTerm) {
+                $terms = $this->academicRepo->findTermsBySession($sessionId);
+                $activeTerm = $terms[0] ?? null;
+            }
+            $termId = $activeTerm ? (int)$activeTerm->id : null;
+        }
+
+        if (!$sessionId || !$termId) {
+            return null;
+        }
+
+        // 1. Resolve parent ID if linked
+        $parentStmt = $this->pdo->prepare('SELECT parent_id FROM `parent_student` WHERE student_id = :s ORDER BY id ASC LIMIT 1');
+        $parentStmt->execute([':s' => $studentId]);
+        $parentId = $parentStmt->fetchColumn();
+        $resolvedParentId = $parentId ? (int)$parentId : null;
+
+        // 2. Check if invoice already exists
+        $existing = $this->feeRepo->findInvoiceForStudentTerm($studentId, $sessionId, $termId);
+        if ($existing !== null) {
+            if ($resolvedParentId && (empty($existing->parentId) || (int)$existing->parentId !== (int)$resolvedParentId)) {
+                $this->pdo->prepare('UPDATE `fee_invoices` SET `parent_id` = ? WHERE `id` = ?')
+                    ->execute([$resolvedParentId, $existing->id]);
+                $existing = $this->feeRepo->findInvoiceById($existing->id);
+            }
+            return $existing;
+        }
+
+        // 3. Resolve student class and academic level
+        $studentStmt = $this->pdo->prepare('SELECT current_class_id FROM `students` WHERE `id` = :id');
+        $studentStmt->execute([':id' => $studentId]);
+        $stClassId = (int)$studentStmt->fetchColumn();
+
+        if ($stClassId <= 0) {
+            $enrStmt = $this->pdo->prepare('SELECT class_id FROM `class_enrollments` WHERE `student_id` = :id AND `session_id` = :ses ORDER BY id DESC LIMIT 1');
+            $enrStmt->execute([':id' => $studentId, ':ses' => $sessionId]);
+            $stClassId = (int)$enrStmt->fetchColumn();
+        }
+
+        if ($stClassId <= 0) {
+            return null;
+        }
+
+        $lvlStmt = $this->pdo->prepare('SELECT academic_level_id FROM `classes` WHERE `id` = :id');
+        $lvlStmt->execute([':id' => $stClassId]);
+        $lvl = $lvlStmt->fetchColumn();
+        $stLevelId = $lvl ? (int)$lvl : null;
+
+        // 4. Resolve matching fee structure
+        $structure = $this->feeRepo->findMatchingStructure($sessionId, $termId, $stLevelId, $stClassId);
+        if (!$structure || empty($structure->items)) {
+            return null;
+        }
+
+        // 5. Ensure valid creator user ID
+        if ($userId <= 0) {
+            $adminUserStmt = $this->pdo->query("SELECT user_id FROM `user_roles` WHERE role IN ('super_admin', 'admin') AND is_active = 1 ORDER BY user_id ASC LIMIT 1");
+            $adminId = $adminUserStmt ? $adminUserStmt->fetchColumn() : null;
+            if (!$adminId) {
+                $firstUser = $this->pdo->query('SELECT id FROM `users` ORDER BY id ASC LIMIT 1');
+                $adminId = $firstUser ? $firstUser->fetchColumn() : 11;
+            }
+            $userId = (int)$adminId;
+        }
+
+        // 6. Generate unique invoice number
+        $invoiceNumber = $this->feeRepo->generateInvoiceNumber($sessionId);
+
+        // 7. Build snapshot line items
+        $itemsData = [];
+        foreach ($structure->items as $fsi) {
+            $itemsData[] = [
+                'fee_category_id' => $fsi->feeCategoryId,
+                'name' => $fsi->name,
+                'amount' => $fsi->amount,
+                'is_compulsory' => $fsi->isCompulsory ? 1 : 0,
+                'is_required_for_result' => $fsi->isRequiredForResult ? 1 : 0,
+            ];
+        }
+
+        $invoiceData = [
+            'invoice_number' => $invoiceNumber,
+            'student_id' => $studentId,
+            'parent_id' => $resolvedParentId,
+            'class_id' => $stClassId,
+            'session_id' => $sessionId,
+            'term_id' => $termId,
+            'discount_amount' => 0.00,
+            'amount_paid' => 0.00,
+            'due_date' => $structure->dueDate,
+            'notes' => "Termly Tuition & Levies — {$structure->title}",
+            'created_by' => $userId,
+        ];
+
+        try {
+            return $this->feeRepo->createInvoice($invoiceData, $itemsData);
+        } catch (\Throwable $e) {
+            error_log('Failed to ensure invoice for student ' . $studentId . ': ' . $e->getMessage());
+            return null;
+        }
+    }
 }
+

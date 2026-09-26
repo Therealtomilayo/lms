@@ -843,6 +843,12 @@ class AdmissionService
             $enrolledStudents = [];
             $rejectedWards = [];
 
+            $admissionSessionId = $app->admissionSessionId ?? $app->sessionId ?? null;
+            $admissionSession = $admissionSessionId ? $this->admissionRepo->findSessionById((int)$admissionSessionId) : null;
+            $academicSessionId = ($admissionSession && $admissionSession->academicSessionId > 0)
+                ? $admissionSession->academicSessionId
+                : ($this->academicRepo->findActiveSession()?->id ?? $this->academicRepo->getAllSessions()[0]?->id ?? null);
+
             // 1. Process each ward decision
             foreach ($wards as $ward) {
                 $decision = strtolower((string)($wardDecisions[$ward->id] ?? 'approve'));
@@ -915,27 +921,20 @@ class AdmissionService
                 );
 
                 // Enroll student into active class enrollment & auto-enroll subjects for that class/arm
-                if ($classId) {
-                    $admissionSessionId = $app->admissionSessionId ?? $app->sessionId ?? null;
-                    $admissionSession = $admissionSessionId ? $this->admissionRepo->findSessionById((int)$admissionSessionId) : null;
-                    $academicSessionId = ($admissionSession && $admissionSession->academicSessionId > 0)
-                        ? $admissionSession->academicSessionId
-                        : ($this->academicRepo->findActiveSession()?->id ?? $this->academicRepo->getAllSessions()[0]?->id ?? null);
-                    if ($academicSessionId) {
-                        try {
-                            $this->enrollmentService->enrollStudentInClass(
-                                studentId: $student->id,
-                                classId: $classId,
-                                sessionId: (int)$academicSessionId,
-                                status: \App\Models\ClassEnrollment::STATUS_ACTIVE,
-                                autoEnrollSubjects: true
-                            );
-                        } catch (\Throwable $e) {
-                            $this->pdo->prepare('INSERT INTO `class_enrollments` (`student_id`, `class_id`, `session_id`, `status`, `enrolled_at`, `created_at`, `updated_at`)
-                                VALUES (?, ?, ?, "active", NOW(), NOW(), NOW())
-                                ON DUPLICATE KEY UPDATE `class_id` = VALUES(`class_id`), `status` = "active"')
-                                ->execute([$student->id, $classId, $academicSessionId]);
-                        }
+                if ($classId && $academicSessionId) {
+                    try {
+                        $this->enrollmentService->enrollStudentInClass(
+                            studentId: $student->id,
+                            classId: $classId,
+                            sessionId: (int)$academicSessionId,
+                            status: \App\Models\ClassEnrollment::STATUS_ACTIVE,
+                            autoEnrollSubjects: true
+                        );
+                    } catch (\Throwable $e) {
+                        $this->pdo->prepare('INSERT INTO `class_enrollments` (`student_id`, `class_id`, `session_id`, `status`, `enrolled_at`, `created_at`, `updated_at`)
+                            VALUES (?, ?, ?, "active", NOW(), NOW(), NOW())
+                            ON DUPLICATE KEY UPDATE `class_id` = VALUES(`class_id`), `status` = "active"')
+                            ->execute([$student->id, $classId, $academicSessionId]);
                     }
                 }
 
@@ -1007,6 +1006,23 @@ class AdmissionService
             }
 
             $this->pdo->commit();
+
+            // Auto-provision initial fee invoice for each newly enrolled student
+            if (!empty($enrolledStudents)) {
+                try {
+                    $feeInvoiceService = new \App\Services\FeeInvoiceService(pdo: $this->pdo);
+                    foreach ($enrolledStudents as $enr) {
+                        $feeInvoiceService->ensureInvoiceForStudent(
+                            studentId: (int)$enr['student_id'],
+                            sessionId: $academicSessionId ? (int)$academicSessionId : null,
+                            termId: null,
+                            userId: $adminUserId
+                        );
+                    }
+                } catch (\Throwable $fe) {
+                    error_log('Failed to auto-provision fee invoice during admission approval: ' . $fe->getMessage());
+                }
+            }
 
             return ServiceResult::success([
                 'application_id' => $applicationId,

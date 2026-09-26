@@ -458,9 +458,7 @@ class ApplicationController extends Controller
         }
 
         $wards = $app ? $this->admissionRepo->getWardsForApplication($app->id) : [];
-        if ($app) {
-            $app->wards = $wards;
-        }
+
 
         $history = $app ? $this->admissionRepo->getStatusHistory($app->id) : [];
 
