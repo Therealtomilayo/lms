@@ -290,6 +290,22 @@ class AdmissionRepository
         return $id ? $this->findApplicationById((int)$id) : null;
     }
 
+    public function findDraftApplicationByApplicantAndSession(int $applicantUserId, int $sessionId): ?AdmissionApplication
+    {
+        $sql = 'SELECT id FROM `admission_applications` 
+                WHERE applicant_user_id = :user_id AND admission_session_id = :session_id AND `status` = :status
+                ORDER BY id DESC LIMIT 1';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            ':user_id' => $applicantUserId,
+            ':session_id' => $sessionId,
+            ':status' => AdmissionApplication::STATUS_DRAFT,
+        ]);
+        $id = $stmt->fetchColumn();
+
+        return $id ? $this->findApplicationById((int)$id) : null;
+    }
+
     /**
      * @return AdmissionApplication[]
      */

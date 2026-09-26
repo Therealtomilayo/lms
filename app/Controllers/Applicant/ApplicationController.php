@@ -37,16 +37,33 @@ class ApplicationController extends Controller
     public function index(Request $request): Response
     {
         $user = $this->requireAuthContext($request);
-        $app = $this->admissionService->getApplicantActiveApplication($user->id);
         $session = $this->admissionService->getActiveSession();
         $levels = $this->admissionService->getAcademicLevels();
 
-        $wards = $app ? $this->admissionService->getApplicantDashboardData($user->id)['applications'][0]->wards ?? [] : [];
+        $applications = $this->admissionRepo->getApplicationsByApplicant($user->id);
+
+        $selectedAppId = (int)$request->query('app', 0);
+        $app = null;
+        if ($selectedAppId > 0) {
+            foreach ($applications as $candidate) {
+                if ($candidate->id === $selectedAppId) {
+                    $app = $candidate;
+                    break;
+                }
+            }
+        }
+
+        if (!$app) {
+            $app = $this->admissionService->getApplicantActiveApplication($user->id, preferDraft: true);
+        }
+
+        $wards = $app ? $this->admissionRepo->getWardsForApplication($app->id) : [];
 
         return $this->view('applicant/application/index', [
             'title' => 'Admission Application Workspace — Claret',
             'user' => $user,
             'application' => $app,
+            'applications' => $applications,
             'session' => $session,
             'levels' => $levels,
             'wards' => $wards,
@@ -60,13 +77,17 @@ class ApplicationController extends Controller
     public function createWard(Request $request): Response
     {
         $user = $this->requireAuthContext($request);
-        $app = $this->admissionService->getApplicantActiveApplication($user->id);
-
-        if (!$app || $app->status !== AdmissionApplication::STATUS_DRAFT) {
-            return $this->redirectWithError('/applicant/application', 'Cannot add wards to an application that has already been submitted.');
+        $session = $this->admissionService->getActiveSession();
+        if (!$session || !$session->isOpen()) {
+            return $this->redirectWithError('/applicant/application', 'Admission applications are currently closed.');
         }
 
-        $session = $this->admissionService->getActiveSession();
+        // Get existing open draft docket or initialize a new draft docket if previous was submitted
+        $app = $this->admissionService->getOrCreateDraftApplication($user->id);
+        if (!$app) {
+            return $this->redirectWithError('/applicant/application', 'Unable to initialize admission application docket.');
+        }
+
         $levels = $this->admissionService->getAcademicLevels();
 
         return $this->view('applicant/application/ward_form', [
@@ -316,6 +337,14 @@ class ApplicationController extends Controller
                 return Response::json(['success' => false, 'message' => 'Ward record not found or access denied.'], 404);
             }
             return $this->notFound('Ward record not found or access denied.');
+        }
+
+        $app = $this->admissionRepo->findApplicationById($ward->applicationId);
+        if (!$app || $app->status !== AdmissionApplication::STATUS_DRAFT) {
+            if ($isJson) {
+                return Response::json(['success' => false, 'message' => 'This application docket has been submitted and is locked under administrative assessment. Documents cannot be modified.'], 403);
+            }
+            return $this->redirectWithError("/applicant/wards/{$wardId}/documents", 'This application docket has been submitted and documents cannot be modified.');
         }
 
         $documentType = (string)$request->post('document_type', '');

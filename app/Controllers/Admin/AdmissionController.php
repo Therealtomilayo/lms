@@ -150,12 +150,16 @@ class AdmissionController extends Controller
         $appId = (int)$id;
         $comment = $request->input('comment') ? trim((string)$request->input('comment')) : null;
         $wardClasses = $request->input('ward_classes') ?: [];
+        $wardDecisions = $request->input('ward_decisions') ?: [];
+        $wardNotes = $request->input('ward_notes') ?: [];
 
         $result = $this->admissionService->approveApplication(
             $appId,
             $userContext->id,
             $comment,
-            is_array($wardClasses) ? $wardClasses : []
+            is_array($wardClasses) ? $wardClasses : [],
+            is_array($wardDecisions) ? $wardDecisions : [],
+            is_array($wardNotes) ? $wardNotes : []
         );
 
         if ($result->isSuccess()) {

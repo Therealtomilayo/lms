@@ -220,11 +220,18 @@ class AdmissionService
     /**
      * Get or create the applicant's application docket for the currently active session.
      */
-    public function getApplicantActiveApplication(int $applicantUserId): ?AdmissionApplication
+    public function getApplicantActiveApplication(int $applicantUserId, bool $preferDraft = false): ?AdmissionApplication
     {
         $session = $this->getActiveSession();
         if (!$session) {
             return null;
+        }
+
+        if ($preferDraft) {
+            $draftApp = $this->admissionRepo->findDraftApplicationByApplicantAndSession($applicantUserId, $session->id);
+            if ($draftApp) {
+                return $draftApp;
+            }
         }
 
         $app = $this->admissionRepo->findApplicationByApplicantAndSession($applicantUserId, $session->id);
@@ -234,6 +241,29 @@ class AdmissionService
         }
 
         return $app;
+    }
+
+    /**
+     * Get existing open draft application or initialize a new draft docket.
+     */
+    public function getOrCreateDraftApplication(int $applicantUserId): ?AdmissionApplication
+    {
+        $session = $this->getActiveSession();
+        if (!$session) {
+            return null;
+        }
+
+        $draftApp = $this->admissionRepo->findDraftApplicationByApplicantAndSession($applicantUserId, $session->id);
+        if ($draftApp) {
+            return $draftApp;
+        }
+
+        if ($session->isOpen()) {
+            $appNumber = $this->generateApplicationNumber($session);
+            return $this->admissionRepo->createApplication($session->id, $applicantUserId, $appNumber);
+        }
+
+        return null;
     }
 
     /**
@@ -255,11 +285,11 @@ class AdmissionService
     }
 
     /**
-     * Add a prospective ward to the applicant's current application docket.
+     * Add a prospective ward to the applicant's current open draft application docket.
      */
     public function addWard(int $applicantUserId, array $data): ServiceResult
     {
-        $app = $this->getApplicantActiveApplication($applicantUserId);
+        $app = $this->getOrCreateDraftApplication($applicantUserId);
         if (!$app) {
             return ServiceResult::error('No active admission session application docket found.');
         }
@@ -683,6 +713,9 @@ class AdmissionService
             $birthCert = $ward->birthCertificateFileId ? $fileRepo->findById($ward->birthCertificateFileId) : null;
             $passport = $ward->passportPhotoFileId ? $fileRepo->findById($ward->passportPhotoFileId) : null;
             $report = $ward->previousReportFileId ? $fileRepo->findById($ward->previousReportFileId) : null;
+            $parentPassport = $ward->parentPassportFileId ? $fileRepo->findById($ward->parentPassportFileId) : null;
+            $pickerPassport = $ward->authorizedPickerPassportFileId ? $fileRepo->findById($ward->authorizedPickerPassportFileId) : null;
+            $immunization = $ward->immunizationRecordFileId ? $fileRepo->findById($ward->immunizationRecordFileId) : null;
             $payment = $this->admissionRepo->getSuccessfulPaymentForWard($ward->id);
 
             $wardDetails[] = [
@@ -690,6 +723,9 @@ class AdmissionService
                 'birth_cert' => $birthCert,
                 'passport' => $passport,
                 'previous_report' => $report,
+                'parent_passport' => $parentPassport,
+                'authorized_picker_passport' => $pickerPassport,
+                'immunization_record' => $immunization,
                 'payment' => $payment,
             ];
         }
@@ -740,6 +776,18 @@ class AdmissionService
             reviewedBy: $adminUserId
         );
 
+        if ($status === AdmissionApplication::STATUS_REJECTED) {
+            $wards = $this->admissionRepo->getWardsForApplication($applicationId);
+            foreach ($wards as $w) {
+                if ($w->isPending()) {
+                    $this->admissionRepo->updateWard($w->id, [
+                        'status' => AdmissionWard::STATUS_REJECTED,
+                        'decision_note' => $comment ?: 'Application docket rejected.'
+                    ]);
+                }
+            }
+        }
+
         $this->admissionRepo->logStatusHistory(
             applicationId: $applicationId,
             fromStatus: $app->status,
@@ -755,16 +803,19 @@ class AdmissionService
     }
 
     /**
-     * Atomically approve application docket:
-     * 1. Converts each registered ward to a student record with STD-xxxxx admission number.
-     * 2. Establishes parent identity and links student(s) to parent.
-     * 3. Transitions docket to APPROVED.
+     * Atomically process application docket decision with per-ward approval/rejection:
+     * 1. Converts approved wards to student records with STD-xxxxx admission numbers.
+     * 2. Establishes parent identity and links student(s) to parent if at least 1 ward approved.
+     * 3. Sets rejected status on rejected wards with decision notes.
+     * 4. Transitions docket to APPROVED (if any admitted) or REJECTED (if all rejected).
      */
     public function approveApplication(
         int $applicationId,
         int $adminUserId,
         ?string $comment = null,
-        array $wardClassAllocations = []
+        array $wardClassAllocations = [],
+        array $wardDecisions = [],
+        array $wardNotes = []
     ): ServiceResult {
         $app = $this->admissionRepo->findApplicationById($applicationId);
         if (!$app) {
@@ -789,19 +840,33 @@ class AdmissionService
 
         $this->pdo->beginTransaction();
         try {
-            // 1. Ensure applicant user has a 'parent' profile and role
-            $parent = $this->parentRepo->findByUserId($app->applicantUserId);
-            if (!$parent) {
-                $parent = $this->parentRepo->create($app->applicantUserId);
-            }
-            $this->userRepo->addRole($app->applicantUserId, 'parent');
-
             $enrolledStudents = [];
+            $rejectedWards = [];
 
-            // 2. Convert each ward to an active student
+            // 1. Process each ward decision
             foreach ($wards as $ward) {
-                // If ward already converted, skip
+                $decision = strtolower((string)($wardDecisions[$ward->id] ?? 'approve'));
+                
+                if ($decision === 'reject') {
+                    $note = trim((string)($wardNotes[$ward->id] ?? $comment ?? 'Admission criteria not met.'));
+                    $this->admissionRepo->updateWard($ward->id, [
+                        'status' => AdmissionWard::STATUS_REJECTED,
+                        'decision_note' => $note,
+                    ]);
+                    $rejectedWards[] = [
+                        'ward_id' => $ward->id,
+                        'ward_name' => $ward->getFullName(),
+                        'reason' => $note,
+                    ];
+                    continue;
+                }
+
+                // If ward already converted, skip creating new student
                 if (!empty($ward->convertedStudentId)) {
+                    $this->admissionRepo->updateWard($ward->id, [
+                        'status' => AdmissionWard::STATUS_APPROVED,
+                        'decision_note' => $comment,
+                    ]);
                     continue;
                 }
 
@@ -849,9 +914,6 @@ class AdmissionService
                     admissionDate: date('Y-m-d')
                 );
 
-                // Link parent and student
-                $this->parentRepo->linkStudent($parent->id, $student->id, 'Parent');
-
                 // Enroll student into active class enrollment & auto-enroll subjects for that class/arm
                 if ($classId) {
                     $admissionSessionId = $app->admissionSessionId ?? $app->sessionId ?? null;
@@ -877,8 +939,12 @@ class AdmissionService
                     }
                 }
 
-                // Link ward converted student ID
+                // Link ward converted student ID and update status to approved
                 $this->admissionRepo->linkWardConvertedStudent($ward->id, $student->id);
+                $this->admissionRepo->updateWard($ward->id, [
+                    'status' => AdmissionWard::STATUS_APPROVED,
+                    'decision_note' => $comment,
+                ]);
 
                 $enrolledStudents[] = [
                     'ward_id' => $ward->id,
@@ -891,35 +957,68 @@ class AdmissionService
                 ];
             }
 
-            // 3. Update application status to APPROVED
-            $this->admissionRepo->updateApplicationStatus(
-                id: $applicationId,
-                status: AdmissionApplication::STATUS_APPROVED,
-                rejectionReason: null,
-                reviewedBy: $adminUserId
-            );
+            // 2. If at least 1 ward approved, ensure parent role and link students
+            if (!empty($enrolledStudents)) {
+                $parent = $this->parentRepo->findByUserId($app->applicantUserId);
+                if (!$parent) {
+                    $parent = $this->parentRepo->create($app->applicantUserId);
+                }
+                $this->userRepo->addRole($app->applicantUserId, 'parent');
 
-            // 4. Log status history
-            $this->admissionRepo->logStatusHistory(
-                applicationId: $applicationId,
-                fromStatus: $app->status,
-                toStatus: AdmissionApplication::STATUS_APPROVED,
-                changedBy: $adminUserId,
-                comment: $comment ?: 'Admissions officer approved docket and converted prospective ward(s) to matriculated student(s).'
-            );
+                foreach ($enrolledStudents as $enr) {
+                    $this->parentRepo->linkStudent($parent->id, $enr['student_id'], 'Parent');
+                }
+
+                // Update application status to APPROVED
+                $finalStatus = AdmissionApplication::STATUS_APPROVED;
+                $this->admissionRepo->updateApplicationStatus(
+                    id: $applicationId,
+                    status: $finalStatus,
+                    rejectionReason: null,
+                    reviewedBy: $adminUserId
+                );
+
+                $statusMsg = 'Admissions officer approved docket and matriculated student(s).' . (!empty($rejectedWards) ? ' (' . count($rejectedWards) . ' ward(s) not admitted).' : '');
+                $this->admissionRepo->logStatusHistory(
+                    applicationId: $applicationId,
+                    fromStatus: $app->status,
+                    toStatus: $finalStatus,
+                    changedBy: $adminUserId,
+                    comment: $comment ?: $statusMsg
+                );
+            } else {
+                // All wards in docket were rejected
+                $finalStatus = AdmissionApplication::STATUS_REJECTED;
+                $rejectionReason = $comment ?: 'All prospective wards in application docket were not admitted.';
+                $this->admissionRepo->updateApplicationStatus(
+                    id: $applicationId,
+                    status: $finalStatus,
+                    rejectionReason: $rejectionReason,
+                    reviewedBy: $adminUserId
+                );
+
+                $this->admissionRepo->logStatusHistory(
+                    applicationId: $applicationId,
+                    fromStatus: $app->status,
+                    toStatus: $finalStatus,
+                    changedBy: $adminUserId,
+                    comment: $rejectionReason
+                );
+            }
 
             $this->pdo->commit();
 
             return ServiceResult::success([
                 'application_id' => $applicationId,
-                'status' => AdmissionApplication::STATUS_APPROVED,
+                'status' => $finalStatus,
                 'enrolled_students' => $enrolledStudents,
+                'rejected_wards' => $rejectedWards,
             ]);
         } catch (\Throwable $e) {
             if ($this->pdo->inTransaction()) {
                 $this->pdo->rollBack();
             }
-            return ServiceResult::error('Failed to approve application: ' . $e->getMessage());
+            return ServiceResult::error('Failed to process admission approval: ' . $e->getMessage());
         }
     }
 

@@ -37,6 +37,22 @@ if ($isDraft && !empty($wards)) {
 
 <div class="space-y-6">
 
+    <?php if (!empty($applications) && count($applications) > 1): ?>
+        <!-- Docket Switcher if Applicant has multiple applications -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-1 mb-1">
+            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1">Your Dockets:</span>
+            <?php foreach ($applications as $appOption): 
+                $isSelected = ($application && $appOption->id === $application->id);
+            ?>
+                <a href="/applicant/application?app=<?= $appOption->id ?>" 
+                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shrink-0 <?= $isSelected ? 'bg-slate-900 text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50' ?>">
+                    <span><?= e($appOption->applicationNumber) ?></span>
+                    <span class="text-[10px] opacity-75 capitalize">(<?= e($appOption->status) ?>)</span>
+                </a>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
+
     <!-- Top Application Docket Header Card -->
     <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs">
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -66,22 +82,26 @@ if ($isDraft && !empty($wards)) {
                     <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400" style="width:14px;height:14px;"></i>
                     <span>Milestone Progress</span>
                 </a>
-                <?php if ($isDraft): ?>
-                    <a href="/applicant/wards/create" 
-                       class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#7B3046] to-[#9B3B58] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:shadow-md transition-all active:scale-[0.99]">
-                        <i data-lucide="plus" class="w-3.5 h-3.5" style="width:14px;height:14px;"></i>
-                        <span>Add Prospective Ward</span>
-                    </a>
-                <?php endif; ?>
+                <a href="/applicant/wards/create" 
+                   class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#7B3046] to-[#9B3B58] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:shadow-md transition-all active:scale-[0.99]">
+                    <i data-lucide="<?= $isDraft ? 'plus' : 'user-plus' ?>" class="w-3.5 h-3.5" style="width:14px;height:14px;"></i>
+                    <span><?= $isDraft ? 'Add Prospective Ward' : 'Enroll Another Child' ?></span>
+                </a>
             </div>
         </div>
 
         <?php if (!$isDraft && $application): ?>
-            <div class="mt-5 rounded-xl bg-blue-50 border border-blue-200 p-3.5 text-xs text-blue-900 flex items-center gap-2.5">
-                <i data-lucide="info" class="w-4 h-4 text-blue-600 shrink-0" style="width:16px;height:16px;"></i>
-                <span>
-                    This application docket was submitted on <strong><?= date('M j, Y \a\t h:i A', strtotime($application->submittedAt ?? $application->updatedAt)) ?></strong> and is currently under administrative assessment. Wards and files are locked against edits.
-                </span>
+            <div class="mt-5 rounded-xl bg-blue-50 border border-blue-200 p-3.5 text-xs text-blue-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5">
+                    <i data-lucide="info" class="w-4 h-4 text-blue-600 shrink-0" style="width:16px;height:16px;"></i>
+                    <span>
+                        This application docket was submitted on <strong><?= date('M j, Y \a\t h:i A', strtotime($application->submittedAt ?? $application->updatedAt)) ?></strong> and is currently under administrative assessment. Wards and files are locked against edits.
+                    </span>
+                </div>
+                <a href="/applicant/wards/create" class="shrink-0 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs transition">
+                    <i data-lucide="plus" class="w-3 h-3"></i>
+                    <span>Apply for Another Child</span>
+                </a>
             </div>
         <?php endif; ?>
     </div>
@@ -144,8 +164,18 @@ if ($isDraft && !empty($wards)) {
                                     </div>
                                 </div>
 
-                                <!-- Payment Status Pill -->
-                                <?php if ($ward->isPaid()): ?>
+                                <!-- Decision / Payment Status Pill -->
+                                <?php if ($ward->isApproved()): ?>
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shrink-0">
+                                        <i data-lucide="check-circle-2" class="w-3 h-3 text-emerald-600" style="width:12px;height:12px;"></i>
+                                        <span>Admitted <?= $ward->studentAdmissionNumber ? '(' . e($ward->studentAdmissionNumber) . ')' : '' ?></span>
+                                    </span>
+                                <?php elseif ($ward->isRejected()): ?>
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 shrink-0">
+                                        <i data-lucide="x-circle" class="w-3 h-3 text-rose-600" style="width:12px;height:12px;"></i>
+                                        <span>Not Admitted</span>
+                                    </span>
+                                <?php elseif ($ward->isPaid()): ?>
                                     <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
                                         <i data-lucide="check" class="w-3 h-3 text-emerald-600" style="width:12px;height:12px;"></i>
                                         <span>Fee Paid</span>
@@ -157,6 +187,12 @@ if ($isDraft && !empty($wards)) {
                                     </span>
                                 <?php endif; ?>
                             </div>
+
+                            <?php if ($ward->decisionNote): ?>
+                                <div class="mb-3 p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700">
+                                    <span class="font-bold text-slate-800">Assessment Note:</span> <?= e($ward->decisionNote) ?>
+                                </div>
+                            <?php endif; ?>
 
                             <!-- Ward Profile Metadata Grid -->
                             <div class="grid grid-cols-2 gap-2 text-[11px] bg-slate-50/70 rounded-xl p-3 border border-slate-100 mb-4">
@@ -170,43 +206,42 @@ if ($isDraft && !empty($wards)) {
                                 </div>
                                 <div>
                                     <span class="text-slate-400 block font-medium">Curriculum</span>
-                                    <span class="font-semibold text-slate-800"><?= e($ward->curriculumChoice ?? 'Standard') ?></span>
+                                    <span class="font-semibold text-slate-800"><?= e($ward->curriculumChoice ?? 'Nigerian-British') ?></span>
                                 </div>
                                 <div>
-                                    <span class="text-slate-400 block font-medium">School Bus</span>
-                                    <span class="font-semibold text-slate-800"><?= $ward->useSchoolBus ? 'Required' : 'Not required' ?></span>
+                                    <span class="text-slate-400 block font-medium">Last Grade Passed</span>
+                                    <span class="font-semibold text-slate-800"><?= e($ward->lastGradePassed ?? '—') ?></span>
                                 </div>
                             </div>
 
-                            <!-- Document Upload Status Checklist -->
+                            <!-- Document Upload Status Checklist (All 6 Required Documents) -->
                             <div class="space-y-1.5 text-xs mb-4">
                                 <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                                    Required Documents
+                                    Required Verification Documents
                                 </span>
 
-                                <div class="flex items-center justify-between py-1 px-2 rounded-lg <?= $ward->birthCertificateFileId ? 'bg-emerald-50/60 text-emerald-800' : 'bg-slate-50 text-slate-500' ?>">
-                                    <span class="flex items-center gap-1.5">
-                                        <i data-lucide="<?= $ward->birthCertificateFileId ? 'check-circle-2' : 'circle' ?>" class="w-3.5 h-3.5 <?= $ward->birthCertificateFileId ? 'text-emerald-600' : 'text-slate-400' ?>" style="width:14px;height:14px;"></i>
-                                        <span>Birth Certificate</span>
-                                    </span>
-                                    <?php if ($ward->birthCertificateFileId): ?>
-                                        <a href="/files/<?= $ward->birthCertificateFileId ?>/download" target="_blank" class="text-[10px] font-bold text-emerald-700 hover:underline">View</a>
-                                    <?php else: ?>
-                                        <span class="text-[10px] text-amber-600 font-semibold">Missing</span>
-                                    <?php endif; ?>
-                                </div>
-
-                                <div class="flex items-center justify-between py-1 px-2 rounded-lg <?= $ward->passportPhotoFileId ? 'bg-emerald-50/60 text-emerald-800' : 'bg-slate-50 text-slate-500' ?>">
-                                    <span class="flex items-center gap-1.5">
-                                        <i data-lucide="<?= $ward->passportPhotoFileId ? 'check-circle-2' : 'circle' ?>" class="w-3.5 h-3.5 <?= $ward->passportPhotoFileId ? 'text-emerald-600' : 'text-slate-400' ?>" style="width:14px;height:14px;"></i>
-                                        <span>Passport Photo</span>
-                                    </span>
-                                    <?php if ($ward->passportPhotoFileId): ?>
-                                        <a href="/files/<?= $ward->passportPhotoFileId ?>/download" target="_blank" class="text-[10px] font-bold text-emerald-700 hover:underline">View</a>
-                                    <?php else: ?>
-                                        <span class="text-[10px] text-amber-600 font-semibold">Missing</span>
-                                    <?php endif; ?>
-                                </div>
+                                <?php 
+                                $docChecklist = [
+                                    ['label' => 'Birth Certificate', 'fileId' => $ward->birthCertificateFileId],
+                                    ['label' => 'Ward Passport Photo', 'fileId' => $ward->passportPhotoFileId],
+                                    ['label' => 'Academic Report / Transcript', 'fileId' => $ward->previousReportFileId],
+                                    ['label' => 'Parent Passport Photo', 'fileId' => $ward->parentPassportFileId],
+                                    ['label' => 'Authorized Picker Photo', 'fileId' => $ward->authorizedPickerPassportFileId],
+                                    ['label' => 'Immunization Card', 'fileId' => $ward->immunizationRecordFileId],
+                                ];
+                                foreach ($docChecklist as $dItem): ?>
+                                    <div class="flex items-center justify-between py-1 px-2 rounded-lg <?= $dItem['fileId'] ? 'bg-emerald-50/60 text-emerald-800' : 'bg-slate-50 text-slate-500' ?>">
+                                        <span class="flex items-center gap-1.5 truncate">
+                                            <i data-lucide="<?= $dItem['fileId'] ? 'check-circle-2' : 'circle' ?>" class="w-3.5 h-3.5 <?= $dItem['fileId'] ? 'text-emerald-600' : 'text-slate-400' ?> shrink-0" style="width:14px;height:14px;"></i>
+                                            <span class="truncate"><?= e($dItem['label']) ?></span>
+                                        </span>
+                                        <?php if ($dItem['fileId']): ?>
+                                            <a href="/files/<?= $dItem['fileId'] ?>/download" target="_blank" class="text-[10px] font-bold text-emerald-700 hover:underline shrink-0">View</a>
+                                        <?php else: ?>
+                                            <span class="text-[10px] text-amber-600 font-semibold shrink-0">Missing</span>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endforeach; ?>
                             </div>
                         </div>
 
@@ -229,7 +264,7 @@ if ($isDraft && !empty($wards)) {
                                     <?php endif; ?>
                                 </div>
                             <?php else: ?>
-                                <span class="text-xs text-slate-400">Locked</span>
+                                <span class="text-xs text-slate-400">Locked for Review</span>
                             <?php endif; ?>
 
                             <!-- Main Ward Action Button -->
@@ -239,11 +274,17 @@ if ($isDraft && !empty($wards)) {
                                     <span>Pay Fee (<?= e($session ? $session->getFormattedFee() : '₦10,000') ?>)</span>
                                     <i data-lucide="credit-card" class="w-3.5 h-3.5" style="width:14px;height:14px;"></i>
                                 </a>
-                            <?php else: ?>
+                            <?php elseif ($isDraft): ?>
                                 <a href="/applicant/wards/<?= $ward->id ?>/documents" 
                                    class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors">
                                     <i data-lucide="upload-cloud" class="w-3.5 h-3.5 text-slate-500" style="width:14px;height:14px;"></i>
                                     <span>Upload Documents</span>
+                                </a>
+                            <?php else: ?>
+                                <a href="/applicant/wards/<?= $ward->id ?>/documents" 
+                                   class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+                                    <i data-lucide="file-text" class="w-3.5 h-3.5 text-slate-400" style="width:14px;height:14px;"></i>
+                                    <span>View Documents</span>
                                 </a>
                             <?php endif; ?>
                         </div>

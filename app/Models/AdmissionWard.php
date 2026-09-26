@@ -39,12 +39,33 @@ final class AdmissionWard
         public readonly ?int $authorizedPickerPassportFileId = null,
         public readonly ?int $immunizationRecordFileId = null,
         public readonly string $paymentStatus = self::PAYMENT_UNPAID,
+        public readonly string $status = self::STATUS_PENDING,
+        public readonly ?string $decisionNote = null,
         public readonly ?int $convertedStudentId = null,
         public readonly ?string $createdAt = null,
         public readonly ?string $updatedAt = null,
         public readonly ?string $academicLevelName = null,
         public readonly ?string $studentAdmissionNumber = null
     ) {
+    }
+
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_APPROVED = 'approved';
+    public const STATUS_REJECTED = 'rejected';
+
+    public function isApproved(): bool
+    {
+        return $this->status === self::STATUS_APPROVED || !empty($this->convertedStudentId);
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->status === self::STATUS_REJECTED;
+    }
+
+    public function isPending(): bool
+    {
+        return $this->status === self::STATUS_PENDING && empty($this->convertedStudentId);
     }
 
     public static function fromArray(array $data): self
@@ -75,6 +96,8 @@ final class AdmissionWard
             authorizedPickerPassportFileId: !empty($data['authorized_picker_passport_file_id']) ? (int)$data['authorized_picker_passport_file_id'] : null,
             immunizationRecordFileId: !empty($data['immunization_record_file_id']) ? (int)$data['immunization_record_file_id'] : null,
             paymentStatus: (string)($data['payment_status'] ?? self::PAYMENT_UNPAID),
+            status: (string)($data['status'] ?? self::STATUS_PENDING),
+            decisionNote: $data['decision_note'] ?? null,
             convertedStudentId: !empty($data['converted_student_id']) ? (int)$data['converted_student_id'] : null,
             createdAt: $data['created_at'] ?? null,
             updatedAt: $data['updated_at'] ?? null,
