@@ -383,21 +383,28 @@ $actionUrl = $isEdit ? "/applicant/wards/{$ward->id}" : "/applicant/wards";
 
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <!-- Ward Passport Photograph -->
-                    <div class="p-3.5 rounded-xl border border-slate-200 bg-slate-50/40">
+                    <div id="card-passport_photo" class="p-3.5 rounded-xl border transition-all duration-200 <?= !empty($ward?->passportPhotoFileId) ? 'border-emerald-400 bg-emerald-50/30' : 'border-slate-200 bg-slate-50/40' ?>">
                         <label for="passport_photo" class="block text-xs font-bold text-slate-800 mb-1 flex items-center justify-between">
-                            <span>Ward Passport</span>
-                            <?php if (!empty($ward?->passportPhotoFileId)): ?>
-                                <span class="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5">
-                                    <i data-lucide="check-circle" class="w-3 h-3" style="width:12px;height:12px;"></i> Uploaded
-                                </span>
-                            <?php endif; ?>
+                            <span class="flex items-center gap-1">
+                                <i data-lucide="user" class="w-3.5 h-3.5 text-slate-400"></i>
+                                <span>Ward Passport</span>
+                            </span>
+                            <span id="badge-passport_photo">
+                                <?php if (!empty($ward?->passportPhotoFileId)): ?>
+                                    <span class="text-[10px] text-emerald-700 bg-emerald-100 font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                                        <i data-lucide="check-circle-2" class="w-3 h-3"></i> Uploaded
+                                    </span>
+                                <?php endif; ?>
+                            </span>
                         </label>
                         <p class="text-[11px] text-slate-500 mb-2">Student passport photo (JPG, PNG)</p>
                         <input id="passport_photo" 
                                name="passport_photo" 
                                type="file" 
                                accept=".jpg,.jpeg,.png"
+                               onchange="handleAttachmentFileChange('passport_photo', this)"
                                class="w-full text-[11px] text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-slate-200 file:text-slate-800 hover:file:bg-slate-300 cursor-pointer">
+                        <div id="feedback-passport_photo" class="hidden mt-2 text-[11px] font-semibold text-emerald-700 items-center gap-1.5 truncate"></div>
                         <?php if (!empty($ward?->passportPhotoFileId)): ?>
                             <a href="/files/<?= $ward->passportPhotoFileId ?>/stream" target="_blank" class="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-[#7B3046] hover:underline">
                                 <i data-lucide="eye" class="w-3 h-3" style="width:12px;height:12px;"></i> View Current
@@ -406,21 +413,28 @@ $actionUrl = $isEdit ? "/applicant/wards/{$ward->id}" : "/applicant/wards";
                     </div>
 
                     <!-- Parent Passport Photograph -->
-                    <div class="p-3.5 rounded-xl border border-slate-200 bg-slate-50/40">
+                    <div id="card-parent_passport" class="p-3.5 rounded-xl border transition-all duration-200 <?= !empty($ward?->parentPassportFileId) ? 'border-emerald-400 bg-emerald-50/30' : 'border-slate-200 bg-slate-50/40' ?>">
                         <label for="parent_passport" class="block text-xs font-bold text-slate-800 mb-1 flex items-center justify-between">
-                            <span>Parent Passport</span>
-                            <?php if (!empty($ward?->parentPassportFileId)): ?>
-                                <span class="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5">
-                                    <i data-lucide="check-circle" class="w-3 h-3" style="width:12px;height:12px;"></i> Uploaded
-                                </span>
-                            <?php endif; ?>
+                            <span class="flex items-center gap-1">
+                                <i data-lucide="user-check" class="w-3.5 h-3.5 text-slate-400"></i>
+                                <span>Parent Passport</span>
+                            </span>
+                            <span id="badge-parent_passport">
+                                <?php if (!empty($ward?->parentPassportFileId)): ?>
+                                    <span class="text-[10px] text-emerald-700 bg-emerald-100 font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                                        <i data-lucide="check-circle-2" class="w-3 h-3"></i> Uploaded
+                                    </span>
+                                <?php endif; ?>
+                            </span>
                         </label>
                         <p class="text-[11px] text-slate-500 mb-2">Parent/Guardian photo (JPG, PNG)</p>
                         <input id="parent_passport" 
                                name="parent_passport" 
                                type="file" 
                                accept=".jpg,.jpeg,.png"
+                               onchange="handleAttachmentFileChange('parent_passport', this)"
                                class="w-full text-[11px] text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-slate-200 file:text-slate-800 hover:file:bg-slate-300 cursor-pointer">
+                        <div id="feedback-parent_passport" class="hidden mt-2 text-[11px] font-semibold text-emerald-700 items-center gap-1.5 truncate"></div>
                         <?php if (!empty($ward?->parentPassportFileId)): ?>
                             <a href="/files/<?= $ward->parentPassportFileId ?>/stream" target="_blank" class="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-[#7B3046] hover:underline">
                                 <i data-lucide="eye" class="w-3 h-3" style="width:12px;height:12px;"></i> View Current
@@ -429,21 +443,28 @@ $actionUrl = $isEdit ? "/applicant/wards/{$ward->id}" : "/applicant/wards";
                     </div>
 
                     <!-- Immunization Record -->
-                    <div class="p-3.5 rounded-xl border border-slate-200 bg-slate-50/40">
+                    <div id="card-immunization_record" class="p-3.5 rounded-xl border transition-all duration-200 <?= !empty($ward?->immunizationRecordFileId) ? 'border-emerald-400 bg-emerald-50/30' : 'border-slate-200 bg-slate-50/40' ?>">
                         <label for="immunization_record" class="block text-xs font-bold text-slate-800 mb-1 flex items-center justify-between">
-                            <span>Immunization Card</span>
-                            <?php if (!empty($ward?->immunizationRecordFileId)): ?>
-                                <span class="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5">
-                                    <i data-lucide="check-circle" class="w-3 h-3" style="width:12px;height:12px;"></i> Uploaded
-                                </span>
-                            <?php endif; ?>
+                            <span class="flex items-center gap-1">
+                                <i data-lucide="shield-plus" class="w-3.5 h-3.5 text-slate-400"></i>
+                                <span>Immunization Card</span>
+                            </span>
+                            <span id="badge-immunization_record">
+                                <?php if (!empty($ward?->immunizationRecordFileId)): ?>
+                                    <span class="text-[10px] text-emerald-700 bg-emerald-100 font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                                        <i data-lucide="check-circle-2" class="w-3 h-3"></i> Uploaded
+                                    </span>
+                                <?php endif; ?>
+                            </span>
                         </label>
                         <p class="text-[11px] text-slate-500 mb-2">Vaccine record (PDF, JPG, PNG)</p>
                         <input id="immunization_record" 
                                name="immunization_record" 
                                type="file" 
                                accept=".pdf,.jpg,.jpeg,.png"
+                               onchange="handleAttachmentFileChange('immunization_record', this)"
                                class="w-full text-[11px] text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-slate-200 file:text-slate-800 hover:file:bg-slate-300 cursor-pointer">
+                        <div id="feedback-immunization_record" class="hidden mt-2 text-[11px] font-semibold text-emerald-700 items-center gap-1.5 truncate"></div>
                         <?php if (!empty($ward?->immunizationRecordFileId)): ?>
                             <a href="/files/<?= $ward->immunizationRecordFileId ?>/stream" target="_blank" class="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-[#7B3046] hover:underline">
                                 <i data-lucide="eye" class="w-3 h-3" style="width:12px;height:12px;"></i> View Current
@@ -473,6 +494,41 @@ $actionUrl = $isEdit ? "/applicant/wards/{$ward->id}" : "/applicant/wards";
 </div>
 
 <script>
+    function handleAttachmentFileChange(type, input) {
+        const card = document.getElementById(`card-${type}`);
+        const badge = document.getElementById(`badge-${type}`);
+        const feedback = document.getElementById(`feedback-${type}`);
+        
+        if (input.files && input.files.length > 0) {
+            const file = input.files[0];
+            card.classList.remove('border-slate-200', 'bg-slate-50/40');
+            card.classList.add('border-emerald-500', 'bg-emerald-50/40', 'ring-2', 'ring-emerald-500/20');
+            
+            badge.innerHTML = `
+                <span class="text-[10px] text-emerald-700 bg-emerald-100 font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                    <i data-lucide="check-circle-2" class="w-3 h-3"></i> Ready
+                </span>
+            `;
+            
+            feedback.innerHTML = `
+                <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600 shrink-0"></i>
+                <span class="truncate">Ready: ${file.name}</span>
+            `;
+            feedback.classList.remove('hidden');
+            feedback.classList.add('flex');
+        } else {
+            card.classList.remove('border-emerald-500', 'bg-emerald-50/40', 'ring-2', 'ring-emerald-500/20');
+            card.classList.add('border-slate-200', 'bg-slate-50/40');
+            badge.innerHTML = '';
+            feedback.innerHTML = '';
+            feedback.classList.add('hidden');
+            feedback.classList.remove('flex');
+        }
+        if (window.lucide) {
+            lucide.createIcons();
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         if (window.lucide) {
             lucide.createIcons();

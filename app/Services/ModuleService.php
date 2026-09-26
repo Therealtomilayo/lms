@@ -328,7 +328,7 @@ class ModuleService
         int $activityId,
         ?int $sequenceOrder = null,
         bool $isRequired = true,
-        UserContext $actor = null
+        ?UserContext $actor = null
     ): ModuleItem {
         $module = $this->moduleRepo->findModuleById($moduleId);
         if (!$module) {

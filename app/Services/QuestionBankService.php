@@ -376,7 +376,7 @@ class QuestionBankService
         ?string $topic = null,
         ?string $type = null,
         ?string $search = null,
-        UserContext $userContext = null
+        ?UserContext $userContext = null
     ): array {
         if ($userContext && !QuestionPolicy::canManageQuestionBank($userContext, $subjectId, $this->teacherRepository, $this->academicRepository)) {
             throw new AuthorizationException('You are not authorized to view questions for this subject.');

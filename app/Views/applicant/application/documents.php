@@ -256,8 +256,10 @@ $documents = [
     const WARD_ID = <?= (int)$ward->id ?>;
     
     function getCsrfToken() {
-        const tokenInput = document.querySelector('#global-csrf-form input[name="_token"]');
-        return tokenInput ? tokenInput.value : '';
+        const tokenInput = document.querySelector('#global-csrf-form input[name="_csrf_token"]')
+            || document.querySelector('#global-csrf-form input[name="_token"]')
+            || document.querySelector('input[name="_csrf_token"]');
+        return tokenInput ? tokenInput.value : '<?= csrf_token() ?>';
     }
 
     async function handleAsyncFileUpload(docType, inputEl) {
@@ -283,8 +285,10 @@ $documents = [
         spinner.classList.add('flex');
         inputEl.disabled = true;
 
+        const token = getCsrfToken();
         const formData = new FormData();
-        formData.append('_token', getCsrfToken());
+        formData.append('_csrf_token', token);
+        formData.append('_token', token);
         formData.append('document_type', docType);
         formData.append('document', file);
 
@@ -293,12 +297,18 @@ $documents = [
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': token
                 },
                 body: formData
             });
 
-            const data = await response.json();
+            let data = {};
+            try {
+                data = await response.json();
+            } catch (e) {
+                // If response is not JSON
+            }
 
             if (response.ok && data.success) {
                 // Success: update state
@@ -332,7 +342,8 @@ $documents = [
                 updateAllProceedButtons();
 
             } else {
-                throw new Error(data.message || 'File upload failed. Please try again.');
+                const errorMsg = data.message || data.error || (response.statusText ? `Upload failed (${response.status}: ${response.statusText})` : 'File upload failed. Please try again.');
+                throw new Error(errorMsg);
             }
         } catch (err) {
             errorText.textContent = err.message || 'An error occurred during upload.';

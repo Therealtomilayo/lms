@@ -159,6 +159,7 @@ class AdminAdmissionsManagementTest extends TestCase
             'immunization_record' => 'application/pdf',
         ];
 
+        $createdFileIds = [];
         foreach ($docTypes as $docType => $mime) {
             $f = $fileRepo->create(
                 uuid: sprintf('%08x-%04x-%04x-%04x-%012x', mt_rand(), mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand()),
@@ -171,6 +172,7 @@ class AdminAdmissionsManagementTest extends TestCase
                 ownerType: 'admission_ward',
                 ownerId: $wardId
             );
+            $createdFileIds[] = (int)$f->id;
             $this->admissionService->attachDocumentToWard($wardId, $this->applicantUserId, $docType, (int)$f->id);
         }
 
@@ -265,7 +267,10 @@ class AdminAdmissionsManagementTest extends TestCase
         $this->assertTrue($this->parentRepo->isLinked($parentProfile->id, $student->id));
 
         // Clean up files
-        $this->db->prepare("DELETE FROM files WHERE id IN (?, ?)")->execute([$birthCert->id, $passport->id]);
+        if (!empty($createdFileIds)) {
+            $inClause = implode(',', array_fill(0, count($createdFileIds), '?'));
+            $this->db->prepare("DELETE FROM files WHERE id IN ($inClause)")->execute($createdFileIds);
+        }
     }
 
     public function testAdminAdmissionControllerViewsRender(): void
