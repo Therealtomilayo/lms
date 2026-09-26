@@ -8,6 +8,8 @@
  */
 $userContextName = $_SESSION['user_name'] ?? 'Applicant';
 $userContextEmail = $_SESSION['user_email'] ?? '';
+$userRoles = $_SESSION['user_roles'] ?? [];
+$isParent = in_array('parent', $userRoles, true);
 $currentUri = $_SERVER['REQUEST_URI'] ?? '';
 ?>
 <!DOCTYPE html>
@@ -58,6 +60,16 @@ $currentUri = $_SERVER['REQUEST_URI'] ?? '';
                     <i data-lucide="receipt" class="w-4 h-4 shrink-0" style="width:16px;height:16px;"></i>
                     <span>Payment History</span>
                 </a>
+
+                <?php if ($isParent): ?>
+                    <div class="pt-2">
+                        <a href="/parent/dashboard" 
+                           class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-emerald-400 bg-emerald-950/40 border border-emerald-800/50 hover:bg-emerald-900/50 transition-all">
+                            <i data-lucide="layout-dashboard" class="w-4 h-4 shrink-0 text-emerald-400" style="width:16px;height:16px;"></i>
+                            <span>Switch to Parent Portal</span>
+                        </a>
+                    </div>
+                <?php endif; ?>
             </nav>
         </div>
 
@@ -66,8 +78,8 @@ $currentUri = $_SERVER['REQUEST_URI'] ?? '';
             <div class="px-3 py-2 mb-2">
                 <span class="block text-xs font-bold text-white truncate"><?= e($userContextName) ?></span>
                 <span class="block text-[11px] text-slate-400 truncate"><?= e($userContextEmail) ?></span>
-                <span class="inline-block mt-1.5 px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                    Applicant Account
+                <span class="inline-block mt-1.5 px-2 py-0.5 rounded text-[10px] font-semibold <?= $isParent ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30' ?>">
+                    <?= $isParent ? 'Parent &amp; Applicant' : 'Applicant Account' ?>
                 </span>
             </div>
 
@@ -98,6 +110,13 @@ $currentUri = $_SERVER['REQUEST_URI'] ?? '';
             </div>
 
             <div class="flex items-center gap-3">
+                <?php if ($isParent): ?>
+                    <a href="/parent/dashboard" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold shadow-xs transition-all">
+                        <i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i>
+                        <span>Parent Portal</span>
+                    </a>
+                <?php endif; ?>
+
                 <a href="/" class="text-xs font-semibold text-[#7B3046] hover:underline flex items-center gap-1">
                     <span>Public School Website</span>
                     <i data-lucide="arrow-up-right" class="w-3.5 h-3.5" style="width:14px;height:14px;"></i>

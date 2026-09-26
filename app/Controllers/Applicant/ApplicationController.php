@@ -11,6 +11,7 @@ use App\Core\Response;
 use App\Core\Session;
 use App\Models\AdmissionApplication;
 use App\Models\AdmissionWard;
+use App\Repositories\AdmissionRepository;
 use App\Services\AdmissionService;
 use App\Services\FileStorageService;
 
@@ -21,14 +22,17 @@ class ApplicationController extends Controller
 {
     private AdmissionService $admissionService;
     private FileStorageService $fileStorageService;
+    private AdmissionRepository $admissionRepo;
 
     public function __construct(
         ?AdmissionService $admissionService = null,
-        ?FileStorageService $fileStorageService = null
+        ?FileStorageService $fileStorageService = null,
+        ?AdmissionRepository $admissionRepo = null
     ) {
         parent::__construct();
         $this->admissionService = $admissionService ?? new AdmissionService();
         $this->fileStorageService = $fileStorageService ?? new FileStorageService();
+        $this->admissionRepo = $admissionRepo ?? new AdmissionRepository();
     }
 
     /**
@@ -435,12 +439,42 @@ class ApplicationController extends Controller
     {
         $user = $this->requireAuthContext($request);
         $data = $this->admissionService->getApplicantDashboardData($user->id);
-        $app = $data['applications'][0] ?? null;
+        $applications = $this->admissionRepo->getApplicationsByApplicant($user->id);
+
+        $selectedAppId = (int)$request->query('app', 0);
+        $app = null;
+        if ($selectedAppId > 0) {
+            foreach ($applications as $candidate) {
+                if ($candidate->id === $selectedAppId) {
+                    $app = $candidate;
+                    break;
+                }
+            }
+        }
+
+        if (!$app) {
+            // Default to most recently submitted or active application
+            $app = $data['applications'][0] ?? ($applications[0] ?? null);
+        }
+
+        $wards = $app ? $this->admissionRepo->getWardsForApplication($app->id) : [];
+        if ($app) {
+            $app->wards = $wards;
+        }
+
+        $history = $app ? $this->admissionRepo->getStatusHistory($app->id) : [];
+
+        $userContext = $request->getAttribute('_user_context');
+        $isParent = $userContext ? $userContext->hasRole('parent') : in_array('parent', $user->roles ?? [], true);
 
         return $this->view('applicant/progress', [
             'title' => 'Application Progress — Claret Admissions',
             'user' => $user,
             'application' => $app,
+            'applications' => $applications,
+            'wards' => $wards,
+            'history' => $history,
+            'isParent' => $isParent,
             'session' => $data['activeSession'],
         ]);
     }

@@ -91,18 +91,69 @@ if ($isDraft && !empty($wards)) {
         </div>
 
         <?php if (!$isDraft && $application): ?>
-            <div class="mt-5 rounded-xl bg-blue-50 border border-blue-200 p-3.5 text-xs text-blue-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div class="flex items-center gap-2.5">
-                    <i data-lucide="info" class="w-4 h-4 text-blue-600 shrink-0" style="width:16px;height:16px;"></i>
-                    <span>
-                        This application docket was submitted on <strong><?= date('M j, Y \a\t h:i A', strtotime($application->submittedAt ?? $application->updatedAt)) ?></strong> and is currently under administrative assessment. Wards and files are locked against edits.
-                    </span>
+            <?php if ($application->isApproved()): ?>
+                <div class="mt-5 rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-xs text-emerald-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div class="flex items-center gap-2.5">
+                        <i data-lucide="award" class="w-5 h-5 text-emerald-600 shrink-0" style="width:20px;height:20px;"></i>
+                        <div>
+                            <span class="font-bold text-emerald-900 block text-sm">Admissions Decision Finalized: Student Enrolled!</span>
+                            <span class="text-emerald-800">Student matriculation record and Parent Portal access have been established.</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 shrink-0">
+                        <a href="/parent/dashboard" class="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs transition shadow-2xs">
+                            <i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i>
+                            <span>Parent Portal</span>
+                        </a>
+                        <a href="/applicant/progress?app=<?= $application->id ?>" class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-100 font-bold text-xs transition">
+                            <i data-lucide="file-check" class="w-3.5 h-3.5"></i>
+                            <span>View Credentials</span>
+                        </a>
+                        <a href="/applicant/wards/create" class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs transition">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            <span>Enroll Another Child</span>
+                        </a>
+                    </div>
                 </div>
-                <a href="/applicant/wards/create" class="shrink-0 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs transition">
-                    <i data-lucide="plus" class="w-3 h-3"></i>
-                    <span>Apply for Another Child</span>
-                </a>
-            </div>
+            <?php elseif ($application->isRejected()): ?>
+                <div class="mt-5 rounded-xl bg-rose-50 border border-rose-200 p-4 text-xs text-rose-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div class="flex items-center gap-2.5">
+                        <i data-lucide="x-circle" class="w-5 h-5 text-rose-600 shrink-0" style="width:20px;height:20px;"></i>
+                        <div>
+                            <span class="font-bold text-rose-900 block text-sm">Admissions Committee Review Concluded</span>
+                            <span class="text-rose-800"><?= e($application->rejectionReason ?: 'Prospective ward(s) could not be offered admission for this academic stream.') ?></span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <a href="/applicant/progress?app=<?= $application->id ?>" class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs transition">
+                            <span>View Decision Details</span>
+                        </a>
+                        <a href="/applicant/wards/create" class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs transition">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            <span>Apply for Another Child</span>
+                        </a>
+                    </div>
+                </div>
+            <?php else: ?>
+                <div class="mt-5 rounded-xl bg-blue-50 border border-blue-200 p-3.5 text-xs text-blue-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div class="flex items-center gap-2.5">
+                        <i data-lucide="info" class="w-4 h-4 text-blue-600 shrink-0" style="width:16px;height:16px;"></i>
+                        <span>
+                            This application docket was submitted on <strong><?= date('M j, Y \a\t h:i A', strtotime($application->submittedAt ?? $application->updatedAt)) ?></strong> and is currently under administrative assessment. Wards and files are locked against edits.
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <a href="/applicant/progress?app=<?= $application->id ?>" class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition">
+                            <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                            <span>Track Progress</span>
+                        </a>
+                        <a href="/applicant/wards/create" class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs transition">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            <span>Apply for Another Child</span>
+                        </a>
+                    </div>
+                </div>
+            <?php endif; ?>
         <?php endif; ?>
     </div>
 
@@ -188,7 +239,27 @@ if ($isDraft && !empty($wards)) {
                                 <?php endif; ?>
                             </div>
 
-                            <?php if ($ward->decisionNote): ?>
+                            <?php if ($ward->isApproved() && !empty($ward->studentAdmissionNumber)): ?>
+                                <div class="mb-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-1">
+                                    <div class="flex items-center justify-between">
+                                        <span class="font-bold text-emerald-800">Student Admission No:</span>
+                                        <span class="font-mono font-black text-xs text-emerald-800 bg-white px-2 py-0.5 rounded border border-emerald-300"><?= e($ward->studentAdmissionNumber) ?></span>
+                                    </div>
+                                    <div class="text-[11px] text-emerald-700">
+                                        Default Password: <code class="font-mono font-bold text-emerald-900 bg-emerald-100 px-1 py-0.5 rounded">Claret@<?= date('Y') ?>!</code>
+                                    </div>
+                                    <?php if ($ward->decisionNote): ?>
+                                        <div class="pt-1 text-[11px] text-slate-600 border-t border-emerald-100">
+                                            <span class="font-bold">Remark:</span> <?= e($ward->decisionNote) ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php elseif ($ward->isRejected()): ?>
+                                <div class="mb-3 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-900 space-y-1">
+                                    <span class="font-bold text-rose-800 block">Not Admitted — Committee Reason:</span>
+                                    <p class="text-rose-700 leading-relaxed"><?= e($ward->decisionNote ?: 'Admission criteria not satisfied for this academic session.') ?></p>
+                                </div>
+                            <?php elseif ($ward->decisionNote): ?>
                                 <div class="mb-3 p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700">
                                     <span class="font-bold text-slate-800">Assessment Note:</span> <?= e($ward->decisionNote) ?>
                                 </div>

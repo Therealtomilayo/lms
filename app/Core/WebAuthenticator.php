@@ -53,6 +53,9 @@ class WebAuthenticator implements AuthenticatorInterface
         // Update session last seen timestamp periodically
         $this->userRepository->updateSessionLastSeen((string)$sessionHash);
 
+        // Keep session roles synchronized with database in case roles were granted mid-session
+        Session::set('user_roles', $user->roles);
+
         $context = UserContext::fromUser($user);
         $request->setAttribute('_user_context', $context);
 
