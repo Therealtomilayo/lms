@@ -13,7 +13,7 @@ use PDO;
 /**
  * Repository for Skills, Student Skill Ratings, and Remark Presets
  */
-final class SkillRepository
+class SkillRepository
 {
     private readonly PDO $pdo;
 

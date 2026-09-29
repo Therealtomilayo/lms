@@ -15,6 +15,8 @@ use App\Repositories\GradebookRepository;
 use App\Repositories\ResultPublicationRepository;
 use App\Repositories\ResultSubmissionRepository;
 use App\Repositories\TeacherRepository;
+use App\Policies\ResultPolicy;
+use App\Services\ReportCardService;
 
 /**
  * Controller for Form/Class Teacher Class Results Overview, Broadsheet, and Admin Submission
@@ -108,12 +110,27 @@ class ResultOverviewController extends Controller
             $submission = $this->submissionRepo->findSubmission($selectedClassId, $selectedTerm->id);
             $isPublished = $this->publicationRepo->isPublished($selectedTerm->id, $selectedClassId);
 
-            $totalSum = 0;
-            $countSum = 0;
             foreach ($summaries as $sm) {
                 $summaryMap[$sm->studentId] = $sm;
-                if ($sm->averageScore !== null) {
-                    $totalSum += (float)$sm->averageScore;
+            }
+
+            $totalSum = 0;
+            $countSum = 0;
+            foreach ($students as $stu) {
+                $scores = [];
+                foreach ($classSubjects as $cs) {
+                    $res = $resultsMatrix[$stu->id][$cs->subjectId] ?? $resultsMatrix[$stu->id][$cs->id] ?? null;
+                    $sc = $res ? ($res['computed_score'] ?? $res['total_score'] ?? null) : null;
+                    if ($sc !== null && $sc !== '') {
+                        $scores[] = (float)$sc;
+                    }
+                }
+                $avg = !empty($scores)
+                    ? (array_sum($scores) / count($scores))
+                    : ($summaryMap[$stu->id]->averageScore ?? null);
+
+                if ($avg !== null) {
+                    $totalSum += (float)$avg;
                     $countSum++;
                 }
             }
@@ -209,5 +226,46 @@ class ResultOverviewController extends Controller
             $redirectUrl,
             "Terminal results for {$className} have been submitted to the administration for review and approval."
         );
+    }
+
+    /**
+     * View Student Official Report Card PDF Dossier for assigned Form Class
+     * Route: GET /teacher/reports/student/{studentId}/{termId}.pdf
+     */
+    public function reportPdf(Request $request, int|string $studentId, int|string $termId): Response
+    {
+        $userContext = $this->requireAuthContext($request);
+        $sId = (int)$studentId;
+        $tId = (int)$termId;
+
+        if ($sId <= 0 || $tId <= 0) {
+            return $this->notFound('Invalid student or academic term specified.');
+        }
+
+        if (!ResultPolicy::canViewReportCard($userContext, $sId, $tId, $this->academicRepo, $this->teacherRepo, $this->gradebookRepo)) {
+            throw new AuthorizationException('Access denied. Only the assigned Class Teacher or School Administrator may view this report card.');
+        }
+
+        $reportCardService = new ReportCardService(
+            $this->gradebookRepo,
+            null,
+            $this->academicRepo,
+            $this->teacherRepo
+        );
+
+        $reportData = $reportCardService->getReportCardData($sId, $tId);
+        $reportData['isPdf'] = true;
+        $reportData['isAdmin'] = $userContext->isAdmin();
+        $reportData['isTeacher'] = true;
+
+        $referer = $request->header('referer') ?? ($_SERVER['HTTP_REFERER'] ?? null);
+        $studentClassId = $reportData['class']?->id ?? (int)$request->get('class_id', 0);
+        $backUrl = "/teacher/results/overview" . ($studentClassId > 0 ? "?class_id={$studentClassId}&term_id={$tId}" : "");
+        if ($referer && str_contains($referer, '/teacher/results/')) {
+            $backUrl = $referer;
+        }
+        $reportData['backUrl'] = $backUrl;
+
+        return $this->view('student/grades/report_card', $reportData);
     }
 }

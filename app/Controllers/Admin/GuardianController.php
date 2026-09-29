@@ -47,7 +47,9 @@ class GuardianController extends Controller
         $limit = 25;
         $offset = ($page - 1) * $limit;
 
-        $parents = $this->parentRepository->getAll($limit, $offset, $search ?: null);
+        $parents = !empty($search) 
+            ? $this->parentRepository->search($search, $limit, $offset) 
+            : $this->parentRepository->getAll($limit, $offset);
         $totalParents = $this->parentRepository->countAll($search ?: null);
         $totalPages = (int)ceil($totalParents / $limit);
 

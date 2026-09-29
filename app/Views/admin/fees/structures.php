@@ -138,6 +138,19 @@ $this->layout('layouts/admin', [
                                             <span class="text-slate-700 font-medium truncate">
                                                 <?= htmlspecialchars($item->name, ENT_QUOTES, 'UTF-8') ?>
                                             </span>
+                                            <?php if (($item->applicability ?? 'all') === 'new_students_only'): ?>
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-50 text-purple-700 border border-purple-200" title="Compulsory only for new admissions/entrants">
+                                                    New Entrants
+                                                </span>
+                                            <?php elseif (($item->applicability ?? 'all') === 'bus_users_only'): ?>
+                                                <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-800 border border-amber-200" title="Compulsory for bus users, optional for others">
+                                                    <i data-lucide="bus" class="w-2.5 h-2.5 text-amber-600"></i> Bus Riders
+                                                </span>
+                                            <?php elseif (($item->applicability ?? 'all') === 'optional'): ?>
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                                    Optional
+                                                </span>
+                                            <?php endif; ?>
                                             <?php if ($item->isRequiredForResult): ?>
                                                 <span class="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[9px] font-bold bg-rose-50 text-rose-700 border border-rose-200" title="Mandatory for Academic Report Card Clearance">
                                                     <i data-lucide="lock" class="w-2.5 h-2.5"></i> Lock Result
@@ -256,64 +269,66 @@ $this->layout('layouts/admin', [
             <!-- Itemized Fee Rows -->
             <div class="space-y-3 pt-2">
                 <div class="flex items-center justify-between">
-                    <label class="block font-bold text-slate-800 text-xs">Fee Breakdown Components</label>
+                    <div>
+                        <label class="block font-bold text-slate-800 text-xs">Fee Breakdown Components</label>
+                        <p class="text-[10px] text-slate-400">Configure itemized levies and target student applicability.</p>
+                    </div>
                     <button type="button" onclick="addFeeItemRow('fee-items-container')" class="text-brand-600 hover:text-brand-800 font-bold text-xs flex items-center gap-1">
-                        <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Component
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Custom Row
+                    </button>
+                </div>
+
+                <!-- Quick Presets -->
+                <div class="flex flex-wrap items-center gap-1.5 p-2.5 bg-slate-50 rounded-2xl border border-slate-200">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mr-1">Quick Add:</span>
+                    <button type="button" onclick="addPresetComponent('fee-items-container', 'tuition')" class="px-2 py-1 rounded-lg bg-white hover:bg-brand-50 hover:text-brand-700 text-[11px] font-bold text-slate-700 border border-slate-200 shadow-2xs transition">+ Tuition</button>
+                    <button type="button" onclick="addPresetComponent('fee-items-container', 'books')" class="px-2 py-1 rounded-lg bg-white hover:bg-brand-50 hover:text-brand-700 text-[11px] font-bold text-slate-700 border border-slate-200 shadow-2xs transition">+ Books</button>
+                    <button type="button" onclick="addPresetComponent('fee-items-container', 'pta')" class="px-2 py-1 rounded-lg bg-white hover:bg-brand-50 hover:text-brand-700 text-[11px] font-bold text-slate-700 border border-slate-200 shadow-2xs transition">+ PTA</button>
+                    <button type="button" onclick="addPresetComponent('fee-items-container', 'clubs')" class="px-2 py-1 rounded-lg bg-white hover:bg-brand-50 hover:text-brand-700 text-[11px] font-bold text-slate-700 border border-slate-200 shadow-2xs transition">+ Clubs</button>
+                    <button type="button" onclick="addPresetComponent('fee-items-container', 'uniforms')" class="px-2 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 text-[11px] font-bold border border-purple-200 shadow-2xs transition">+ Uniforms (New Only)</button>
+                    <button type="button" onclick="addPresetComponent('fee-items-container', 'practicals')" class="px-2 py-1 rounded-lg bg-white hover:bg-brand-50 hover:text-brand-700 text-[11px] font-bold text-slate-700 border border-slate-200 shadow-2xs transition">+ Practicals</button>
+                    <button type="button" onclick="addPresetComponent('fee-items-container', 'health')" class="px-2 py-1 rounded-lg bg-white hover:bg-brand-50 hover:text-brand-700 text-[11px] font-bold text-slate-700 border border-slate-200 shadow-2xs transition">+ Health</button>
+                    <button type="button" onclick="addPresetComponent('fee-items-container', 'bus')" class="px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-bold border border-amber-200 shadow-2xs transition flex items-center gap-1">
+                        <i data-lucide="bus" class="w-3 h-3 text-amber-600"></i> + School Bus
                     </button>
                 </div>
 
                 <div id="fee-items-container" class="space-y-2">
-                    <div class="grid grid-cols-12 gap-2 items-center fee-row">
+                    <div class="grid grid-cols-12 gap-2 items-center fee-row bg-slate-50/60 p-2 rounded-xl border border-slate-100">
                         <div class="col-span-3">
-                            <select name="category_id[]" required class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs bg-white text-slate-700">
+                            <label class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Category</label>
+                            <select name="category_id[]" required class="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs bg-white text-slate-700 cat-select">
                                 <?php foreach ($categories as $cat): ?>
                                     <option value="<?= $cat->id ?>"><?= htmlspecialchars($cat->name, ENT_QUOTES, 'UTF-8') ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="col-span-3">
-                            <input type="text" name="item_name[]" value="Tuition Fee" required placeholder="Component Name" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs text-slate-800">
+                            <label class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Component Name</label>
+                            <input type="text" name="item_name[]" value="Tuition Fee" required placeholder="Component Name" class="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-800 name-input">
                         </div>
-                        <div class="col-span-3">
-                            <input type="number" step="0.01" min="0" name="item_amount[]" value="75000.00" required placeholder="Amount (₦)" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs font-mono text-slate-800">
+                        <div class="col-span-2">
+                            <label class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Amount (₦)</label>
+                            <input type="number" step="0.01" min="0" name="item_amount[]" value="75000.00" required placeholder="Amount" class="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs font-mono text-slate-800 amt-input">
                         </div>
-                        <div class="col-span-2 text-center">
-                            <input type="hidden" name="is_required_for_result[]" value="1" class="req-result-hidden">
-                            <label class="inline-flex items-center gap-1 cursor-pointer font-bold text-slate-700" title="Result is locked until this fee is settled">
-                                <input type="checkbox" checked onchange="this.closest('.fee-row').querySelector('.req-result-hidden').value = this.checked ? '1' : '0'" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500">
-                                <span class="text-[10px]">Lock Result</span>
-                            </label>
-                        </div>
-                        <div class="col-span-1 text-center">
-                            <button type="button" onclick="removeFeeRow(this)" class="p-1 rounded text-slate-400 hover:text-rose-600">
-                                <i data-lucide="trash-2" class="w-4 h-4"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-12 gap-2 items-center fee-row">
-                        <div class="col-span-3">
-                            <select name="category_id[]" required class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs bg-white text-slate-700">
-                                <?php foreach ($categories as $cat): ?>
-                                    <option value="<?= $cat->id ?>" <?= $cat->id === 3 ? 'selected' : '' ?>><?= htmlspecialchars($cat->name, ENT_QUOTES, 'UTF-8') ?></option>
-                                <?php endforeach; ?>
+                        <div class="col-span-2">
+                            <label class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Applicability</label>
+                            <select name="applicability[]" class="w-full px-1.5 py-1.5 rounded-lg border border-slate-200 text-[11px] bg-white text-slate-700 app-select">
+                                <option value="all" selected>All Students</option>
+                                <option value="new_students_only">New Entrants Only</option>
+                                <option value="bus_users_only">Bus Users Only</option>
+                                <option value="optional">Optional Add-on</option>
                             </select>
                         </div>
-                        <div class="col-span-3">
-                            <input type="text" name="item_name[]" value="ICT & E-Learning Levy" required placeholder="Component Name" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs text-slate-800">
-                        </div>
-                        <div class="col-span-3">
-                            <input type="number" step="0.01" min="0" name="item_amount[]" value="15000.00" required placeholder="Amount (₦)" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs font-mono text-slate-800">
-                        </div>
-                        <div class="col-span-2 text-center">
+                        <div class="col-span-1 text-center pt-2">
                             <input type="hidden" name="is_required_for_result[]" value="1" class="req-result-hidden">
-                            <label class="inline-flex items-center gap-1 cursor-pointer font-bold text-slate-700" title="Result is locked until this fee is settled">
-                                <input type="checkbox" checked onchange="this.closest('.fee-row').querySelector('.req-result-hidden').value = this.checked ? '1' : '0'" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500">
-                                <span class="text-[10px]">Lock Result</span>
+                            <label class="inline-flex flex-col items-center cursor-pointer font-bold text-slate-700" title="Result is locked until this fee is settled">
+                                <input type="checkbox" checked onchange="this.closest('.fee-row').querySelector('.req-result-hidden').value = this.checked ? '1' : '0'" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500 req-checkbox">
+                                <span class="text-[9px] text-slate-500">Lock</span>
                             </label>
                         </div>
-                        <div class="col-span-1 text-center">
-                            <button type="button" onclick="removeFeeRow(this)" class="p-1 rounded text-slate-400 hover:text-rose-600">
+                        <div class="col-span-1 text-center pt-2">
+                            <button type="button" onclick="removeFeeRow(this)" title="Remove item" class="p-1 rounded text-slate-400 hover:text-rose-600">
                                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                             </button>
                         </div>
@@ -408,14 +423,29 @@ $this->layout('layouts/admin', [
             </div>
 
             <!-- Dynamic Fee Items Repeater -->
-            <div class="border-t border-slate-100 pt-3 space-y-2">
+            <div class="border-t border-slate-100 pt-3 space-y-3">
                 <div class="flex items-center justify-between">
                     <div>
                         <span class="font-bold text-slate-800 text-xs">Fee Breakdown Components</span>
-                        <p class="text-[10px] text-slate-400">Select which fees are mandatory for report card result clearance.</p>
+                        <p class="text-[10px] text-slate-400">Configure itemized levies and target student applicability.</p>
                     </div>
                     <button type="button" onclick="addFeeItemRow('edit-fee-items-container')" class="text-brand-600 hover:text-brand-800 font-bold text-xs flex items-center gap-1">
-                        <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Component
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Custom Row
+                    </button>
+                </div>
+
+                <!-- Quick Presets -->
+                <div class="flex flex-wrap items-center gap-1.5 p-2.5 bg-slate-50 rounded-2xl border border-slate-200">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mr-1">Quick Add:</span>
+                    <button type="button" onclick="addPresetComponent('edit-fee-items-container', 'tuition')" class="px-2 py-1 rounded-lg bg-white hover:bg-brand-50 hover:text-brand-700 text-[11px] font-bold text-slate-700 border border-slate-200 shadow-2xs transition">+ Tuition</button>
+                    <button type="button" onclick="addPresetComponent('edit-fee-items-container', 'books')" class="px-2 py-1 rounded-lg bg-white hover:bg-brand-50 hover:text-brand-700 text-[11px] font-bold text-slate-700 border border-slate-200 shadow-2xs transition">+ Books</button>
+                    <button type="button" onclick="addPresetComponent('edit-fee-items-container', 'pta')" class="px-2 py-1 rounded-lg bg-white hover:bg-brand-50 hover:text-brand-700 text-[11px] font-bold text-slate-700 border border-slate-200 shadow-2xs transition">+ PTA</button>
+                    <button type="button" onclick="addPresetComponent('edit-fee-items-container', 'clubs')" class="px-2 py-1 rounded-lg bg-white hover:bg-brand-50 hover:text-brand-700 text-[11px] font-bold text-slate-700 border border-slate-200 shadow-2xs transition">+ Clubs</button>
+                    <button type="button" onclick="addPresetComponent('edit-fee-items-container', 'uniforms')" class="px-2 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 text-[11px] font-bold border border-purple-200 shadow-2xs transition">+ Uniforms (New Only)</button>
+                    <button type="button" onclick="addPresetComponent('edit-fee-items-container', 'practicals')" class="px-2 py-1 rounded-lg bg-white hover:bg-brand-50 hover:text-brand-700 text-[11px] font-bold text-slate-700 border border-slate-200 shadow-2xs transition">+ Practicals</button>
+                    <button type="button" onclick="addPresetComponent('edit-fee-items-container', 'health')" class="px-2 py-1 rounded-lg bg-white hover:bg-brand-50 hover:text-brand-700 text-[11px] font-bold text-slate-700 border border-slate-200 shadow-2xs transition">+ Health</button>
+                    <button type="button" onclick="addPresetComponent('edit-fee-items-container', 'bus')" class="px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-bold border border-amber-200 shadow-2xs transition flex items-center gap-1">
+                        <i data-lucide="bus" class="w-3 h-3 text-amber-600"></i> + School Bus
                     </button>
                 </div>
 
@@ -443,29 +473,41 @@ $this->layout('layouts/admin', [
 </div>
 
 <template id="fee-row-template">
-    <div class="grid grid-cols-12 gap-2 items-center fee-row">
+    <div class="grid grid-cols-12 gap-2 items-center fee-row bg-slate-50/60 p-2 rounded-xl border border-slate-100">
         <div class="col-span-3">
-            <select name="category_id[]" required class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs bg-white text-slate-700 cat-select">
+            <label class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Category</label>
+            <select name="category_id[]" required class="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs bg-white text-slate-700 cat-select">
                 <?php foreach ($categories as $cat): ?>
                     <option value="<?= $cat->id ?>"><?= htmlspecialchars($cat->name, ENT_QUOTES, 'UTF-8') ?></option>
                 <?php endforeach; ?>
             </select>
         </div>
         <div class="col-span-3">
-            <input type="text" name="item_name[]" required placeholder="Component Name" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs text-slate-800 name-input">
+            <label class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Component Name</label>
+            <input type="text" name="item_name[]" required placeholder="Component Name" class="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-800 name-input">
         </div>
-        <div class="col-span-3">
-            <input type="number" step="0.01" min="0" name="item_amount[]" required placeholder="Amount (₦)" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs font-mono text-slate-800 amt-input">
+        <div class="col-span-2">
+            <label class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Amount (₦)</label>
+            <input type="number" step="0.01" min="0" name="item_amount[]" required placeholder="Amount" class="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs font-mono text-slate-800 amt-input">
         </div>
-        <div class="col-span-2 text-center">
+        <div class="col-span-2">
+            <label class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Applicability</label>
+            <select name="applicability[]" class="w-full px-1.5 py-1.5 rounded-lg border border-slate-200 text-[11px] bg-white text-slate-700 app-select">
+                <option value="all">All Students</option>
+                <option value="new_students_only">New Entrants Only</option>
+                <option value="bus_users_only">Bus Users Only</option>
+                <option value="optional">Optional Add-on</option>
+            </select>
+        </div>
+        <div class="col-span-1 text-center pt-2">
             <input type="hidden" name="is_required_for_result[]" value="1" class="req-result-hidden">
-            <label class="inline-flex items-center gap-1 cursor-pointer font-bold text-slate-700" title="Result is locked until this fee is settled">
+            <label class="inline-flex flex-col items-center cursor-pointer font-bold text-slate-700" title="Result is locked until this fee is settled">
                 <input type="checkbox" checked onchange="this.closest('.fee-row').querySelector('.req-result-hidden').value = this.checked ? '1' : '0'" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500 req-checkbox">
-                <span class="text-[10px]">Lock Result</span>
+                <span class="text-[9px] text-slate-500">Lock</span>
             </label>
         </div>
-        <div class="col-span-1 text-center">
-            <button type="button" onclick="removeFeeRow(this)" class="p-1 rounded text-slate-400 hover:text-rose-600">
+        <div class="col-span-1 text-center pt-2">
+            <button type="button" onclick="removeFeeRow(this)" title="Remove item" class="p-1 rounded text-slate-400 hover:text-rose-600">
                 <i data-lucide="trash-2" class="w-4 h-4"></i>
             </button>
         </div>
@@ -473,6 +515,55 @@ $this->layout('layouts/admin', [
 </template>
 
 <script>
+const FEE_PRESETS = {
+    tuition: { name: 'Tuition Fee', match: ['tuition'], amount: '75000.00', lock: true, app: 'all' },
+    books: { name: 'Books & Learning Materials', match: ['book', 'stationery', 'material'], amount: '25000.00', lock: false, app: 'all' },
+    pta: { name: 'PTA Levy', match: ['pta', 'parent'], amount: '5000.00', lock: false, app: 'all' },
+    clubs: { name: 'Club & Society Dues', match: ['club', 'sport', 'society'], amount: '3500.00', lock: false, app: 'all' },
+    uniforms: { name: 'School Uniform & Sportswear', match: ['uniform'], amount: '35000.00', lock: true, app: 'new_students_only' },
+    practicals: { name: 'Laboratory & Practicals Levy', match: ['practical', 'exam', 'lab', 'science'], amount: '12000.00', lock: true, app: 'all' },
+    health: { name: 'Health & Medical Services', match: ['health', 'medical', 'clinic'], amount: '8000.00', lock: false, app: 'all' },
+    bus: { name: 'School Bus & Transportation', match: ['bus', 'transport'], amount: '45000.00', lock: true, app: 'bus_users_only' }
+};
+
+function addPresetComponent(containerId, presetKey) {
+    const preset = FEE_PRESETS[presetKey];
+    if (!preset) return;
+
+    const container = document.getElementById(containerId);
+    const template = document.getElementById('fee-row-template');
+    if (!container || !template) return;
+
+    const clone = template.content.cloneNode(true);
+    const row = clone.querySelector('.fee-row');
+
+    // Select matching category
+    const catSelect = row.querySelector('.cat-select');
+    if (catSelect && preset.match) {
+        for (let i = 0; i < catSelect.options.length; i++) {
+            const optText = catSelect.options[i].text.toLowerCase();
+            if (preset.match.some(m => optText.includes(m))) {
+                catSelect.selectedIndex = i;
+                break;
+            }
+        }
+    }
+
+    row.querySelector('.name-input').value = preset.name;
+    row.querySelector('.amt-input').value = preset.amount;
+    
+    const appSelect = row.querySelector('.app-select');
+    if (appSelect) appSelect.value = preset.app;
+
+    const reqHidden = row.querySelector('.req-result-hidden');
+    const reqCheck = row.querySelector('.req-checkbox');
+    reqHidden.value = preset.lock ? '1' : '0';
+    reqCheck.checked = preset.lock;
+
+    container.appendChild(row);
+    if (window.lucide) lucide.createIcons();
+}
+
 function addFeeItemRow(containerId) {
     const container = document.getElementById(containerId);
     const template = document.getElementById('fee-row-template');
@@ -521,6 +612,11 @@ async function openEditStructureModal(structureId) {
                 clone.querySelector('.name-input').value = it.name;
                 clone.querySelector('.amt-input').value = parseFloat(it.amount).toFixed(2);
                 
+                const appSelect = clone.querySelector('.app-select');
+                if (appSelect) {
+                    appSelect.value = it.applicability || 'all';
+                }
+
                 const hiddenReq = clone.querySelector('.req-result-hidden');
                 const checkReq = clone.querySelector('.req-checkbox');
                 const isReq = parseInt(it.is_required_for_result, 10) === 1 || it.is_required_for_result === true;

@@ -917,7 +917,8 @@ class AdmissionService
                     lga: $ward->lga,
                     nationality: $ward->nationality ?: 'Nigerian',
                     religion: $ward->religion,
-                    admissionDate: date('Y-m-d')
+                    admissionDate: date('Y-m-d'),
+                    useSchoolBus: !empty($ward->useSchoolBus)
                 );
 
                 // Enroll student into active class enrollment & auto-enroll subjects for that class/arm

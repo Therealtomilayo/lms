@@ -42,7 +42,7 @@ $hasOtherRoles = !empty(array_diff($oldRoles, ['student']));
     <?php endif; ?>
 
     <!-- Form Container -->
-    <form method="POST" action="/admin/users" class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-8" novalidate id="create-user-form"
+    <form method="POST" action="/admin/users" enctype="multipart/form-data" class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-8" id="create-user-form"
           data-suggested-adm="<?= e($suggestedAdmissionNumber ?? '') ?>"
           data-suggested-staff="<?= e($suggestedStaffId ?? '') ?>">
         <?= csrf_field() ?>
@@ -132,10 +132,33 @@ $hasOtherRoles = !empty(array_diff($oldRoles, ['student']));
         <div class="space-y-4 border-b border-slate-200 pb-6">
             <div>
                 <h3 class="text-base font-bold text-slate-900">2. Primary Account Details</h3>
-                <p class="text-xs text-slate-500 mt-0.5">Core login credentials and personal identity details.</p>
+                <p class="text-xs text-slate-500 mt-0.5">Core login credentials, passport photograph, and personal identity details.</p>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Passport Photograph Upload with Live Circular Preview -->
+                <div class="sm:col-span-2 flex flex-col sm:flex-row items-center gap-5 p-4 rounded-xl bg-slate-50 border border-slate-200">
+                    <div class="relative flex-shrink-0">
+                        <div id="passport_placeholder" class="w-20 h-20 rounded-full bg-[#7B3046] text-white font-extrabold text-2xl flex items-center justify-center shadow-xs">
+                            <svg class="w-8 h-8 text-rose-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                        </div>
+                        <img id="passport_preview" src="" alt="Passport Preview" class="hidden w-20 h-20 rounded-full object-cover border-2 border-white shadow-xs">
+                    </div>
+                    <div class="space-y-1 text-center sm:text-left flex-1">
+                        <label for="passport" class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                            Passport Photograph (Optional)
+                        </label>
+                        <p class="text-xs text-slate-500">Upload square portrait photo (JPG, PNG, or WEBP, max 5MB). Used as profile image across student, parent, and staff portals.</p>
+                        <div class="mt-2 flex items-center justify-center sm:justify-start">
+                            <input type="file" name="passport" id="passport" accept="image/jpeg,image/png,image/webp"
+                                   class="text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-white file:text-slate-700 file:border file:border-slate-300 hover:file:bg-slate-100 file:cursor-pointer cursor-pointer">
+                        </div>
+                        <?php if (!empty($errors['passport'])): ?>
+                            <p class="mt-1 text-xs text-red-600 font-medium"><?= e($errors['passport'][0]) ?></p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
                 <!-- Full Name -->
                 <div>
                     <label for="user_name" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
@@ -230,7 +253,7 @@ $hasOtherRoles = !empty(array_diff($oldRoles, ['student']));
                         <input type="password" 
                                id="user_password" 
                                name="password" 
-                               value="<?= e(old('password', 'Password123!')) ?>" 
+                               value="<?= e(old('password')) ?>" 
                                required 
                                placeholder="Minimum 8 characters"
                                class="w-full pl-3.5 pr-11 py-2.5 text-sm rounded-lg border <?= !empty($errors['password']) ? 'border-red-400 bg-red-50/30' : 'border-slate-300 bg-white' ?> text-slate-800 shadow-xs focus:ring-2 focus:ring-brand-500 focus:outline-hidden transition">
@@ -241,7 +264,7 @@ $hasOtherRoles = !empty(array_diff($oldRoles, ['student']));
                             <svg class="eye-closed w-4 h-4 hidden text-[#7B3046]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"/></svg>
                         </button>
                     </div>
-                    <p class="text-[11px] text-slate-500 mt-1">Minimum 8 characters. Defaults to Password123!</p>
+                    <p class="text-[11px] text-slate-500 mt-1">Minimum 8 characters (e.g. Password123!).</p>
                     <?php if (!empty($errors['password'])): ?>
                         <p class="mt-1 text-xs text-red-600 font-medium flex items-center gap-1">
                             <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -357,6 +380,19 @@ $hasOtherRoles = !empty(array_diff($oldRoles, ['student']));
                             <option value="Islam" <?= $currRel === 'Islam' ? 'selected' : '' ?>>Islam</option>
                             <option value="Other" <?= $currRel === 'Other' ? 'selected' : '' ?>>Other</option>
                         </select>
+                    </div>
+
+                    <div class="sm:col-span-3 pt-3 border-t border-slate-200/80">
+                        <label class="flex items-start gap-3 cursor-pointer select-none">
+                            <input type="checkbox" name="use_school_bus" value="1" <?= old('use_school_bus') === '1' ? 'checked' : '' ?> class="w-4 h-4 mt-0.5 rounded text-brand-600 focus:ring-brand-500 border-slate-300">
+                            <div>
+                                <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h8m-8 4h8m-9 8h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zm1-2a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z"/></svg>
+                                    <span>School Bus Transportation Service</span>
+                                </span>
+                                <span class="text-[11px] text-slate-500 block mt-0.5">Student requires daily school bus transportation; bus fee will be marked compulsory on termly fee invoices.</span>
+                            </div>
+                        </label>
                     </div>
                 </div>
             </div>
@@ -490,5 +526,27 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Run initial sync on load
     syncRolesAndFields();
+
+    // Passport live preview
+    const passportInput = document.getElementById('passport');
+    if (passportInput) {
+        passportInput.addEventListener('change', function () {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const preview = document.getElementById('passport_preview');
+                    const placeholder = document.getElementById('passport_placeholder');
+                    if (preview) {
+                        preview.src = e.target.result;
+                        preview.classList.remove('hidden');
+                    }
+                    if (placeholder) {
+                        placeholder.classList.add('hidden');
+                    }
+                };
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+    }
 });
 </script>

@@ -381,6 +381,48 @@ class NotificationService
     }
 
     /**
+     * Triggered when a ward's admission application is rejected
+     */
+    public function sendAdmissionRejectedNotice(
+        ?string $parentPhone,
+        ?string $parentEmail,
+        string $parentName,
+        string $wardName,
+        ?string $rejectionReason = null,
+        ?int $userId = null
+    ): array {
+        $results = [];
+        $appUrl = (string)Config::get('app.url', 'https://lms.test');
+
+        // 1. Dispatch SMS
+        if (!empty($parentPhone)) {
+            $reasonSnip = !empty($rejectionReason) ? " Note: " . substr(strip_tags($rejectionReason), 0, 50) . "..." : "";
+            $smsText = "Claret Admissions Update: Regarding the application for {$wardName}. After review, admission could not be offered at this time.{$reasonSnip} Portal: {$appUrl}/admissions/status";
+            $results['sms'] = $this->sendSms($parentPhone, $smsText, $userId, 'admission_rejected', [
+                'ward_name' => $wardName,
+                'rejection_reason' => $rejectionReason,
+            ]);
+        }
+
+        // 2. Dispatch Formal Rejection Decision Letter via Email
+        if (!empty($parentEmail)) {
+            $subject = "Admission Application Status Update — {$wardName}";
+            $html = $this->renderEmailTemplate('admission_rejected', [
+                'parentName' => $parentName,
+                'wardName' => $wardName,
+                'rejectionReason' => $rejectionReason,
+                'portalUrl' => "{$appUrl}/admissions/status",
+            ], $subject);
+
+            $results['email'] = $this->sendEmail($parentEmail, $subject, $html, null, $userId, 'admission_rejected', [
+                'ward_name' => $wardName,
+            ]);
+        }
+
+        return $results;
+    }
+
+    /**
      * Triggered when a user requests password reset
      */
     public function sendPasswordResetEmail(

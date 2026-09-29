@@ -170,17 +170,8 @@ class FeeInvoiceService
             // 4. Generate unique invoice number
             $invoiceNumber = $this->feeRepo->generateInvoiceNumber($sessionId);
 
-            // 5. Build snapshot line items
-            $itemsData = [];
-            foreach ($structure->items as $fsi) {
-                $itemsData[] = [
-                    'fee_category_id' => $fsi->feeCategoryId,
-                    'name' => $fsi->name,
-                    'amount' => $fsi->amount,
-                    'is_compulsory' => $fsi->isCompulsory ? 1 : 0,
-                    'is_required_for_result' => $fsi->isRequiredForResult ? 1 : 0,
-                ];
-            }
+            // 5. Build snapshot line items adapted to student context (bus ridership, new entrant uniforms)
+            $itemsData = $this->buildStudentInvoiceItems($structure, $studentId);
 
             $invoiceData = [
                 'invoice_number' => $invoiceNumber,
@@ -597,12 +588,21 @@ class FeeInvoiceService
         }
 
         if ($termId === null && $sessionId !== null) {
-            $activeTerm = $this->academicRepo->findActiveTermForSession($sessionId);
-            if (!$activeTerm) {
-                $terms = $this->academicRepo->findTermsBySession($sessionId);
-                $activeTerm = $terms[0] ?? null;
+            // Check if there are already invoices generated in this session (e.g. admin batch-generated once)
+            $invTermStmt = $this->pdo->prepare('SELECT term_id FROM `fee_invoices` WHERE `session_id` = :s ORDER BY id DESC LIMIT 1');
+            $invTermStmt->execute([':s' => $sessionId]);
+            $invoicedTermId = $invTermStmt->fetchColumn();
+
+            if ($invoicedTermId) {
+                $termId = (int)$invoicedTermId;
+            } else {
+                $activeTerm = $this->academicRepo->findActiveTermForSession($sessionId);
+                if (!$activeTerm) {
+                    $terms = $this->academicRepo->findTermsBySession($sessionId);
+                    $activeTerm = $terms[0] ?? null;
+                }
+                $termId = $activeTerm ? (int)$activeTerm->id : null;
             }
-            $termId = $activeTerm ? (int)$activeTerm->id : null;
         }
 
         if (!$sessionId || !$termId) {
@@ -666,17 +666,8 @@ class FeeInvoiceService
         // 6. Generate unique invoice number
         $invoiceNumber = $this->feeRepo->generateInvoiceNumber($sessionId);
 
-        // 7. Build snapshot line items
-        $itemsData = [];
-        foreach ($structure->items as $fsi) {
-            $itemsData[] = [
-                'fee_category_id' => $fsi->feeCategoryId,
-                'name' => $fsi->name,
-                'amount' => $fsi->amount,
-                'is_compulsory' => $fsi->isCompulsory ? 1 : 0,
-                'is_required_for_result' => $fsi->isRequiredForResult ? 1 : 0,
-            ];
-        }
+        // 7. Build snapshot line items adapted to student context (bus ridership, new entrant uniforms)
+        $itemsData = $this->buildStudentInvoiceItems($structure, $studentId);
 
         $invoiceData = [
             'invoice_number' => $invoiceNumber,
@@ -698,6 +689,97 @@ class FeeInvoiceService
             error_log('Failed to ensure invoice for student ' . $studentId . ': ' . $e->getMessage());
             return null;
         }
+    }
+
+    /**
+     * Build invoice line items adapted to student context:
+     * 1. Uniforms: Compulsory for new applicants/entrants; omitted for returning students unless manually added.
+     * 2. School Bus: Included on all invoices; compulsory if use_school_bus = 1, optional (unlocked) if use_school_bus = 0.
+     * 3. General items: Follow fee structure item definition.
+     */
+    private function buildStudentInvoiceItems(FeeStructure $structure, int $studentId): array
+    {
+        // 1. Check if student uses school bus
+        $usesBus = false;
+        try {
+            $busStmt = $this->pdo->prepare('SELECT use_school_bus FROM `students` WHERE id = :id');
+            $busStmt->execute([':id' => $studentId]);
+            $usesBus = (int)$busStmt->fetchColumn() === 1;
+        } catch (\Throwable) {
+            $usesBus = false;
+        }
+
+        // 2. Check if student is a new applicant / new entrant
+        $isFromAdmission = false;
+        try {
+            $wardStmt = $this->pdo->prepare('SELECT 1 FROM `admission_wards` WHERE converted_student_id = :id LIMIT 1');
+            $wardStmt->execute([':id' => $studentId]);
+            $isFromAdmission = (bool)$wardStmt->fetchColumn();
+        } catch (\Throwable) {
+            $isFromAdmission = false;
+        }
+
+        $priorInvoicesStmt = $this->pdo->prepare('SELECT COUNT(*) FROM `fee_invoices` WHERE student_id = :id');
+        $priorInvoicesStmt->execute([':id' => $studentId]);
+        $priorInvoicesCount = (int)$priorInvoicesStmt->fetchColumn();
+
+        $isNewEntrant = $isFromAdmission || $priorInvoicesCount === 0;
+
+        $itemsData = [];
+        foreach ($structure->items as $fsi) {
+            $catId = (int)$fsi->feeCategoryId;
+            $nameLower = mb_strtolower(trim($fsi->name));
+            $applicability = $fsi->applicability ?? 'all';
+
+            $isBusItem = ($applicability === 'bus_users_only')
+                || ($catId === 10)
+                || str_contains($nameLower, 'bus')
+                || str_contains($nameLower, 'transport');
+
+            $isUniformItem = ($applicability === 'new_students_only')
+                || ($catId === 6)
+                || str_contains($nameLower, 'uniform')
+                || str_contains($nameLower, 'sportswear');
+
+            if ($isUniformItem) {
+                if ($isNewEntrant) {
+                    // Enforce uniforms as compulsory (locks results) for new applicants
+                    $itemsData[] = [
+                        'fee_category_id' => $catId,
+                        'name' => $fsi->name,
+                        'amount' => $fsi->amount,
+                        'is_compulsory' => 1,
+                        'is_required_for_result' => 1,
+                    ];
+                }
+                // Returning students: omit uniforms unless explicitly in structure for all
+                continue;
+            }
+
+            if ($isBusItem) {
+                // Include bus fee on all invoices:
+                // Compulsory (locks results) for students who use bus, optional (unlocked) for non-bus students
+                $itemsData[] = [
+                    'fee_category_id' => $catId,
+                    'name' => $fsi->name,
+                    'amount' => $fsi->amount,
+                    'is_compulsory' => $usesBus ? 1 : 0,
+                    'is_required_for_result' => $usesBus ? 1 : 0,
+                ];
+                continue;
+            }
+
+            // General items
+            $itemsData[] = [
+                'fee_category_id' => $catId,
+                'name' => $fsi->name,
+                'amount' => $fsi->amount,
+                'is_compulsory' => $fsi->isCompulsory ? 1 : 0,
+                'is_required_for_result' => $fsi->isRequiredForResult ? 1 : 0,
+            ];
+        }
+
+        return $itemsData;
     }
 }
 

@@ -42,8 +42,14 @@ $fullClassName = $childClass . $arm;
     <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div class="flex items-center gap-4">
-                <div class="w-14 h-14 rounded-2xl bg-brand-700 text-white font-extrabold text-2xl flex items-center justify-center shadow-xs flex-shrink-0">
-                    <?= strtoupper(substr($student->name, 0, 1)) ?>
+                <div class="relative flex-shrink-0">
+                    <?php if (!empty($student->avatarUrl)): ?>
+                        <img src="<?= e($student->avatarUrl) ?>" alt="<?= e($student->name) ?>" class="w-14 h-14 rounded-full object-cover border-2 border-white shadow-xs">
+                    <?php else: ?>
+                        <div class="w-14 h-14 rounded-full bg-[#7B3046] text-white font-extrabold text-2xl flex items-center justify-center shadow-xs">
+                            <?= strtoupper(substr($student->name, 0, 1)) ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
                 <div>
                     <!-- Breadcrumbs -->

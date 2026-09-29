@@ -388,4 +388,17 @@ final class BroadsheetIntegrationTest extends TestCase
 
         $this->controller->broadsheet($request);
     }
+
+    public function testAdminBroadsheetWithoutFiltersDoesNotTriggerUndefinedSubmissionWarning(): void
+    {
+        $request = $this->createAdminRequest('GET', '/admin/results/broadsheet', []);
+
+        $response = $this->controller->broadsheet($request);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $body = $response->getContent();
+        $this->assertStringContainsString('Select Term &amp; Class Cohort', $body);
+        $this->assertStringNotContainsString('Undefined variable $submission', $body);
+    }
 }
+

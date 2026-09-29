@@ -200,8 +200,13 @@ try {
     $router->post('/admin/guardians/link', [\App\Controllers\Admin\GuardianController::class, 'link'], $adminFormAuth);
     $router->post('/admin/guardians/unlink', [\App\Controllers\Admin\GuardianController::class, 'unlink'], $adminFormAuth);
 
-    // CSV Bulk Imports
+    // CSV Bulk Imports & Browser-Side Excel Onboarding
     $router->get('/admin/imports/users', [\App\Controllers\Admin\ImportController::class, 'show'], $adminAuth);
+    $router->post('/admin/imports/init', [\App\Controllers\Admin\ImportController::class, 'initBatch'], $adminFormAuth);
+    $router->post('/admin/imports/resolve-classes', [\App\Controllers\Admin\ImportController::class, 'resolveClasses'], $adminFormAuth);
+    $router->post('/admin/imports/save-class-mappings', [\App\Controllers\Admin\ImportController::class, 'saveClassMappings'], $adminFormAuth);
+    $router->post('/admin/imports/{id}/process-chunk', [\App\Controllers\Admin\ImportController::class, 'processChunk'], $adminFormAuth);
+    $router->post('/admin/imports/{id}/finalize', [\App\Controllers\Admin\ImportController::class, 'finalizeBatch'], $adminFormAuth);
     $router->post('/admin/imports/users/validate', [\App\Controllers\Admin\ImportController::class, 'validateCsv'], $adminFormAuth);
     $router->get('/admin/imports/{id}/review', [\App\Controllers\Admin\ImportController::class, 'review'], $adminAuth);
     $router->post('/admin/imports/{id}/commit', [\App\Controllers\Admin\ImportController::class, 'commit'], $adminFormAuth);
@@ -227,7 +232,7 @@ try {
     $router->post('/admin/results/publish', [\App\Controllers\Admin\ResultPublicationController::class, 'publish'], $adminFormAuth);
     $router->post('/admin/results/unpublish', [\App\Controllers\Admin\ResultPublicationController::class, 'unpublish'], $adminFormAuth);
     $router->post('/admin/results/approve-submission', [\App\Controllers\Admin\ResultReviewController::class, 'approveSubmission'], $adminFormAuth);
-    $router->get('/admin/reports/student/{studentId}/{termId}.pdf', [\App\Controllers\Admin\ReportController::class, 'pdf'], $adminAuth);
+    $router->get('/admin/reports/student/{studentId}/{termId}.pdf', [\App\Controllers\Admin\ReportController::class, 'pdf'], ['auth']);
 
     // Admin Cumulative Student Transcripts & Dossier Generator (SRS §26, §51)
     $router->get('/admin/transcripts', [\App\Controllers\Admin\TranscriptController::class, 'index'], $adminAuth);
@@ -357,6 +362,7 @@ try {
 
     // Teacher Class Workspace & Student Rosters Routes (TEACHER-25)
     $router->get('/teacher/classes', [\App\Controllers\Teacher\ClassController::class, 'index'], $teacherAuth);
+    $router->get('/teacher/classes/class/{classId}', [\App\Controllers\Teacher\ClassController::class, 'showClass'], $teacherAuth);
     $router->get('/teacher/classes/{classSubjectId}', [\App\Controllers\Teacher\ClassController::class, 'show'], $teacherAuth);
 
     $router->get('/teacher/content', [\App\Controllers\Teacher\ContentController::class, 'index'], $teacherAuth);
@@ -427,10 +433,14 @@ try {
     $router->get('/teacher/gradebook', [\App\Controllers\Teacher\GradebookController::class, 'index'], $teacherAuth);
     $router->get('/teacher/gradebook/{classSubjectId}', [\App\Controllers\Teacher\GradebookController::class, 'show'], $teacherAuth);
     $router->post('/teacher/gradebook/{classSubjectId}/save', [\App\Controllers\Teacher\GradebookController::class, 'save'], $teacherFormAuth);
+    $router->get('/teacher/results/skills', [\App\Controllers\Teacher\BatchRemarkController::class, 'skillsMatrix'], $teacherAuth);
+    $router->post('/teacher/results/skills', [\App\Controllers\Teacher\BatchRemarkController::class, 'saveSkillsMatrix'], $teacherFormAuth);
     $router->get('/teacher/results/comments', [\App\Controllers\Teacher\BatchRemarkController::class, 'index'], $teacherAuth);
     $router->post('/teacher/results/comments', [\App\Controllers\Teacher\BatchRemarkController::class, 'save'], $teacherFormAuth);
     $router->get('/teacher/results/overview', [\App\Controllers\Teacher\ResultOverviewController::class, 'overview'], $teacherAuth);
     $router->post('/teacher/results/submit', [\App\Controllers\Teacher\ResultOverviewController::class, 'submit'], $teacherFormAuth);
+    $router->get('/teacher/reports/student/{studentId}/{termId}.pdf', [\App\Controllers\Teacher\ResultOverviewController::class, 'reportPdf'], $teacherAuth);
+    $router->get('/teacher/results/student/{studentId}/{termId}.pdf', [\App\Controllers\Teacher\ResultOverviewController::class, 'reportPdf'], $teacherAuth);
 
     // Teacher Attendance & Announcements Routes
     $router->get('/teacher/attendance', [\App\Controllers\Teacher\AttendanceController::class, 'index'], $teacherAuth);

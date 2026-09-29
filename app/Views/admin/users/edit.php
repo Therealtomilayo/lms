@@ -51,7 +51,7 @@ $studentClassId = $student ? $student->currentClassId : null;
     <?php endif; ?>
 
     <!-- Main Update Form -->
-    <form method="POST" action="/admin/users/<?= e($user->id) ?>" class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-8" novalidate id="edit-user-form"
+    <form method="POST" action="/admin/users/<?= e($user->id) ?>" enctype="multipart/form-data" class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-8" id="edit-user-form"
           data-suggested-adm="<?= e($suggestedAdmissionNumber ?? '') ?>"
           data-suggested-staff="<?= e($suggestedStaffId ?? '') ?>">
         <?= csrf_field() ?>
@@ -141,10 +141,39 @@ $studentClassId = $student ? $student->currentClassId : null;
         <div class="space-y-4 border-b border-slate-200 pb-6">
             <div>
                 <h3 class="text-base font-bold text-slate-900">2. Account Information</h3>
-                <p class="text-xs text-slate-500 mt-0.5">Contact details and active account status.</p>
+                <p class="text-xs text-slate-500 mt-0.5">Contact details, passport photograph, and active account status.</p>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Passport Photograph Section with Rounded Thumbnail -->
+                <div class="sm:col-span-2 flex flex-col sm:flex-row items-center gap-5 p-4 rounded-xl bg-slate-50 border border-slate-200">
+                    <div class="relative flex-shrink-0">
+                        <?php if (!empty($user->avatarUrl)): ?>
+                            <img id="passport_preview" src="<?= e($user->avatarUrl) ?>" alt="<?= e($user->name) ?>" class="w-20 h-20 rounded-full object-cover border-2 border-white shadow-xs">
+                        <?php else: ?>
+                            <div id="passport_placeholder" class="w-20 h-20 rounded-full bg-[#7B3046] text-white font-extrabold text-2xl flex items-center justify-center shadow-xs">
+                                <?= strtoupper(substr($user->name, 0, 1)) ?>
+                            </div>
+                            <img id="passport_preview" src="" alt="Passport Preview" class="hidden w-20 h-20 rounded-full object-cover border-2 border-white shadow-xs">
+                        <?php endif; ?>
+                    </div>
+                    <div class="space-y-1 text-center sm:text-left flex-1">
+                        <label for="passport" class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                            Passport Photograph
+                        </label>
+                        <p class="text-xs text-slate-500">
+                            <?= !empty($user->avatarUrl) ? 'Current passport photo active. Choose a new file to replace it.' : 'No passport photo uploaded yet. Upload a portrait image (JPG, PNG, or WEBP, max 5MB).' ?>
+                        </p>
+                        <div class="mt-2 flex items-center justify-center sm:justify-start">
+                            <input type="file" name="passport" id="passport" accept="image/jpeg,image/png,image/webp"
+                                   class="text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-white file:text-slate-700 file:border file:border-slate-300 hover:file:bg-slate-100 file:cursor-pointer cursor-pointer">
+                        </div>
+                        <?php if (!empty($errors['passport'])): ?>
+                            <p class="mt-1 text-xs text-red-600 font-medium"><?= e($errors['passport'][0]) ?></p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
                 <!-- Full Name -->
                 <div>
                     <label for="user_name" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
@@ -357,6 +386,19 @@ $studentClassId = $student ? $student->currentClassId : null;
                             <option value="Other" <?= $currRel === 'Other' ? 'selected' : '' ?>>Other</option>
                         </select>
                     </div>
+
+                    <div class="sm:col-span-3 pt-3 border-t border-slate-200/80">
+                        <label class="flex items-start gap-3 cursor-pointer select-none">
+                            <input type="checkbox" name="use_school_bus" value="1" <?= old('use_school_bus', $student?->useSchoolBus ? '1' : '0') === '1' ? 'checked' : '' ?> class="w-4 h-4 mt-0.5 rounded text-brand-600 focus:ring-brand-500 border-slate-300">
+                            <div>
+                                <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h8m-8 4h8m-9 8h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zm1-2a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z"/></svg>
+                                    <span>School Bus Transportation Service</span>
+                                </span>
+                                <span class="text-[11px] text-slate-500 block mt-0.5">Student requires daily school bus transportation; bus fee will be marked compulsory on termly fee invoices.</span>
+                            </div>
+                        </label>
+                    </div>
                 </div>
             </div>
         </div>
@@ -385,7 +427,7 @@ $studentClassId = $student ? $student->currentClassId : null;
                 <p class="text-xs text-slate-500 mt-0.5">Assign a new password and immediately revoke all active browser sessions for this user.</p>
             </div>
 
-            <form method="POST" action="/admin/users/<?= e($user->id) ?>/reset-password" class="flex flex-col sm:flex-row items-end gap-4" novalidate>
+            <form method="POST" action="/admin/users/<?= e($user->id) ?>/reset-password" class="flex flex-col sm:flex-row items-end gap-4">
                 <?= csrf_field() ?>
                 <div class="w-full sm:w-80">
                     <label for="reset_password" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
@@ -531,5 +573,27 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     syncRolesAndFields();
+
+    // Passport live preview
+    const passportInput = document.getElementById('passport');
+    if (passportInput) {
+        passportInput.addEventListener('change', function () {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const preview = document.getElementById('passport_preview');
+                    const placeholder = document.getElementById('passport_placeholder');
+                    if (preview) {
+                        preview.src = e.target.result;
+                        preview.classList.remove('hidden');
+                    }
+                    if (placeholder) {
+                        placeholder.classList.add('hidden');
+                    }
+                };
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+    }
 });
 </script>

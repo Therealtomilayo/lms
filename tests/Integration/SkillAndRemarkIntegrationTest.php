@@ -121,6 +121,7 @@ final class SkillAndRemarkIntegrationTest extends TestCase
                 `academic_level_id` INTEGER NOT NULL,
                 `name` VARCHAR(100) NOT NULL,
                 `section_arm` VARCHAR(50) NULL,
+                `form_teacher_id` INTEGER NULL,
                 `capacity` INTEGER NOT NULL DEFAULT 30,
                 `status` VARCHAR(20) NOT NULL DEFAULT 'active',
                 `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -285,8 +286,8 @@ final class SkillAndRemarkIntegrationTest extends TestCase
             INSERT INTO `terms` (`id`, `session_id`, `name`, `term_number`, `start_date`, `end_date`, `is_current`) VALUES
             (1, 1, 'First Term', 1, '2026-09-01', '2026-12-15', 1);
 
-            INSERT INTO `classes` (`id`, `academic_level_id`, `name`, `section_arm`) VALUES
-            (1, 1, 'JSS 1', 'Gold');
+            INSERT INTO `classes` (`id`, `academic_level_id`, `name`, `section_arm`, `form_teacher_id`) VALUES
+            (1, 1, 'JSS 1', 'Gold', 1);
 
             INSERT INTO `students` (`id`, `user_id`, `admission_number`, `current_class_id`, `admission_date`) VALUES
             (1, 3, 'CLT/2026/001', 1, '2026-09-01');
@@ -641,4 +642,130 @@ final class SkillAndRemarkIntegrationTest extends TestCase
         $summary = $this->gradebookRepo->findStudentTermSummary($this->studentId, $this->termId);
         $this->assertSame('Excellent participation during group sessions.', $summary?->classTeacherRemark);
     }
+
+    public function testNonClassTeacherCannotSaveBatchRemarks(): void
+    {
+        // Create Teacher 2 who is NOT form teacher
+        $this->pdo->exec("
+            INSERT INTO `users` (`id`, `uuid`, `name`, `email`, `password_hash`, `role`, `status`) VALUES
+            (4, 'tch-uuid-004', 'Mrs. Subject Teacher', 'subject@claret.edu', 'hash', 'teacher', 'active');
+            INSERT INTO `user_roles` (`user_id`, `role_id`) VALUES (4, 2);
+            INSERT INTO `teachers` (`id`, `user_id`, `staff_id`, `employment_date`) VALUES (2, 4, 'TCH-002', '2025-01-01');
+        ");
+
+        $auth = $this->createMockAuthenticator(4);
+        $controller = new TeacherBatchRemarkController(
+            $auth,
+            $this->teacherRepo,
+            $this->gradebookRepo,
+            $this->skillRepo,
+            $this->academicRepo,
+            $this->studentRepo,
+            $this->enrollmentRepo
+        );
+
+        $postReq = new Request([], [
+            'session_id' => (string)$this->sessionId,
+            'term_id' => (string)$this->termId,
+            'class_id' => (string)$this->classId,
+            'comments' => [
+                $this->studentId => [
+                    'teacher_remark' => 'Hacked remark by non-class-teacher',
+                ]
+            ],
+        ], ['REQUEST_METHOD' => 'POST', 'REQUEST_URI' => '/teacher/results/comments']);
+        $postRes = $controller->save($postReq);
+        $this->assertSame(403, $postRes->getStatusCode());
+    }
+
+    public function testClassTeacherCanViewAndSaveSkillsMatrix(): void
+    {
+        $skillId1 = $this->skillRepo->createSkill([
+            'name' => 'Handwriting',
+            'category' => 'psychomotor',
+            'display_order' => 1,
+            'status' => 'active',
+        ]);
+        $skillId2 = $this->skillRepo->createSkill([
+            'name' => 'Neatness & Politeness',
+            'category' => 'affective',
+            'display_order' => 2,
+            'status' => 'active',
+        ]);
+
+        $auth = $this->createMockAuthenticator($this->teacherUserId);
+        $controller = new TeacherBatchRemarkController(
+            $auth,
+            $this->teacherRepo,
+            $this->gradebookRepo,
+            $this->skillRepo,
+            $this->academicRepo,
+            $this->studentRepo,
+            $this->enrollmentRepo
+        );
+
+        // 1. GET /teacher/results/skills
+        $getReq = new Request([
+            'session_id' => (string)$this->sessionId,
+            'term_id' => (string)$this->termId,
+            'class_id' => (string)$this->classId,
+        ], [], ['REQUEST_METHOD' => 'GET', 'REQUEST_URI' => '/teacher/results/skills']);
+        $getRes = $controller->skillsMatrix($getReq);
+        $this->assertSame(200, $getRes->getStatusCode());
+
+        // 2. POST /teacher/results/skills
+        $postReq = new Request([], [
+            'session_id' => (string)$this->sessionId,
+            'term_id' => (string)$this->termId,
+            'class_id' => (string)$this->classId,
+            'ratings' => [
+                $this->studentId => [
+                    $skillId1 => 5,
+                    $skillId2 => 4,
+                ]
+            ],
+        ], ['REQUEST_METHOD' => 'POST', 'REQUEST_URI' => '/teacher/results/skills']);
+        $postRes = $controller->saveSkillsMatrix($postReq);
+        $this->assertSame(302, $postRes->getStatusCode());
+
+        $matrix = $this->skillRepo->getClassRatingsMatrix($this->classId, $this->termId);
+        $this->assertSame(5, $matrix[$this->studentId][$skillId1] ?? null);
+        $this->assertSame(4, $matrix[$this->studentId][$skillId2] ?? null);
+    }
+
+    public function testNonClassTeacherCannotSaveSkillsMatrix(): void
+    {
+        // Create Teacher 2 who is NOT form teacher
+        $this->pdo->exec("
+            INSERT INTO `users` (`id`, `uuid`, `name`, `email`, `password_hash`, `role`, `status`) VALUES
+            (4, 'tch-uuid-004', 'Mrs. Subject Teacher', 'subject@claret.edu', 'hash', 'teacher', 'active');
+            INSERT INTO `user_roles` (`user_id`, `role_id`) VALUES (4, 2);
+            INSERT INTO `teachers` (`id`, `user_id`, `staff_id`, `employment_date`) VALUES (2, 4, 'TCH-002', '2025-01-01');
+        ");
+
+        $auth = $this->createMockAuthenticator(4);
+        $controller = new TeacherBatchRemarkController(
+            $auth,
+            $this->teacherRepo,
+            $this->gradebookRepo,
+            $this->skillRepo,
+            $this->academicRepo,
+            $this->studentRepo,
+            $this->enrollmentRepo
+        );
+
+        $postReq = new Request([], [
+            'session_id' => (string)$this->sessionId,
+            'term_id' => (string)$this->termId,
+            'class_id' => (string)$this->classId,
+            'ratings' => [
+                $this->studentId => [
+                    1 => 2,
+                ]
+            ],
+        ], ['REQUEST_METHOD' => 'POST', 'REQUEST_URI' => '/teacher/results/skills']);
+        $postRes = $controller->saveSkillsMatrix($postReq);
+        $this->assertSame(403, $postRes->getStatusCode());
+    }
 }
+

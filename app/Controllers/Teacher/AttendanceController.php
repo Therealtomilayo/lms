@@ -45,7 +45,7 @@ class AttendanceController extends Controller
         $teacher = $this->teacherRepo->findTeacherByUserId($userContext->id);
 
         if (!$teacher && !$userContext->isAdmin()) {
-            return Response::forbidden('Teacher profile not found.');
+            return $this->forbidden('Teacher profile not found.');
         }
 
         $teacherId = $teacher ? $teacher->id : 0;
@@ -54,7 +54,7 @@ class AttendanceController extends Controller
             ? $this->teacherRepo->getTeachingAllocations($teacherId, $currentSession->id)
             : [];
 
-        // Form classes: classes where teacher is the designated Form Teacher
+        // Form classes: classes where teacher is the designated Class Teacher (Form Teacher)
         $formClasses = $teacherId > 0 ? $this->academicRepo->getClassesByFormTeacherId($teacherId) : [];
         if ($userContext->isAdmin() && empty($formClasses)) {
             $formClasses = $this->academicRepo->getAllClasses();
@@ -73,29 +73,6 @@ class AttendanceController extends Controller
                     'level_name' => $fc->academicLevel?->name ?? 'Class',
                     'is_form_teacher' => true,
                 ];
-            }
-        } else {
-            // Fallback for teachers without form class assignment
-            $seenCids = [];
-            foreach ($allocations as $alloc) {
-                $cid = (int)$alloc['class_id'];
-                if (!isset($seenCids[$cid])) {
-                    $seenCids[$cid] = true;
-                    $arm = trim((string)($alloc['section_arm'] ?? ''));
-                    $cName = (string)$alloc['class_name'];
-                    $fullName = (!empty($arm) && !str_ends_with($cName, "({$arm})") && !str_ends_with($cName, " {$arm}"))
-                        ? "{$cName} ({$arm})"
-                        : $cName;
-
-                    $homeroomClasses[] = [
-                        'id' => $cid,
-                        'name' => $cName,
-                        'full_name' => $fullName,
-                        'section_arm' => $arm,
-                        'level_name' => $alloc['academic_level_name'] ?? 'Class',
-                        'is_form_teacher' => false,
-                    ];
-                }
             }
         }
 
@@ -154,7 +131,7 @@ class AttendanceController extends Controller
                 user: $userContext
             );
         } catch (AuthorizationException $e) {
-            return Response::forbidden($e->getMessage());
+            return $this->forbidden($e->getMessage());
         }
 
         $classSubject = $classSubjectId ? $this->academicRepo->findClassSubjectById($classSubjectId) : null;
@@ -224,7 +201,7 @@ class AttendanceController extends Controller
                 implode(' ', $e->getErrors())
             );
         } catch (AuthorizationException $e) {
-            return Response::forbidden($e->getMessage());
+            return $this->forbidden($e->getMessage());
         }
     }
 }

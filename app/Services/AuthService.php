@@ -87,6 +87,7 @@ class AuthService
         Session::set('user_name', $user->name);
         Session::set('user_email', $user->email);
         Session::set('user_roles', $user->roles);
+        Session::set('user_avatar', $user->avatarUrl);
 
         return $user->mustChangePassword
             ? '/profile/password'

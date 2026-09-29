@@ -123,4 +123,108 @@ final class GradebookPolicyTest extends TestCase
         // When published: student cannot view other student's results
         $this->assertFalse(ResultPolicy::canViewStudentResults($studentContext, 200, true, null, $studentRepoMock));
     }
+
+    public function testResultPolicyReportCardGating(): void
+    {
+        // 1. SuperAdmin / Admin can always view
+        $adminUser = User::fromArray([
+            'id' => 1,
+            'name' => 'Admin User',
+            'roles' => ['admin'],
+        ]);
+        $adminContext = UserContext::fromUser($adminUser);
+        $this->assertTrue(ResultPolicy::canViewReportCard($adminContext, 10, 5));
+
+        // 2. Class Teacher assigned to class can view
+        $teacherUser = User::fromArray([
+            'id' => 20,
+            'name' => 'Class Teacher Okoro',
+            'roles' => ['teacher'],
+        ]);
+        $teacherContext = UserContext::fromUser($teacherUser);
+
+        $teacherRepoMock = $this->createMock(\App\Repositories\TeacherRepository::class);
+        $teacherRepoMock->method('findTeacherByUserId')->with(20)->willReturn(
+            \App\Models\Teacher::fromArray([
+                'id' => 50,
+                'user_id' => 20,
+                'staff_id' => 'STF050',
+            ])
+        );
+
+        $academicRepoMock = $this->createMock(\App\Repositories\AcademicRepository::class);
+        $academicRepoMock->method('findClassById')->with(7)->willReturn(
+            \App\Models\SchoolClass::fromArray([
+                'id' => 7,
+                'name' => 'JSS 1 (B)',
+                'academic_level_id' => 1,
+                'form_teacher_id' => 50,
+            ])
+        );
+
+        $gradebookRepoMock = $this->createMock(\App\Repositories\GradebookRepository::class);
+        $gradebookRepoMock->method('findStudentTermSummary')->with(10, 5)->willReturn(
+            \App\Models\StudentTermSummary::fromArray([
+                'id' => 101,
+                'student_id' => 10,
+                'term_id' => 5,
+                'class_id' => 7,
+                'total_score' => 450,
+                'average_score' => 75.0,
+            ])
+        );
+
+        $this->assertTrue(
+            ResultPolicy::canViewReportCard(
+                $teacherContext,
+                10,
+                5,
+                $academicRepoMock,
+                $teacherRepoMock,
+                $gradebookRepoMock
+            )
+        );
+
+        // 3. Different teacher (not form teacher of class 7) cannot view
+        $otherTeacherUser = User::fromArray([
+            'id' => 21,
+            'name' => 'Subject Teacher David',
+            'roles' => ['teacher'],
+        ]);
+        $otherTeacherContext = UserContext::fromUser($otherTeacherUser);
+
+        $otherTeacherRepoMock = $this->createMock(\App\Repositories\TeacherRepository::class);
+        $otherTeacherRepoMock->method('findTeacherByUserId')->with(21)->willReturn(
+            \App\Models\Teacher::fromArray([
+                'id' => 99,
+                'user_id' => 21,
+                'staff_id' => 'STF099',
+            ])
+        );
+
+        $studentRepoMock = $this->createMock(\App\Repositories\StudentRepository::class);
+        $studentRepoMock->method('findById')->with(10)->willReturn(null);
+
+        $this->assertFalse(
+            ResultPolicy::canViewReportCard(
+                $otherTeacherContext,
+                10,
+                5,
+                $academicRepoMock,
+                $otherTeacherRepoMock,
+                $gradebookRepoMock,
+                $studentRepoMock
+            )
+        );
+
+        // 4. Student/Parent role cannot view report card through faculty policy
+        $studentUser = User::fromArray([
+            'id' => 10,
+            'name' => 'Student',
+            'roles' => ['student'],
+        ]);
+        $studentContext = UserContext::fromUser($studentUser);
+        $this->assertFalse(ResultPolicy::canViewReportCard($studentContext, 10, 5));
+    }
 }
+

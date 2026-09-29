@@ -28,6 +28,7 @@ class AttendancePolicyTest extends TestCase
             CREATE TABLE students (id INTEGER PRIMARY KEY, user_id INTEGER);
             CREATE TABLE parents (id INTEGER PRIMARY KEY, user_id INTEGER);
             CREATE TABLE parent_student (id INTEGER PRIMARY KEY, parent_id INTEGER, student_id INTEGER);
+            CREATE TABLE classes (id INTEGER PRIMARY KEY, form_teacher_id INTEGER);
             CREATE TABLE class_subjects (id INTEGER PRIMARY KEY, class_id INTEGER, subject_id INTEGER, teacher_id INTEGER);
         ");
 
@@ -62,24 +63,43 @@ class AttendancePolicyTest extends TestCase
 
     public function testTeacherCanMarkOnlyAllocatedClassAndSubject(): void
     {
-        // Teacher user #2 -> teacher #100
+        // Teacher user #2 -> teacher #100 (Class teacher for class 10, also teaches subject 50)
         $this->db->exec("INSERT INTO teachers (id, user_id) VALUES (100, 2)");
+        $this->db->exec("INSERT INTO classes (id, form_teacher_id) VALUES (10, 100)");
         $this->db->exec("INSERT INTO class_subjects (id, class_id, subject_id, teacher_id) VALUES (50, 10, 1, 100)");
 
-        $teacherContext = UserContext::fromUser(User::fromArray([
+        // Teacher user #3 -> teacher #200 (Subject teacher only for class 10, subject 51 - NOT class teacher)
+        $this->db->exec("INSERT INTO teachers (id, user_id) VALUES (200, 3)");
+        $this->db->exec("INSERT INTO class_subjects (id, class_id, subject_id, teacher_id) VALUES (51, 10, 2, 200)");
+
+        $classTeacherCtx = UserContext::fromUser(User::fromArray([
             'id' => 2,
             'email' => 'teacher@test.com',
             'status' => 'active',
             'roles' => ['teacher']
         ]));
 
-        // Can mark allocated class
-        $this->assertTrue($this->policy->canMark($teacherContext, 10, null));
-        $this->assertTrue($this->policy->canMark($teacherContext, 10, 50));
+        $subjectTeacherCtx = UserContext::fromUser(User::fromArray([
+            'id' => 3,
+            'email' => 'subject.teacher@test.com',
+            'status' => 'active',
+            'roles' => ['teacher']
+        ]));
+
+        // Class teacher can mark daily roll call for assigned class
+        $this->assertTrue($this->policy->canMark($classTeacherCtx, 10, null));
+        // Class teacher can mark subject attendance for assigned subject
+        $this->assertTrue($this->policy->canMark($classTeacherCtx, 10, 50));
+
+        // Subject teacher CANNOT mark daily roll call for class where they are not class teacher
+        $this->assertFalse($this->policy->canMark($subjectTeacherCtx, 10, null));
+        // Subject teacher can mark their own subject attendance
+        $this->assertTrue($this->policy->canMark($subjectTeacherCtx, 10, 51));
 
         // Cannot mark unallocated class or subject
-        $this->assertFalse($this->policy->canMark($teacherContext, 99, null));
-        $this->assertFalse($this->policy->canMark($teacherContext, 10, 999));
+        $this->assertFalse($this->policy->canMark($classTeacherCtx, 99, null));
+        $this->assertFalse($this->policy->canMark($classTeacherCtx, 10, 999));
+        $this->assertFalse($this->policy->canMark($subjectTeacherCtx, 10, 50));
     }
 
     public function testTeacherEditGracePeriodEnforcement(): void

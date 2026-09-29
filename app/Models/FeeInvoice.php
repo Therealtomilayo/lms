@@ -43,6 +43,7 @@ final class FeeInvoice
         public readonly ?string $className = null,
         public readonly ?string $sessionName = null,
         public readonly ?string $termName = null,
+        public readonly bool $studentUseSchoolBus = false,
         public readonly array $items = [],
         public readonly array $payments = []
     ) {
@@ -85,6 +86,7 @@ final class FeeInvoice
             className: $className,
             sessionName: $data['session_name'] ?? null,
             termName: $data['term_name'] ?? null,
+            studentUseSchoolBus: !empty($data['student_use_school_bus'] ?? $data['use_school_bus'] ?? false),
             items: $items,
             payments: $payments
         );

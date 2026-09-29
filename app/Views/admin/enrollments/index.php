@@ -119,7 +119,15 @@ $enrollStatusOptions = [
                         <?php foreach ($roster as $enr): ?>
                             <tr class="hover:bg-slate-50/50 transition">
                                 <td class="px-6 py-4">
-                                    <div class="font-bold text-slate-900"><?= e($enr->student?->user?->name ?? '—') ?></div>
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="font-bold text-slate-900"><?= e($enr->student?->user?->name ?? '—') ?></span>
+                                        <?php if (!empty($enr->student?->useSchoolBus)): ?>
+                                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200" title="Registered for School Bus">
+                                                <svg class="w-3 h-3 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h8m-8 4h8m-6 4h4M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/></svg>
+                                                Bus
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
                                     <div class="text-xs text-slate-500 font-normal"><?= e($enr->student?->user?->email ?? '—') ?></div>
                                 </td>
                                 <td class="px-6 py-4 font-mono text-xs font-semibold text-slate-800">

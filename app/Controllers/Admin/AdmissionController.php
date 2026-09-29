@@ -165,8 +165,12 @@ class AdmissionController extends Controller
         if ($result->isSuccess()) {
             $data = $result->getData();
             $enrolled = $data['enrolled_students'] ?? [];
+            $rejectedWards = $data['rejected_wards'] ?? [];
             $count = count($enrolled);
-            $msg = "Application successfully approved! {$count} prospective student(s) matriculated and enrolled in all class subjects.";
+            $msg = "Application successfully processed! {$count} prospective student(s) matriculated and enrolled in all class subjects.";
+            if (!empty($rejectedWards)) {
+                $msg .= " " . count($rejectedWards) . " ward(s) not admitted.";
+            }
             if (!empty($enrolled)) {
                 $creds = array_map(fn($s) => "{$s['ward_name']} (Adm: {$s['admission_number']}, Email: {$s['student_email']}, Default Pwd: {$s['default_password']})", $enrolled);
                 $msg .= " Credentials: " . implode('; ', $creds);
@@ -177,6 +181,8 @@ class AdmissionController extends Controller
                 $app = $this->admissionRepo->findApplicationById($appId);
                 if ($app && $app->applicant) {
                     $notificationService = new \App\Services\NotificationService();
+                    
+                    // 1. Dispatch acceptance notices for approved wards
                     foreach ($enrolled as $student) {
                         $notificationService->sendAdmissionApprovedNotice(
                             parentPhone: $app->applicant->phone,
@@ -186,6 +192,18 @@ class AdmissionController extends Controller
                             admissionNumber: $student['admission_number'],
                             className: $student['class_name'] ?? 'Assigned Class',
                             defaultPassword: $student['default_password'] ?? 'Claret@2026!',
+                            userId: $app->applicantUserId
+                        );
+                    }
+
+                    // 2. Dispatch rejection notices for any rejected wards in multi-ward applications
+                    foreach ($rejectedWards as $rw) {
+                        $notificationService->sendAdmissionRejectedNotice(
+                            parentPhone: $app->applicant->phone,
+                            parentEmail: $app->applicant->email,
+                            parentName: $app->applicant->name,
+                            wardName: $rw['ward_name'],
+                            rejectionReason: $rw['reason'] ?? $comment,
                             userId: $app->applicantUserId
                         );
                     }
@@ -228,7 +246,28 @@ class AdmissionController extends Controller
         );
 
         if ($result->isSuccess()) {
-            Session::setFlash('success', 'Application marked as Rejected. Rejection reason has been logged in docket history.');
+            // Dispatch multi-channel rejection notification for each registered ward
+            try {
+                $app = $this->admissionRepo->findApplicationById($appId);
+                if ($app && $app->applicant) {
+                    $wards = $this->admissionRepo->getWardsForApplication($appId);
+                    $notificationService = new \App\Services\NotificationService();
+                    foreach ($wards as $ward) {
+                        $notificationService->sendAdmissionRejectedNotice(
+                            parentPhone: $app->applicant->phone,
+                            parentEmail: $app->applicant->email,
+                            parentName: $app->applicant->name,
+                            wardName: $ward->getFullName(),
+                            rejectionReason: $rejectionReason,
+                            userId: $app->applicantUserId
+                        );
+                    }
+                }
+            } catch (\Throwable $e) {
+                error_log("Failed to dispatch admission rejection notification: " . $e->getMessage());
+            }
+
+            Session::setFlash('success', 'Application marked as Rejected. Rejection reason has been logged in docket history and dispatched to the applicant.');
         } else {
             Session::setFlash('error', $result->getMessage());
         }

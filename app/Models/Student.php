@@ -21,6 +21,7 @@ final class Student
         public readonly ?string $religion = null,
         public readonly ?string $admissionDate = null,
         public readonly ?int $currentClassId = null,
+        public readonly bool $useSchoolBus = false,
         public readonly ?string $createdAt = null,
         public readonly ?string $updatedAt = null,
         public readonly ?User $user = null,
@@ -43,6 +44,7 @@ final class Student
             religion: $data['religion'] ?? null,
             admissionDate: $data['admission_date'] ?? null,
             currentClassId: isset($data['current_class_id']) && $data['current_class_id'] !== null ? (int)$data['current_class_id'] : null,
+            useSchoolBus: !empty($data['use_school_bus']),
             createdAt: isset($data['created_at']) ? (string)$data['created_at'] : null,
             updatedAt: isset($data['updated_at']) ? (string)$data['updated_at'] : null,
             user: $user ?? (!empty($data['user_name']) || !empty($data['name']) || !empty($data['user_email']) || !empty($data['email']) ? User::fromArray([
@@ -56,6 +58,7 @@ final class Student
                 'must_change_password' => $data['must_change_password'] ?? 0,
                 'created_at' => $data['user_created_at'] ?? $data['created_at'] ?? null,
                 'updated_at' => $data['user_updated_at'] ?? $data['updated_at'] ?? null,
+                'avatar_url' => $data['user_avatar'] ?? $data['avatar_url'] ?? null,
             ]) : null),
             currentClass: $currentClass ?? (!empty($data['class_name']) ? SchoolClass::fromArray([
                 'id' => $data['current_class_id'] ?? $data['class_id'],
@@ -74,6 +77,7 @@ final class Student
             'name', 'user_name', 'userName' => $this->user?->name ?? '',
             'email', 'user_email', 'userEmail' => $this->user?->email ?? '',
             'phone', 'user_phone', 'userPhone' => $this->user?->phone,
+            'avatar_url', 'avatarUrl' => $this->user?->avatarUrl ?? null,
             'schoolClass', 'school_class' => $this->currentClass,
             'class_name', 'className' => $this->currentClass?->name ?? '',
             'relationship_type', 'relationshipType' => $this->relationshipType,

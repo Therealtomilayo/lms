@@ -46,8 +46,17 @@ foreach ($summaries as $cSummary) {
     <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div class="flex items-center gap-4">
-                <div class="w-14 h-14 rounded-2xl bg-brand-700 text-white font-extrabold text-xl flex items-center justify-center shadow-xs flex-shrink-0">
-                    <?= strtoupper(substr($parentName, 0, 1)) ?>
+                <div class="relative flex-shrink-0">
+                    <?php 
+                    $pAvatar = $parent?->user?->avatarUrl ?? ($parent?->avatarUrl ?? ($user->avatarUrl ?? null));
+                    if (!empty($pAvatar)): 
+                    ?>
+                        <img src="<?= e($pAvatar) ?>" alt="<?= e($parentName) ?>" class="w-14 h-14 rounded-full object-cover border-2 border-white shadow-xs">
+                    <?php else: ?>
+                        <div class="w-14 h-14 rounded-full bg-[#7B3046] text-white font-extrabold text-xl flex items-center justify-center shadow-xs">
+                            <?= strtoupper(substr($parentName, 0, 1)) ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
                 <div>
                     <!-- Breadcrumbs -->
@@ -236,8 +245,14 @@ foreach ($summaries as $cSummary) {
                             <!-- Card Header -->
                             <div class="flex items-start justify-between gap-4 pb-4 border-b border-slate-100">
                                 <div class="flex items-center gap-3 min-w-0">
-                                    <div class="w-12 h-12 rounded-2xl <?= $isActiveChild ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700' ?> font-extrabold text-base flex items-center justify-center flex-shrink-0 shadow-xs">
-                                        <?= strtoupper(substr($child->name, 0, 1)) ?>
+                                    <div class="relative flex-shrink-0">
+                                        <?php if (!empty($child->avatarUrl)): ?>
+                                            <img src="<?= e($child->avatarUrl) ?>" alt="<?= e($child->name) ?>" class="w-12 h-12 rounded-full object-cover border border-slate-200 shadow-xs">
+                                        <?php else: ?>
+                                            <div class="w-12 h-12 rounded-full <?= $isActiveChild ? 'bg-[#7B3046] text-white' : 'bg-slate-200 text-slate-700' ?> font-extrabold text-base flex items-center justify-center shadow-xs">
+                                                <?= strtoupper(substr($child->name, 0, 1)) ?>
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
                                     <div class="min-w-0">
                                         <h3 class="text-base font-extrabold text-slate-900 leading-snug truncate">

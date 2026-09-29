@@ -1,7 +1,11 @@
 <?php
-$className = $classSubject->schoolClass?->name ?? 'Class Arm';
-$subjectName = $classSubject->subject?->name ?? 'Subject';
-$subjectCode = $classSubject->subject?->code ?? '';
+$isClassTeacher = $isClassTeacher ?? false;
+$canViewParentContacts = $canViewParentContacts ?? false;
+$className = isset($class) && method_exists($class, 'getFullName') 
+    ? $class->getFullName() 
+    : ($classSubject?->schoolClass?->name ?? ($class?->name ?? 'Class'));
+$subjectName = $classSubject?->subject?->name ?? null;
+$subjectCode = $classSubject?->subject?->code ?? '';
 ?>
 <div class="space-y-6">
     <!-- Top Header Card -->
@@ -18,21 +22,34 @@ $subjectCode = $classSubject->subject?->code ?? '';
                 </nav>
                 <div class="flex flex-wrap items-center gap-3">
                     <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight leading-tight">
-                        <?= htmlspecialchars($className) ?> — <?= htmlspecialchars($subjectName) ?>
+                        <?= htmlspecialchars($className) ?><?= $subjectName ? ' — ' . htmlspecialchars($subjectName) : ' — Class Roster' ?>
                     </h1>
                     <?php if (!empty($subjectCode)): ?>
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
                             <?= htmlspecialchars($subjectCode) ?>
                         </span>
                     <?php endif; ?>
-                    <?php if ($activeTerm): ?>
+                    <?php if ($isClassTeacher): ?>
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                            Class Teacher
+                        </span>
+                    <?php else: ?>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold bg-sky-50 text-sky-800 border border-sky-200">
+                            Subject Teacher
+                        </span>
+                    <?php endif; ?>
+                    <?php if ($activeTerm): ?>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
                             <?= htmlspecialchars($activeTerm->name) ?>
                         </span>
                     <?php endif; ?>
                 </div>
                 <p class="text-xs text-slate-500 mt-1">
-                    Official student candidate roster and parent/guardian contact directory for this teaching cohort.
+                    <?php if ($canViewParentContacts): ?>
+                        Official student roster and parent/guardian contact directory for your assigned class.
+                    <?php else: ?>
+                        Student candidate roster for this subject teaching allocation.
+                    <?php endif; ?>
                 </p>
             </div>
 
@@ -44,24 +61,35 @@ $subjectCode = $classSubject->subject?->code ?? '';
                     </svg>
                     All Classes
                 </a>
-                <a href="/teacher/subjects/<?= (int)$classSubject->id ?>/discussions" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-xl transition">
-                    <svg class="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
-                    </svg>
-                    Discussions
-                </a>
-                <a href="/teacher/badges?class_subject_id=<?= (int)$classSubject->id ?>" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition">
-                    <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
-                    </svg>
-                    Award Badges
-                </a>
-                <a href="/teacher/gradebook/<?= (int)$classSubject->id ?>" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition">
-                    <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                    </svg>
-                    Gradebook
-                </a>
+
+                <?php if ($classSubject): ?>
+                    <a href="/teacher/subjects/<?= (int)$classSubject->id ?>/discussions" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-xl transition">
+                        <svg class="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                        </svg>
+                        Discussions
+                    </a>
+                    <a href="/teacher/gradebook/<?= (int)$classSubject->id ?>" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition">
+                        <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        Gradebook
+                    </a>
+                <?php else: ?>
+                    <a href="/teacher/attendance/<?= (int)$class->id ?>/<?= date('Y-m-d') ?>" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition">
+                        <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        Daily Roll Call
+                    </a>
+                    <a href="/teacher/results/comments?class_id=<?= (int)$class->id ?>" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-xl transition">
+                        <svg class="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                        </svg>
+                        Batch Remarks
+                    </a>
+                <?php endif; ?>
+
                 <button onclick="window.print()" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl shadow-xs transition">
                     <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
@@ -81,7 +109,7 @@ $subjectCode = $classSubject->subject?->code ?? '';
                 <h3 class="text-2xl font-extrabold text-slate-900"><?= number_format($totalStudents) ?></h3>
                 <span class="text-xs font-semibold text-slate-500">enrolled</span>
             </div>
-            <span class="text-[11px] font-medium text-slate-500 mt-1 block">Active cohort members</span>
+            <span class="text-[11px] font-medium text-slate-500 mt-1 block">Active students</span>
         </div>
 
         <!-- Male -->
@@ -104,21 +132,30 @@ $subjectCode = $classSubject->subject?->code ?? '';
             <span class="text-[11px] font-medium text-pink-600 mt-1 block">Girls in class</span>
         </div>
 
-        <!-- Linked Guardians -->
+        <!-- Linked Guardians or Privacy Status -->
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-            <p class="text-xs font-bold uppercase tracking-wider text-emerald-600">Linked Guardians</p>
-            <div class="flex items-baseline gap-2 mt-1">
-                <h3 class="text-2xl font-extrabold text-slate-900"><?= number_format($guardiansLinkedCount) ?></h3>
-                <span class="text-xs font-semibold text-slate-500">parents</span>
-            </div>
-            <span class="text-[11px] font-medium text-emerald-600 mt-1 block">Contactable via portal</span>
+            <?php if ($canViewParentContacts): ?>
+                <p class="text-xs font-bold uppercase tracking-wider text-emerald-600">Linked Guardians</p>
+                <div class="flex items-baseline gap-2 mt-1">
+                    <h3 class="text-2xl font-extrabold text-slate-900"><?= number_format($guardiansLinkedCount) ?></h3>
+                    <span class="text-xs font-semibold text-slate-500">parents</span>
+                </div>
+                <span class="text-[11px] font-medium text-emerald-600 mt-1 block">Contactable via portal</span>
+            <?php else: ?>
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Parent Contacts</p>
+                <div class="flex items-baseline gap-2 mt-1">
+                    <h3 class="text-sm font-extrabold text-slate-500">Protected</h3>
+                </div>
+                <span class="text-[11px] font-medium text-slate-400 mt-1 block">Restricted to Class Teacher</span>
+            <?php endif; ?>
         </div>
     </div>
 
     <!-- Search/Filter Bar (hidden when printing) -->
     <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs print:hidden">
         <div class="relative">
-            <input type="text" id="roster-search" placeholder="Search candidate by full name, admission number, or guardian contact..." 
+            <input type="text" id="roster-search" 
+                   placeholder="<?= $canViewParentContacts ? 'Search candidate by full name, admission number, or guardian contact...' : 'Search candidate by full name or admission number...' ?>" 
                    class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition">
             <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -137,7 +174,7 @@ $subjectCode = $classSubject->subject?->code ?? '';
                 </div>
                 <h3 class="text-base font-bold text-slate-800">No Enrolled Candidates</h3>
                 <p class="text-xs text-slate-500 max-w-sm mx-auto mt-1">
-                    There are no students currently enrolled in this class cohort for this session.
+                    There are no students currently enrolled in this class for this session.
                 </p>
             </div>
         <?php else: ?>
@@ -167,12 +204,14 @@ $subjectCode = $classSubject->subject?->code ?? '';
 
                             $guardianNames = [];
                             $guardianPhones = [];
-                            foreach ($guardians as $g) {
-                                if ($g->user?->name) {
-                                    $guardianNames[] = $g->user->name;
-                                }
-                                if ($g->user?->phone) {
-                                    $guardianPhones[] = $g->user->phone;
+                            if ($canViewParentContacts) {
+                                foreach ($guardians as $g) {
+                                    if ($g->user?->name) {
+                                        $guardianNames[] = $g->user->name;
+                                    }
+                                    if ($g->user?->phone) {
+                                        $guardianPhones[] = $g->user->phone;
+                                    }
                                 }
                             }
                             $searchString = strtolower($studentName . ' ' . $student->admissionNumber . ' ' . implode(' ', $guardianNames) . ' ' . implode(' ', $guardianPhones));
@@ -205,7 +244,12 @@ $subjectCode = $classSubject->subject?->code ?? '';
                                     </span>
                                 </td>
                                 <td class="py-3 px-4">
-                                    <?php if (empty($guardians)): ?>
+                                    <?php if (!$canViewParentContacts): ?>
+                                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-500 border border-slate-200">
+                                            <svg class="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m0 0v2m0-2h2m-2 0H10m7-7a5 5 0 10-10 0v2H6a2 2 0 00-2 2v6a2 2 0 002 2h12a2 2 0 002-2v-6a2 2 0 00-2-2h-1V8z"/></svg>
+                                            Protected (Class Teacher only)
+                                        </span>
+                                    <?php elseif (empty($guardians)): ?>
                                         <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
                                             No Linked Guardian
                                         </span>

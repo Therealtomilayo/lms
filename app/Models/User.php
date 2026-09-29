@@ -23,7 +23,8 @@ final class User
         public readonly bool $mustChangePassword = false,
         public readonly ?string $createdAt = null,
         public readonly ?string $updatedAt = null,
-        public readonly array $roles = []
+        public readonly array $roles = [],
+        public readonly ?string $avatarUrl = null
     ) {
     }
 
@@ -42,7 +43,8 @@ final class User
             mustChangePassword: (bool)($data['must_change_password'] ?? false),
             createdAt: isset($data['created_at']) ? (string)$data['created_at'] : null,
             updatedAt: isset($data['updated_at']) ? (string)$data['updated_at'] : null,
-            roles: $rolesList
+            roles: $rolesList,
+            avatarUrl: isset($data['avatar_url']) && $data['avatar_url'] !== '' ? (string)$data['avatar_url'] : null
         );
     }
 

@@ -77,7 +77,7 @@
         <div class="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-xs">
             <?php $this->include('components/empty_state', [
                 'title' => 'No Teaching Allocation Selected',
-                'description' => 'Please select an assigned class-subject above to manage instructional materials.'
+                'message' => 'Please select an assigned class-subject above to manage instructional materials.'
             ]); ?>
         </div>
     <?php elseif (empty($items)): ?>

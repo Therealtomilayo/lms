@@ -55,9 +55,13 @@ $displayRole = $roleLabels[$primaryRole] ?? ucfirst($primaryRole);
             <!-- Left: Avatar & Identity Particulars -->
             <div class="flex items-center gap-4">
                 <div class="relative">
-                    <div class="w-16 h-16 rounded-2xl bg-brand-700 text-white font-extrabold text-2xl flex items-center justify-center shadow-xs flex-shrink-0">
-                        <?= strtoupper(substr($userName, 0, 1)) ?>
-                    </div>
+                    <?php if (!empty($user->avatarUrl)): ?>
+                        <img src="<?= e($user->avatarUrl) ?>" alt="<?= e($userName) ?>" class="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md flex-shrink-0">
+                    <?php else: ?>
+                        <div class="w-16 h-16 rounded-full bg-[#7B3046] text-white font-extrabold text-2xl flex items-center justify-center shadow-xs flex-shrink-0">
+                            <?= strtoupper(substr($userName, 0, 1)) ?>
+                        </div>
+                    <?php endif; ?>
                     <span class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white" title="Account Active"></span>
                 </div>
                 <div>
@@ -313,9 +317,13 @@ $displayRole = $roleLabels[$primaryRole] ?? ucfirst($primaryRole);
                         <?php foreach ($linkedStudents as $c): ?>
                             <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white hover:border-brand-200 hover:shadow-xs transition flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-xl bg-brand-700 text-white font-extrabold text-sm flex items-center justify-center flex-shrink-0">
-                                        <?= strtoupper(substr($c->name, 0, 1)) ?>
-                                    </div>
+                                    <?php if (!empty($c->avatarUrl)): ?>
+                                        <img src="<?= e($c->avatarUrl) ?>" alt="<?= e($c->name) ?>" class="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-xs flex-shrink-0">
+                                    <?php else: ?>
+                                        <div class="w-10 h-10 rounded-full bg-[#7B3046] text-white font-extrabold text-sm flex items-center justify-center flex-shrink-0">
+                                            <?= strtoupper(substr($c->name, 0, 1)) ?>
+                                        </div>
+                                    <?php endif; ?>
                                     <div>
                                         <h4 class="text-sm font-bold text-slate-900 leading-tight">
                                             <?= htmlspecialchars($c->name) ?>

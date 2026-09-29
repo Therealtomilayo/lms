@@ -16,10 +16,62 @@ use PDO;
 class FeeRepository
 {
     private PDO $pdo;
+    private ?bool $hasApplicabilityColumn = null;
+    private ?bool $hasStudentBusColumn = null;
 
     public function __construct(?PDO $pdo = null)
     {
         $this->pdo = $pdo ?? Database::getConnection();
+    }
+
+    private function hasApplicabilityColumn(): bool
+    {
+        if ($this->hasApplicabilityColumn !== null) {
+            return $this->hasApplicabilityColumn;
+        }
+
+        try {
+            $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+            if ($driver === 'sqlite') {
+                $stmt = $this->pdo->query("PRAGMA table_info(`fee_structure_items`)");
+                if ($stmt) {
+                    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                        if (($row['name'] ?? '') === 'applicability') {
+                            return $this->hasApplicabilityColumn = true;
+                        }
+                    }
+                }
+                return $this->hasApplicabilityColumn = false;
+            }
+            return $this->hasApplicabilityColumn = true;
+        } catch (\Throwable) {
+            return $this->hasApplicabilityColumn = false;
+        }
+    }
+
+    private function hasStudentBusColumn(): bool
+    {
+        if ($this->hasStudentBusColumn !== null) {
+            return $this->hasStudentBusColumn;
+        }
+
+        try {
+            $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+            if ($driver === 'sqlite') {
+                $stmt = $this->pdo->query("PRAGMA table_info(`students`)");
+                if ($stmt) {
+                    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                        if (($row['name'] ?? '') === 'use_school_bus') {
+                            return $this->hasStudentBusColumn = true;
+                        }
+                    }
+                }
+                return $this->hasStudentBusColumn = false;
+            }
+            return $this->hasStudentBusColumn = true;
+        } catch (\Throwable) {
+            return $this->hasStudentBusColumn = false;
+        }
     }
 
     /* ----------------------------------------------------------------------
@@ -225,16 +277,22 @@ class FeeRepository
         $structureId = (int)$this->pdo->lastInsertId();
 
         // Insert items
-        $itemStmt = $this->pdo->prepare('INSERT INTO `fee_structure_items`
-            (`fee_structure_id`, `fee_category_id`, `name`, `amount`, `is_compulsory`, `is_required_for_result`, `created_at`)
-            VALUES (:fs_id, :cat_id, :name, :amount, :is_compulsory, :is_required_for_result, :created_at)');
+        if ($this->hasApplicabilityColumn()) {
+            $itemStmt = $this->pdo->prepare('INSERT INTO `fee_structure_items`
+                (`fee_structure_id`, `fee_category_id`, `name`, `amount`, `is_compulsory`, `is_required_for_result`, `applicability`, `created_at`)
+                VALUES (:fs_id, :cat_id, :name, :amount, :is_compulsory, :is_required_for_result, :applicability, :created_at)');
+        } else {
+            $itemStmt = $this->pdo->prepare('INSERT INTO `fee_structure_items`
+                (`fee_structure_id`, `fee_category_id`, `name`, `amount`, `is_compulsory`, `is_required_for_result`, `created_at`)
+                VALUES (:fs_id, :cat_id, :name, :amount, :is_compulsory, :is_required_for_result, :created_at)');
+        }
 
         foreach ($items as $item) {
             $amount = (float)($item['amount'] ?? 0.0);
             if ($amount <= 0 && empty($item['name'])) {
                 continue;
             }
-            $itemStmt->execute([
+            $params = [
                 ':fs_id' => $structureId,
                 ':cat_id' => (int)($item['fee_category_id'] ?? 1),
                 ':name' => trim((string)($item['name'] ?? 'Fee Component')),
@@ -242,7 +300,11 @@ class FeeRepository
                 ':is_compulsory' => isset($item['is_compulsory']) ? (int)$item['is_compulsory'] : 1,
                 ':is_required_for_result' => isset($item['is_required_for_result']) ? (int)$item['is_required_for_result'] : 1,
                 ':created_at' => $now,
-            ]);
+            ];
+            if ($this->hasApplicabilityColumn()) {
+                $params[':applicability'] = !empty($item['applicability']) ? (string)$item['applicability'] : 'all';
+            }
+            $itemStmt->execute($params);
         }
 
         return $this->findStructureById($structureId);
@@ -277,16 +339,22 @@ class FeeRepository
         // Delete old items and insert updated ones
         $this->pdo->prepare('DELETE FROM `fee_structure_items` WHERE `fee_structure_id` = ?')->execute([$id]);
 
-        $itemStmt = $this->pdo->prepare('INSERT INTO `fee_structure_items`
-            (`fee_structure_id`, `fee_category_id`, `name`, `amount`, `is_compulsory`, `is_required_for_result`, `created_at`)
-            VALUES (:fs_id, :cat_id, :name, :amount, :is_compulsory, :is_required_for_result, :created_at)');
+        if ($this->hasApplicabilityColumn()) {
+            $itemStmt = $this->pdo->prepare('INSERT INTO `fee_structure_items`
+                (`fee_structure_id`, `fee_category_id`, `name`, `amount`, `is_compulsory`, `is_required_for_result`, `applicability`, `created_at`)
+                VALUES (:fs_id, :cat_id, :name, :amount, :is_compulsory, :is_required_for_result, :applicability, :created_at)');
+        } else {
+            $itemStmt = $this->pdo->prepare('INSERT INTO `fee_structure_items`
+                (`fee_structure_id`, `fee_category_id`, `name`, `amount`, `is_compulsory`, `is_required_for_result`, `created_at`)
+                VALUES (:fs_id, :cat_id, :name, :amount, :is_compulsory, :is_required_for_result, :created_at)');
+        }
 
         foreach ($items as $item) {
             $amount = (float)($item['amount'] ?? 0.0);
             if ($amount <= 0 && empty($item['name'])) {
                 continue;
             }
-            $itemStmt->execute([
+            $params = [
                 ':fs_id' => $id,
                 ':cat_id' => (int)($item['fee_category_id'] ?? 1),
                 ':name' => trim((string)($item['name'] ?? 'Fee Component')),
@@ -294,7 +362,11 @@ class FeeRepository
                 ':is_compulsory' => isset($item['is_compulsory']) ? (int)$item['is_compulsory'] : 1,
                 ':is_required_for_result' => isset($item['is_required_for_result']) ? (int)$item['is_required_for_result'] : 1,
                 ':created_at' => $now,
-            ]);
+            ];
+            if ($this->hasApplicabilityColumn()) {
+                $params[':applicability'] = !empty($item['applicability']) ? (string)$item['applicability'] : 'all';
+            }
+            $itemStmt->execute($params);
         }
 
         return $this->findStructureById($id);
@@ -401,8 +473,10 @@ class FeeRepository
 
     public function findInvoiceById(int $id): ?FeeInvoice
     {
-        $sql = 'SELECT fi.*,
+        $busCol = $this->hasStudentBusColumn() ? 's.use_school_bus as student_use_school_bus' : '0 as student_use_school_bus';
+        $sql = "SELECT fi.*,
                        s.admission_number,
+                       {$busCol},
                        u_st.name as student_name,
                        u_p.name as parent_name,
                        u_p.email as parent_email,
@@ -418,7 +492,7 @@ class FeeRepository
                 JOIN `classes` c ON c.id = fi.class_id
                 JOIN `sessions` ses ON ses.id = fi.session_id
                 JOIN `terms` t ON t.id = fi.term_id
-                WHERE fi.id = :id LIMIT 1';
+                WHERE fi.id = :id LIMIT 1";
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([':id' => $id]);
@@ -586,6 +660,11 @@ class FeeRepository
             $params[':status'] = (string)$filters['status'];
         }
 
+        if ($this->hasStudentBusColumn() && isset($filters['bus']) && $filters['bus'] !== '') {
+            $sql .= ' AND s.use_school_bus = :bus';
+            $params[':bus'] = (int)$filters['bus'];
+        }
+
         if (!empty($filters['query'])) {
             $sql .= ' AND (u_st.name LIKE :q1 OR s.admission_number LIKE :q2 OR fi.invoice_number LIKE :q3)';
             $searchTerm = '%' . trim((string)$filters['query']) . '%';
@@ -639,6 +718,11 @@ class FeeRepository
         if (!empty($filters['status'])) {
             $sql .= ' AND fi.status = :status';
             $params[':status'] = (string)$filters['status'];
+        }
+
+        if ($this->hasStudentBusColumn() && isset($filters['bus']) && $filters['bus'] !== '') {
+            $sql .= ' AND s.use_school_bus = :bus';
+            $params[':bus'] = (int)$filters['bus'];
         }
 
         if (!empty($filters['query'])) {
@@ -979,8 +1063,10 @@ class FeeRepository
      */
     public function getInvoicesForStructureScope(int $sessionId, int $termId, ?int $academicLevelId = null, ?int $classId = null): array
     {
-        $sql = 'SELECT fi.*,
+        $busCol = $this->hasStudentBusColumn() ? 's.use_school_bus as student_use_school_bus' : '0 as student_use_school_bus';
+        $sql = "SELECT fi.*,
                        s.admission_number,
+                       {$busCol},
                        u_st.name as student_name,
                        u_p.name as parent_name,
                        u_p.email as parent_email,
@@ -996,7 +1082,7 @@ class FeeRepository
                 JOIN `classes` c ON c.id = fi.class_id
                 JOIN `sessions` ses ON ses.id = fi.session_id
                 JOIN `terms` t ON t.id = fi.term_id
-                WHERE fi.session_id = :session_id AND fi.term_id = :term_id';
+                WHERE fi.session_id = :session_id AND fi.term_id = :term_id";
 
         $params = [
             ':session_id' => $sessionId,

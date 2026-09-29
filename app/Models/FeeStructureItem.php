@@ -6,6 +6,11 @@ namespace App\Models;
 
 final class FeeStructureItem
 {
+    public const APPLICABILITY_ALL = 'all';
+    public const APPLICABILITY_NEW_STUDENTS = 'new_students_only';
+    public const APPLICABILITY_BUS_USERS = 'bus_users_only';
+    public const APPLICABILITY_OPTIONAL = 'optional';
+
     public function __construct(
         public readonly int $id,
         public readonly int $feeStructureId,
@@ -14,6 +19,7 @@ final class FeeStructureItem
         public readonly float $amount,
         public readonly bool $isCompulsory = true,
         public readonly bool $isRequiredForResult = true,
+        public readonly string $applicability = self::APPLICABILITY_ALL,
         public readonly ?string $createdAt = null,
         public readonly ?string $categoryName = null
     ) {
@@ -29,6 +35,7 @@ final class FeeStructureItem
             amount: (float)$data['amount'],
             isCompulsory: (bool)($data['is_compulsory'] ?? true),
             isRequiredForResult: (bool)($data['is_required_for_result'] ?? true),
+            applicability: (string)($data['applicability'] ?? self::APPLICABILITY_ALL),
             createdAt: $data['created_at'] ?? null,
             categoryName: $data['category_name'] ?? null
         );

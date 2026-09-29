@@ -18,7 +18,7 @@
                     </span>
                 </div>
                 <p class="text-xs text-slate-500 mt-1">
-                    Take daily homeroom roll calls or record period-by-period subject attendance for your allocated classroom cohorts.
+                    Take daily morning roll call for your assigned class or record period-by-period attendance for your subject allocations.
                 </p>
             </div>
         </div>
@@ -26,21 +26,21 @@
 
     <!-- 4-Card KPI Summary Metrics Strip -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <!-- Assigned Classes -->
+        <!-- Assigned Classes (Class Teacher) -->
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-            <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Class Cohorts</p>
+            <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Assigned Class</p>
             <div class="flex items-baseline gap-2 mt-1">
                 <h3 class="text-2xl font-extrabold text-slate-900"><?= number_format(count($classes)) ?></h3>
-                <span class="text-xs font-semibold text-slate-500">classes</span>
+                <span class="text-xs font-semibold text-slate-500"><?= count($classes) === 1 ? 'class' : 'classes' ?></span>
             </div>
             <span class="text-[11px] font-medium text-slate-500 mt-1 block">
-                Assigned homerooms
+                Class Teacher role
             </span>
         </div>
 
-        <!-- Subject Allocations -->
+        <!-- Subject Allocations (Subject Teacher) -->
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-            <p class="text-xs font-bold uppercase tracking-wider text-emerald-600">Subject Periods</p>
+            <p class="text-xs font-bold uppercase tracking-wider text-emerald-600">Subject Allocations</p>
             <div class="flex items-baseline gap-2 mt-1">
                 <h3 class="text-2xl font-extrabold text-emerald-600"><?= number_format(count($allocations)) ?></h3>
                 <span class="text-xs font-semibold text-slate-500">allocations</span>
@@ -84,7 +84,11 @@
 
         <?php if (empty($classes)): ?>
             <div class="p-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                <p class="text-xs text-slate-500">You do not have any teaching allocations in the current academic session.</p>
+                <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                </div>
+                <h3 class="text-sm font-bold text-slate-700">No Assigned Class as Class Teacher</h3>
+                <p class="text-xs text-slate-500 max-w-sm mx-auto mt-1">You are not currently assigned as a Class Teacher for any class this session. Daily homeroom roll call is reserved for designated Class Teachers.</p>
             </div>
         <?php else: ?>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -97,7 +101,7 @@
                                 </span>
                                 <?php if (!empty($cls['is_form_teacher'])): ?>
                                     <?php $this->include('components/badge', [
-                                        'label' => 'Form Class',
+                                        'label' => 'Class Teacher',
                                         'variant' => 'info',
                                         'size' => 'sm'
                                     ]); ?>
@@ -141,7 +145,7 @@
                 <table class="w-full text-left border-collapse text-xs">
                     <thead>
                         <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                            <th class="py-3.5 px-5">Class Cohort</th>
+                            <th class="py-3.5 px-5">Class</th>
                             <th class="py-3.5 px-4">Subject</th>
                             <th class="py-3.5 px-5 text-right">Action</th>
                         </tr>

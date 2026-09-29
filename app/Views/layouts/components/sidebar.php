@@ -11,6 +11,10 @@
 
 $userContextName = $_SESSION['user_name'] ?? 'User';
 $userContextEmail = $_SESSION['user_email'] ?? '';
+$userContextAvatar = $_SESSION['user_avatar'] ?? null;
+if (empty($userContextAvatar) && isset($userContext) && $userContext instanceof \App\Core\UserContext) {
+    $userContextAvatar = $userContext->user?->avatarUrl ?? null;
+}
 $currentUri = $_SERVER['REQUEST_URI'] ?? '';
 
 // Build children context variables
@@ -227,8 +231,9 @@ $navConfig = [
         ['label' => 'Quiz Management', 'route' => '/teacher/quizzes', 'icon' => 'quiz'],
         ['category' => 'Grading & Assessment'],
         ['label' => 'Class Gradebooks', 'route' => '/teacher/gradebook', 'icon' => 'document-text'],
-        ['label' => 'Batch Remarks & Traits', 'route' => '/teacher/results/comments', 'icon' => 'clipboard'],
         ['label' => 'Form Class Broadsheet', 'route' => '/teacher/results/overview', 'icon' => 'chart'],
+        ['label' => 'Behavioral Traits Matrix', 'route' => '/teacher/results/skills', 'icon' => 'award'],
+        ['label' => 'Batch Remarks & Comments', 'route' => '/teacher/results/comments', 'icon' => 'clipboard'],
         ['label' => 'Badges & Rewards', 'route' => '/teacher/badges', 'icon' => 'award'],
         ['category' => 'Communication'],
         ['label' => 'Class Discussions', 'route' => '/teacher/discussions', 'icon' => 'discussion'],
@@ -440,9 +445,13 @@ if ($role === 'parent' && $activeChildId > 0) {
     <!-- Sidebar Footer / Logout -->
     <div class="p-4 border-t border-slate-800 bg-slate-950 flex items-center justify-between flex-shrink-0">
         <a href="/profile" class="flex items-center gap-3 min-w-0 hover:opacity-85 transition group" title="View My Profile">
-            <div class="w-8 h-8 rounded-full bg-brand-700 flex items-center justify-center text-white font-bold text-xs flex-shrink-0 shadow-xs group-hover:ring-2 group-hover:ring-brand-500 transition">
-                <?= e(substr($userContextName, 0, 1)) ?>
-            </div>
+            <?php if (!empty($userContextAvatar)): ?>
+                <img src="<?= e($userContextAvatar) ?>" alt="<?= e($userContextName) ?>" class="w-8 h-8 rounded-full object-cover flex-shrink-0 shadow-xs border border-slate-700 group-hover:ring-2 group-hover:ring-[#7B3046] transition">
+            <?php else: ?>
+                <div class="w-8 h-8 rounded-full bg-[#7B3046] flex items-center justify-center text-white font-bold text-xs flex-shrink-0 shadow-xs group-hover:ring-2 group-hover:ring-brand-500 transition">
+                    <?= e(substr($userContextName, 0, 1)) ?>
+                </div>
+            <?php endif; ?>
             <div class="truncate">
                 <p class="text-xs font-semibold text-white truncate group-hover:text-brand-400 transition"><?= e($userContextName) ?></p>
                 <p class="text-[10px] text-slate-400 truncate"><?= e($userContextEmail) ?></p>

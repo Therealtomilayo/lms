@@ -35,10 +35,16 @@ $this->layout('layouts/teacher', [
                 <span>Form Class Broadsheet Overview</span>
             </a>
 
-            <a href="/teacher/results/comments<?= ($selectedTermId > 0 && $selectedClassId > 0) ? "?term_id={$selectedTermId}&class_id={$selectedClassId}" : '' ?>"
+            <a href="/teacher/results/skills<?= ($selectedTermId > 0 && $selectedClassId > 0) ? "?session_id={$selectedSessionId}&term_id={$selectedTermId}&class_id={$selectedClassId}" : '' ?>"
+               class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+                <span>Affective &amp; Psychomotor Matrix</span>
+            </a>
+
+            <a href="/teacher/results/comments<?= ($selectedTermId > 0 && $selectedClassId > 0) ? "?session_id={$selectedSessionId}&term_id={$selectedTermId}&class_id={$selectedClassId}" : '' ?>"
                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-brand-700 bg-brand-50 border border-brand-200/60 shadow-xs transition" aria-current="page">
                 <svg class="w-4 h-4 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
-                <span>Batch Remarks &amp; Behavioral Ratings</span>
+                <span>Batch Remarks &amp; Comments</span>
             </a>
         </nav>
     </div>
@@ -96,14 +102,18 @@ $this->layout('layouts/teacher', [
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Class Cohort & Arm</label>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Assigned Class (Class Teacher)</label>
                     <select name="class_id" onchange="document.getElementById('teacher-cohort-form').submit()" 
                             class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition bg-white font-bold text-slate-900">
-                        <?php foreach ($classes as $c): ?>
-                            <option value="<?= (int)$c->id ?>" <?= $selectedClassId === (int)$c->id ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($c->name) ?><?= !empty($c->sectionArm) ? ' (' . htmlspecialchars($c->sectionArm) . ')' : '' ?>
-                            </option>
-                        <?php endforeach; ?>
+                        <?php if (empty($classes)): ?>
+                            <option value="">No assigned class</option>
+                        <?php else: ?>
+                            <?php foreach ($classes as $c): ?>
+                                <option value="<?= (int)$c->id ?>" <?= $selectedClassId === (int)$c->id ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($c->name) ?><?= !empty($c->sectionArm) ? ' (' . htmlspecialchars($c->sectionArm) . ')' : '' ?>
+                                </option>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </select>
                 </div>
             </form>
@@ -111,13 +121,21 @@ $this->layout('layouts/teacher', [
     </div>
 
     <!-- Student Cards Form -->
-    <?php if (empty($students)): ?>
+    <?php if (empty($classes)): ?>
+        <div class="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-xs space-y-3">
+            <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            </div>
+            <h3 class="text-base font-bold text-slate-800">No Assigned Class as Class Teacher</h3>
+            <p class="text-sm text-slate-500 max-w-md mx-auto">You are not currently assigned as a Class Teacher for any class this session. Batch general remarks and behavioral evaluations are entered exclusively by assigned Class Teachers.</p>
+        </div>
+    <?php elseif (empty($students)): ?>
         <div class="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm space-y-3">
             <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
             </div>
             <h3 class="text-base font-bold text-slate-800">No Students Enrolled in this Class</h3>
-            <p class="text-sm text-slate-500 max-w-md mx-auto">Select a different cohort from your assigned classes.</p>
+            <p class="text-sm text-slate-500 max-w-md mx-auto">There are no students enrolled in this class for the selected academic session.</p>
         </div>
     <?php else: ?>
         <form method="POST" action="/teacher/results/comments" id="teacher-batch-comments-form" class="space-y-6">

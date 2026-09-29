@@ -92,6 +92,7 @@ class FeeController extends Controller
         $itemAmounts = (array)$request->input('item_amount', []);
         $isCompulsory = (array)$request->input('is_compulsory', []);
         $isRequiredForResult = (array)$request->input('is_required_for_result', []);
+        $applicabilities = (array)$request->input('applicability', []);
 
         $items = [];
         foreach ($itemNames as $i => $name) {
@@ -103,6 +104,7 @@ class FeeController extends Controller
                     'amount' => $amt,
                     'is_compulsory' => !empty($isCompulsory[$i]) ? 1 : 0,
                     'is_required_for_result' => !empty($isRequiredForResult[$i]) ? 1 : 0,
+                    'applicability' => !empty($applicabilities[$i]) ? trim((string)$applicabilities[$i]) : 'all',
                 ];
             }
         }
@@ -160,6 +162,7 @@ class FeeController extends Controller
                 'amount' => $it->amount,
                 'is_compulsory' => $it->isCompulsory,
                 'is_required_for_result' => $it->isRequiredForResult,
+                'applicability' => $it->applicability ?? 'all',
             ];
         }
 
@@ -208,6 +211,7 @@ class FeeController extends Controller
         $itemAmounts = (array)$request->input('item_amount', []);
         $isCompulsory = (array)$request->input('is_compulsory', []);
         $isRequiredForResult = (array)$request->input('is_required_for_result', []);
+        $applicabilities = (array)$request->input('applicability', []);
 
         $items = [];
         foreach ($itemNames as $i => $name) {
@@ -219,6 +223,7 @@ class FeeController extends Controller
                     'amount' => $amt,
                     'is_compulsory' => !empty($isCompulsory[$i]) ? 1 : 0,
                     'is_required_for_result' => !empty($isRequiredForResult[$i]) ? 1 : 0,
+                    'applicability' => !empty($applicabilities[$i]) ? trim((string)$applicabilities[$i]) : 'all',
                 ];
             }
         }
@@ -266,6 +271,7 @@ class FeeController extends Controller
             'term_id' => (int)$request->query('term_id', 0),
             'class_id' => (int)$request->query('class_id', 0),
             'status' => (string)$request->query('status', ''),
+            'bus' => $request->query('bus') !== null && $request->query('bus') !== '' ? (string)$request->query('bus') : '',
             'query' => (string)$request->query('q', ''),
         ];
 

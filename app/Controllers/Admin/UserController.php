@@ -107,6 +107,28 @@ class UserController extends Controller
         }
 
         $roles = (array)($request->post('roles', []));
+        $name = trim((string)$request->post('name', ''));
+        $gender = trim((string)$request->post('gender', ''));
+        $password = (string)$request->post('password', '');
+        $email = trim((string)$request->post('email', ''));
+        $classId = $request->post('current_class_id');
+
+        $validationErrors = [];
+        if ($name === '') {
+            $validationErrors['name'] = ['Full name is required.'];
+        }
+        if (empty($roles)) {
+            $validationErrors['roles'] = ['At least one user role must be selected.'];
+        }
+        if ($password === '') {
+            $validationErrors['password'] = ['Initial password is required.'];
+        } elseif (strlen($password) < 8) {
+            $validationErrors['password'] = ['Password must be at least 8 characters.'];
+        }
+
+        if (!empty($validationErrors)) {
+            return $this->redirectWithErrors('/admin/users/create', $validationErrors, $request->all());
+        }
 
         try {
             $isSuperAdmin = $userContext->hasRole('super_admin');
@@ -124,11 +146,13 @@ class UserController extends Controller
 
             // Normal user creation is active immediately
             $status = $request->post('status', 'active');
+            $avatarUrl = $this->handlePassportUpload($request);
 
             $result = $this->userService->createUser([
                 'name' => $request->post('name'),
                 'email' => $request->post('email'),
                 'phone' => $request->post('phone'),
+                'avatar_url' => $avatarUrl,
                 'password' => $request->post('password'),
                 'roles' => $assigningRoles,
                 'status' => $status,
@@ -143,6 +167,7 @@ class UserController extends Controller
                 'nationality' => $request->post('nationality') ?: 'Nigerian',
                 'religion' => $request->post('religion'),
                 'admission_date' => $request->post('admission_date'),
+                'use_school_bus' => !empty($request->post('use_school_bus')),
             ], $userContext);
 
             $createdUser = $result->data;
@@ -251,6 +276,7 @@ class UserController extends Controller
                 'nationality' => $request->post('nationality') ?: 'Nigerian',
                 'religion' => $request->post('religion'),
                 'admission_date' => $request->post('admission_date'),
+                'use_school_bus' => !empty($request->post('use_school_bus')),
             ];
 
             if ($roles !== null) {
@@ -259,6 +285,11 @@ class UserController extends Controller
 
             if (!empty($request->post('password'))) {
                 $data['password'] = $request->post('password');
+            }
+
+            $avatarUrl = $this->handlePassportUpload($request);
+            if ($avatarUrl !== null) {
+                $data['avatar_url'] = $avatarUrl;
             }
 
             $this->userService->updateUser($userId, $data, $userContext);
@@ -367,15 +398,72 @@ class UserController extends Controller
         }
 
         $userId = (int)($id ?: $request->post('id', 0));
-        $password = (string)$request->post('password', 'Password123!');
+        $password = trim((string)$request->post('password', ''));
+
+        if ($password === '') {
+            return $this->redirectWithErrors("/admin/users/{$userId}/edit", ['password' => ['New temporary password is required.']]);
+        }
+        if (strlen($password) < 8) {
+            return $this->redirectWithErrors("/admin/users/{$userId}/edit", ['password' => ['Password must be at least 8 characters.']]);
+        }
 
         try {
             $this->userService->adminResetPassword($userId, $password, $userContext);
-            return $this->redirectWithSuccess('/admin/users', 'Password reset successfully. Sessions revoked.');
-        } catch (DomainRuleException|ValidationException $e) {
-            return $this->redirectWithError('/admin/users', $e->getMessage());
+            return $this->redirectWithSuccess("/admin/users/{$userId}/edit", 'Password reset successfully. Active sessions revoked.');
+        } catch (ValidationException $e) {
+            return $this->redirectWithErrors("/admin/users/{$userId}/edit", $e->getErrors());
+        } catch (DomainRuleException $e) {
+            return $this->redirectWithErrors("/admin/users/{$userId}/edit", ['password' => [$e->getMessage()]]);
         } catch (ResourceNotFoundException $e) {
             return Response::html($e->getMessage(), 404);
         }
+    }
+
+    /**
+     * Process uploaded passport photograph file into public storage.
+     */
+    private function handlePassportUpload(Request $request): ?string
+    {
+        $file = $request->file('passport');
+        if (!$file || !isset($file['error']) || $file['error'] !== UPLOAD_ERR_OK) {
+            return null;
+        }
+
+        $allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+        $tmpName = (string)($file['tmp_name'] ?? '');
+        if ($tmpName === '' || !file_exists($tmpName)) {
+            return null;
+        }
+
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $mime = $finfo->file($tmpName);
+        if (!in_array($mime, $allowedMimes, true)) {
+            throw new ValidationException(['passport' => ['Passport must be a valid JPG, PNG, or WEBP image.']]);
+        }
+
+        if (($file['size'] ?? 0) > 5242880) { // 5MB limit
+            throw new ValidationException(['passport' => ['Passport image size cannot exceed 5MB.']]);
+        }
+
+        $ext = match ($mime) {
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+            default => 'jpg',
+        };
+
+        $targetDir = dirname(__DIR__, 3) . '/public/assets/uploads/passports';
+        if (!is_dir($targetDir)) {
+            @mkdir($targetDir, 0755, true);
+        }
+
+        $filename = 'passport_' . bin2hex(random_bytes(8)) . '_' . time() . '.' . $ext;
+        $destPath = $targetDir . '/' . $filename;
+
+        if (!move_uploaded_file($tmpName, $destPath)) {
+            throw new DomainRuleException('Failed to save uploaded passport photo.');
+        }
+
+        return '/assets/uploads/passports/' . $filename;
     }
 }

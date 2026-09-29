@@ -21,16 +21,43 @@ use PDO;
 class EnrollmentRepository
 {
     private PDO $pdo;
+    private ?bool $hasStudentBusColumn = null;
 
     public function __construct(?PDO $pdo = null)
     {
         $this->pdo = $pdo ?? Database::getInstance();
     }
 
+    private function hasStudentBusColumn(): bool
+    {
+        if ($this->hasStudentBusColumn !== null) {
+            return $this->hasStudentBusColumn;
+        }
+
+        try {
+            $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+            if ($driver === 'sqlite') {
+                $stmt = $this->pdo->query("PRAGMA table_info(`students`)");
+                if ($stmt) {
+                    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                        if (($row['name'] ?? '') === 'use_school_bus') {
+                            return $this->hasStudentBusColumn = true;
+                        }
+                    }
+                }
+                return $this->hasStudentBusColumn = false;
+            }
+            return $this->hasStudentBusColumn = true;
+        } catch (\Throwable) {
+            return $this->hasStudentBusColumn = false;
+        }
+    }
+
     public function findClassEnrollmentById(int $id): ?ClassEnrollment
     {
-        $sql = 'SELECT ce.*, 
-                       s.admission_number, s.date_of_birth, s.gender, s.current_class_id,
+        $busCol = $this->hasStudentBusColumn() ? 's.use_school_bus' : '0 as use_school_bus';
+        $sql = "SELECT ce.*, 
+                       s.admission_number, s.date_of_birth, s.gender, s.current_class_id, {$busCol},
                        u.name as user_name, u.email as user_email, u.phone as user_phone, u.status as user_status,
                        c.name as class_name, c.section_arm, c.academic_level_id, c.status as class_status,
                        ses.name as session_name, ses.start_date as session_start_date, ses.end_date as session_end_date, ses.status as session_status
@@ -39,7 +66,7 @@ class EnrollmentRepository
                 JOIN `users` u ON u.id = s.user_id
                 JOIN `classes` c ON c.id = ce.class_id
                 JOIN `sessions` ses ON ses.id = ce.session_id
-                WHERE ce.id = :id LIMIT 1';
+                WHERE ce.id = :id LIMIT 1";
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([':id' => $id]);
@@ -54,8 +81,9 @@ class EnrollmentRepository
 
     public function findClassEnrollment(int $studentId, int $sessionId): ?ClassEnrollment
     {
-        $sql = 'SELECT ce.*, 
-                       s.admission_number, s.date_of_birth, s.gender, s.current_class_id,
+        $busCol = $this->hasStudentBusColumn() ? 's.use_school_bus' : '0 as use_school_bus';
+        $sql = "SELECT ce.*, 
+                       s.admission_number, s.date_of_birth, s.gender, s.current_class_id, {$busCol},
                        u.name as user_name, u.email as user_email, u.phone as user_phone, u.status as user_status,
                        c.name as class_name, c.section_arm, c.academic_level_id, c.status as class_status,
                        ses.name as session_name, ses.start_date as session_start_date, ses.end_date as session_end_date, ses.status as session_status
@@ -64,7 +92,7 @@ class EnrollmentRepository
                 JOIN `users` u ON u.id = s.user_id
                 JOIN `classes` c ON c.id = ce.class_id
                 JOIN `sessions` ses ON ses.id = ce.session_id
-                WHERE ce.student_id = :student_id AND ce.session_id = :session_id LIMIT 1';
+                WHERE ce.student_id = :student_id AND ce.session_id = :session_id LIMIT 1";
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
@@ -129,8 +157,9 @@ class EnrollmentRepository
         }
 
         $whereClause = 'WHERE ' . implode(' AND ', $where);
+        $busCol = $this->hasStudentBusColumn() ? 's.use_school_bus' : '0 as use_school_bus';
         $sql = "SELECT ce.*, 
-                       s.admission_number, s.date_of_birth, s.gender, s.current_class_id,
+                       s.admission_number, s.date_of_birth, s.gender, s.current_class_id, {$busCol},
                        u.name as user_name, u.email as user_email, u.phone as user_phone, u.status as user_status,
                        c.name as class_name, c.section_arm, c.academic_level_id, c.status as class_status,
                        ses.name as session_name, ses.start_date as session_start_date, ses.end_date as session_end_date, ses.status as session_status
@@ -452,6 +481,7 @@ class EnrollmentRepository
             'date_of_birth' => $row['date_of_birth'] ?? null,
             'gender' => $row['gender'] ?? null,
             'current_class_id' => $row['current_class_id'] ?? null,
+            'use_school_bus' => !empty($row['use_school_bus']),
             'user_name' => $row['user_name'] ?? '',
             'user_email' => $row['user_email'] ?? '',
             'user_phone' => $row['user_phone'] ?? null,

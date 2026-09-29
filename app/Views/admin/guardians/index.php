@@ -7,7 +7,9 @@ $this->layout('layouts/admin', [
 // Build parent options for select dropdown in modal
 $parentOptions = ['' => 'Select Guardian...'];
 foreach ($parents as $p) {
-    $parentOptions[$p->id] = e($p->user?->name ?? 'Parent #' . $p->id) . ' (' . e($p->user?->email ?? '') . ')';
+    $pName = $p->getName() ?: 'Parent #' . $p->id;
+    $pContact = $p->getEmail() ?: ($p->getPhone() ?: '');
+    $parentOptions[$p->id] = e($pName) . ($pContact !== '' ? ' (' . e($pContact) . ')' : '');
 }
 
 // Build student options for select dropdown in modal
@@ -31,7 +33,14 @@ $relationshipOptions = [
             <h2 class="text-2xl font-bold text-slate-900">Guardian Links</h2>
             <p class="text-sm text-slate-500 mt-1">Manage parent and guardian relationships linked to enrolled students.</p>
         </div>
-        <div>
+        <div class="flex flex-wrap items-center gap-2.5">
+            <?php $this->include('components/button', [
+                'variant' => 'secondary',
+                'label' => 'Bulk Import Guardians',
+                'href' => '/admin/imports/users',
+                'icon' => '<svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>'
+            ]); ?>
+
             <?php $this->include('components/button', [
                 'type' => 'button',
                 'variant' => 'primary',
@@ -95,11 +104,18 @@ $relationshipOptions = [
                         <?php foreach ($parents as $p): ?>
                             <tr class="hover:bg-slate-50/50 transition">
                                 <td class="px-6 py-4">
-                                    <div class="font-bold text-slate-900"><?= e($p->user?->name ?? '—') ?></div>
-                                    <div class="text-xs text-slate-500 font-normal"><?= e($p->user?->email ?? '—') ?></div>
+                                    <div class="flex items-center gap-2">
+                                        <div class="font-bold text-slate-900"><?= e($p->getName() ?: 'Parent #' . $p->id) ?></div>
+                                        <?php if ($p->isPortalActivated()): ?>
+                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Portal User</span>
+                                        <?php else: ?>
+                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">Contact Only</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="text-xs text-slate-500 font-normal"><?= e($p->getEmail() ?: 'No email on file') ?></div>
                                 </td>
-                                <td class="px-6 py-4 text-xs text-slate-500 font-normal">
-                                    <?= e($p->user?->phone ?? '—') ?>
+                                <td class="px-6 py-4 text-xs text-slate-600 font-normal">
+                                    <?= e($p->getPhone() ?: '—') ?>
                                 </td>
                                 <td class="px-6 py-4">
                                     <?php if (empty($p->students)): ?>

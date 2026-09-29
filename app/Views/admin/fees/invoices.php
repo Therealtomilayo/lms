@@ -142,6 +142,11 @@ $this->layout('layouts/admin', [
                 <option value="unpaid" <?= ($filters['status'] ?? '') === 'unpaid' ? 'selected' : '' ?>>Unpaid</option>
                 <option value="overdue" <?= ($filters['status'] ?? '') === 'overdue' ? 'selected' : '' ?>>Overdue</option>
             </select>
+            <select name="bus" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-medium focus:ring-2 focus:ring-brand-500/20 focus:outline-none">
+                <option value="">-- All Transport --</option>
+                <option value="1" <?= ($filters['bus'] ?? '') === '1' ? 'selected' : '' ?>>School Bus Users</option>
+                <option value="0" <?= ($filters['bus'] ?? '') === '0' ? 'selected' : '' ?>>Non-Bus Students</option>
+            </select>
             <div class="relative flex-1 min-w-[200px]">
                 <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
                 <input type="text" name="q" value="<?= htmlspecialchars($filters['query'] ?? '', ENT_QUOTES, 'UTF-8') ?>" placeholder="Search student name, admission #, or invoice #..." class="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder:text-slate-400 text-xs focus:ring-2 focus:ring-brand-500/20 focus:outline-none">
@@ -193,7 +198,14 @@ $this->layout('layouts/admin', [
                                     </a>
                                 </td>
                                 <td class="py-3.5 px-5">
-                                    <div class="font-bold text-slate-900"><?= htmlspecialchars($inv->studentName ?? 'Student', ENT_QUOTES, 'UTF-8') ?></div>
+                                    <div class="flex items-center gap-1.5 font-bold text-slate-900">
+                                        <span><?= htmlspecialchars($inv->studentName ?? 'Student', ENT_QUOTES, 'UTF-8') ?></span>
+                                        <?php if (!empty($inv->studentUseSchoolBus)): ?>
+                                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200" title="School Bus User">
+                                                <i data-lucide="bus" class="w-3 h-3 text-amber-600"></i> Bus
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
                                     <div class="font-mono text-[11px] text-slate-400"><?= htmlspecialchars($inv->admissionNumber ?? '—', ENT_QUOTES, 'UTF-8') ?></div>
                                 </td>
                                 <td class="py-3.5 px-5">

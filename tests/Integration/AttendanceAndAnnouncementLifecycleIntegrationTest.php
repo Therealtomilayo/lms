@@ -38,7 +38,7 @@ class AttendanceAndAnnouncementLifecycleIntegrationTest extends TestCase
         $this->db->exec("
             CREATE TABLE sessions (id INTEGER PRIMARY KEY, name TEXT, start_date TEXT, end_date TEXT, status TEXT DEFAULT 'active', is_current INTEGER DEFAULT 0);
             CREATE TABLE terms (id INTEGER PRIMARY KEY, session_id INTEGER, name TEXT, start_date TEXT, end_date TEXT, status TEXT DEFAULT 'active', is_current INTEGER DEFAULT 0);
-            CREATE TABLE classes (id INTEGER PRIMARY KEY, name TEXT, academic_level_id INTEGER);
+            CREATE TABLE classes (id INTEGER PRIMARY KEY, name TEXT, academic_level_id INTEGER, form_teacher_id INTEGER);
             CREATE TABLE subjects (id INTEGER PRIMARY KEY, name TEXT, code TEXT);
             CREATE TABLE class_subjects (id INTEGER PRIMARY KEY, class_id INTEGER, subject_id INTEGER, teacher_id INTEGER);
             
@@ -119,7 +119,7 @@ class AttendanceAndAnnouncementLifecycleIntegrationTest extends TestCase
         // Seed Core Data
         $this->db->exec("INSERT INTO sessions (id, name, is_current) VALUES (1, '2026/2027', 1)");
         $this->db->exec("INSERT INTO terms (id, session_id, name, is_current) VALUES (1, 1, 'First Term', 1)");
-        $this->db->exec("INSERT INTO classes (id, name, academic_level_id) VALUES (10, 'Grade 10-A', 1), (20, 'Grade 11-B', 2)");
+        $this->db->exec("INSERT INTO classes (id, name, academic_level_id, form_teacher_id) VALUES (10, 'Grade 10-A', 1, 100), (20, 'Grade 11-B', 2, 200)");
         $this->db->exec("INSERT INTO subjects (id, name, code) VALUES (1, 'Mathematics', 'MTH101'), (2, 'Physics', 'PHY101')");
 
         // Users & Roles

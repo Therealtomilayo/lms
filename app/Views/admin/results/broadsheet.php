@@ -17,6 +17,20 @@ $classOptions = [];
 foreach ($classes as $c) {
     $classOptions[$c->id] = $c->name . ($c->sectionArm ? ' (' . $c->sectionArm . ')' : '');
 }
+
+if (!isset($settings)) {
+    try {
+        $stmt = \App\Core\Database::getInstance()->query("SELECT setting_key, setting_value FROM system_settings");
+        $raw = $stmt ? $stmt->fetchAll(PDO::FETCH_KEY_PAIR) : [];
+    } catch (\Throwable) {
+        $raw = [];
+    }
+    $settings = [
+        'school_name' => $raw['school_name'] ?? 'Claret International School',
+        'school_motto' => $raw['school_motto'] ?? 'Discipline, Integrity & Ardour',
+        'school_logo_url' => $raw['school_logo_url'] ?? '/assets/img/logo.png',
+    ];
+}
 ?>
 
 <div class="space-y-6 pb-12">
@@ -86,10 +100,10 @@ foreach ($classes as $c) {
         <div class="print-only hidden pb-4 mb-4 border-b-2 border-slate-800">
             <div class="flex items-center justify-between gap-4">
                 <div class="flex items-center gap-3">
-                    <img src="/assets/img/logo.png" alt="School Crest" class="w-16 h-16 object-contain" onerror="this.style.display='none'">
+                    <img src="<?= htmlspecialchars($settings['school_logo_url']) ?>" alt="School Crest" class="w-16 h-16 object-contain" onerror="this.style.display='none'">
                     <div>
-                        <h1 class="text-2xl font-black tracking-tight text-slate-900 uppercase">Claret International School</h1>
-                        <p class="text-xs font-semibold text-slate-600 tracking-wider uppercase">Excellence &bull; Integrity &bull; Discipline</p>
+                        <h1 class="text-2xl font-black tracking-tight text-slate-900 uppercase"><?= htmlspecialchars($settings['school_name']) ?></h1>
+                        <p class="text-xs font-semibold text-slate-600 tracking-wider uppercase"><?= htmlspecialchars($settings['school_motto']) ?></p>
                         <p class="text-xs text-slate-500">Official Terminal Academic Broadsheet</p>
                     </div>
                 </div>
@@ -255,12 +269,16 @@ foreach ($classes as $c) {
                                         <?= $st->gender ? substr($st->gender, 0, 1) : '—' ?>
                                     </td>
 
-                                    <?php foreach ($classSubjects as $cs): ?>
-                                        <?php
-                                        $subRes = $resultsMatrix[$st->id][$cs->subjectId] ?? null;
+                                    <?php 
+                                    $studentScores = [];
+                                    foreach ($classSubjects as $cs): 
+                                        $subRes = $resultsMatrix[$st->id][$cs->subjectId] ?? $resultsMatrix[$st->id][$cs->id] ?? null;
                                         $score = $subRes ? (float)($subRes['computed_score'] ?? $subRes['total_score'] ?? 0) : null;
-                                        $grade = $subRes['grade_letter'] ?? null;
-                                        ?>
+                                        $grade = $subRes['grade_letter'] ?? $subRes['grade'] ?? null;
+                                        if ($score !== null) {
+                                            $studentScores[] = $score;
+                                        }
+                                    ?>
                                         <td class="px-2 py-3 text-center border-r border-slate-200 whitespace-nowrap font-mono text-xs">
                                             <?php if ($score !== null): ?>
                                                 <div class="flex items-center justify-center gap-1">
@@ -279,12 +297,16 @@ foreach ($classes as $c) {
                                         </td>
                                     <?php endforeach; ?>
 
+                                    <?php
+                                    $rowTotal = !empty($studentScores) ? array_sum($studentScores) : ($sm?->totalScore !== null ? (float)$sm->totalScore : null);
+                                    $rowAvg = !empty($studentScores) ? ($rowTotal / count($studentScores)) : ($sm?->averageScore !== null ? (float)$sm->averageScore : null);
+                                    ?>
                                     <td class="px-3 py-3 text-center font-mono font-extrabold text-slate-900 bg-slate-50/50 border-r border-slate-200">
-                                        <?= $sm ? number_format((float)$sm->totalScore, 1) : '—' ?>
+                                        <?= $rowTotal !== null ? number_format($rowTotal, 1) : '—' ?>
                                     </td>
 
                                     <td class="px-3 py-3 text-center font-mono font-black text-brand-700 bg-slate-50/50 border-r border-slate-200 text-xs">
-                                        <?= $sm && $sm->averageScore !== null ? number_format((float)$sm->averageScore, 1) . '%' : '—' ?>
+                                        <?= $rowAvg !== null ? number_format($rowAvg, 1) . '%' : '—' ?>
                                     </td>
 
                                     <td class="px-3 py-3 text-center font-bold text-slate-800 bg-slate-50/50 border-r border-slate-200">

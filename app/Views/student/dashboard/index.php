@@ -3,8 +3,14 @@
     <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div class="flex items-center gap-4">
-                <div class="w-14 h-14 rounded-2xl bg-sky-500 text-white font-extrabold text-xl flex items-center justify-center shadow-xs flex-shrink-0">
-                    <?= strtoupper(substr($user->name ?? 'S', 0, 1)) ?>
+                <div class="relative flex-shrink-0">
+                    <?php if (!empty($user->avatarUrl)): ?>
+                        <img src="<?= e($user->avatarUrl) ?>" alt="<?= e($user->name ?? 'Student') ?>" class="w-14 h-14 rounded-full object-cover border-2 border-white shadow-xs">
+                    <?php else: ?>
+                        <div class="w-14 h-14 rounded-full bg-[#7B3046] text-white font-extrabold text-xl flex items-center justify-center shadow-xs">
+                            <?= strtoupper(substr($user->name ?? 'S', 0, 1)) ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
                 <div>
                     <!-- Breadcrumbs -->

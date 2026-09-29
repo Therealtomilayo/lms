@@ -15,11 +15,27 @@ $classOptions = [];
 foreach ($formClasses as $c) {
     $classOptions[$c->id] = method_exists($c, 'getFullName') ? $c->getFullName() : ($c->name . (!empty($c->sectionArm) ? ' (' . $c->sectionArm . ')' : ''));
 }
+if (!isset($settings)) {
+    try {
+        $stmt = \App\Core\Database::getInstance()->query("SELECT setting_key, setting_value FROM system_settings");
+        $raw = $stmt ? $stmt->fetchAll(PDO::FETCH_KEY_PAIR) : [];
+    } catch (\Throwable) {
+        $raw = [];
+    }
+    $settings = [
+        'school_name' => $raw['school_name'] ?? 'Claret International School',
+        'school_motto' => $raw['school_motto'] ?? 'Discipline, Integrity & Ardour',
+        'school_logo_url' => $raw['school_logo_url'] ?? '/assets/img/logo.png',
+        'school_address' => $raw['school_address'] ?? '',
+        'school_phone' => $raw['school_phone'] ?? '',
+        'school_email' => $raw['school_email'] ?? '',
+    ];
+}
 ?>
 
 <div class="space-y-6 pb-12">
-    <!-- Tab Navigation between Overview and Batch Remarks -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-2 sm:p-3">
+    <!-- Tab Navigation between Overview and Batch Remarks (Screen Only) -->
+    <div class="screen-only bg-white rounded-2xl border border-slate-200 shadow-xs p-2 sm:p-3">
         <nav class="flex flex-wrap items-center gap-1.5" aria-label="Results Navigation Tabs">
             <a href="/teacher/results/overview<?= ($selectedTermId > 0 && $selectedClassId > 0) ? "?term_id={$selectedTermId}&class_id={$selectedClassId}" : '' ?>"
                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-brand-700 bg-brand-50 border border-brand-200/60 shadow-xs transition" aria-current="page">
@@ -27,10 +43,16 @@ foreach ($formClasses as $c) {
                 <span>Form Class Broadsheet Overview</span>
             </a>
 
-            <a href="/teacher/results/comments<?= ($selectedTermId > 0 && $selectedClassId > 0) ? "?term_id={$selectedTermId}&class_id={$selectedClassId}" : '' ?>"
+            <a href="/teacher/results/skills<?= ($selectedTermId > 0 && $selectedClassId > 0) ? "?session_id={$selectedSessionId}&term_id={$selectedTermId}&class_id={$selectedClassId}" : '' ?>"
+               class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+                <span>Affective &amp; Psychomotor Matrix</span>
+            </a>
+
+            <a href="/teacher/results/comments<?= ($selectedTermId > 0 && $selectedClassId > 0) ? "?session_id={$selectedSessionId}&term_id={$selectedTermId}&class_id={$selectedClassId}" : '' ?>"
                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
                 <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
-                <span>Batch Remarks &amp; Behavioral Ratings</span>
+                <span>Batch Remarks &amp; Comments</span>
             </a>
         </nav>
     </div>
@@ -55,8 +77,8 @@ foreach ($formClasses as $c) {
         </div>
     <?php else: ?>
 
-        <!-- Context Filter Bar -->
-        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+        <!-- Context Filter Bar (Screen Only) -->
+        <div class="screen-only bg-white rounded-xl border border-slate-200 shadow-sm p-5">
             <form method="GET" action="/teacher/results/overview" class="flex flex-col md:flex-row md:items-end gap-4">
                 <div class="w-full md:w-64">
                     <?php $this->include('components/select', [
@@ -102,8 +124,28 @@ foreach ($formClasses as $c) {
 
         <?php if ($selectedClass && $selectedTerm): ?>
 
-            <!-- Submission Status & Actions Banner -->
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
+            <!-- Official Print Header (Print Only) -->
+            <div class="print-only hidden pb-4 mb-4 border-b-2 border-slate-800">
+                <div class="flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <img src="<?= htmlspecialchars($settings['school_logo_url']) ?>" alt="School Crest" class="w-16 h-16 object-contain" onerror="this.style.display='none'">
+                        <div>
+                            <h1 class="text-2xl font-black tracking-tight text-slate-900 uppercase"><?= htmlspecialchars($settings['school_name']) ?></h1>
+                            <p class="text-xs font-semibold text-slate-600 tracking-wider uppercase"><?= htmlspecialchars($settings['school_motto']) ?></p>
+                            <p class="text-xs text-slate-500">Official Terminal Academic Broadsheet</p>
+                        </div>
+                    </div>
+                    <div class="text-right text-xs text-slate-700 space-y-0.5">
+                        <p><span class="font-bold">Cohort:</span> <?= e($selectedClass->getFullName()) ?></p>
+                        <p><span class="font-bold">Term:</span> <?= e($selectedTerm->name) ?></p>
+                        <p><span class="font-bold">Form Teacher:</span> <?= e($selectedClass->formTeacherName ?? ($teacher->name ?? 'Unassigned')) ?></p>
+                        <p><span class="font-bold">Generated:</span> <?= date('d M Y, H:i') ?></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submission Status & Actions Banner (Screen Only) -->
+            <div class="screen-only bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
                 <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
                     <div class="space-y-2">
                         <div class="flex flex-wrap items-center gap-3">
@@ -180,7 +222,7 @@ foreach ($formClasses as $c) {
 
                         <?php if (!$submission || !$submission->isApproved()): ?>
                             <button type="button" onclick="openSubmitResultsModal()"
-                                    class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition cursor-pointer">
+                                     class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition cursor-pointer">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                 <span><?= $submission ? 'Resubmit Results for Approval' : 'Submit Class Results to Admin' ?></span>
                             </button>
@@ -225,6 +267,7 @@ foreach ($formClasses as $c) {
                                     <?php endforeach; ?>
                                     <th class="py-3 px-3 text-center bg-slate-100 font-bold text-slate-900">Total</th>
                                     <th class="py-3 px-3 text-center bg-slate-100 font-bold text-slate-900">Average</th>
+                                    <th class="screen-only py-3 px-3 text-center bg-slate-100 font-bold text-slate-900 w-28">Report Card</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 font-medium text-slate-700">
@@ -232,6 +275,7 @@ foreach ($formClasses as $c) {
                                     $summary = $summaryMap[$stu->id] ?? null;
                                     $rank = $summary->classRank ?? ($index + 1);
                                     $isTop3 = $rank <= 3;
+                                    $studentScores = [];
                                 ?>
                                     <tr class="hover:bg-slate-50/70 transition <?= $isTop3 ? 'bg-amber-50/30' : '' ?>">
                                         <td class="py-3 px-3 text-center font-bold">
@@ -250,26 +294,48 @@ foreach ($formClasses as $c) {
                                             <div class="text-[11px] font-mono text-slate-400"><?= e($stu->admissionNumber) ?></div>
                                         </td>
                                         <?php foreach ($classSubjects as $cs): 
-                                            $res = $resultsMatrix[$stu->id][$cs->id] ?? null;
-                                            $score = $res['total_score'] ?? null;
-                                            $grade = $res['grade'] ?? null;
+                                            $res = $resultsMatrix[$stu->id][$cs->subjectId] ?? $resultsMatrix[$stu->id][$cs->id] ?? null;
+                                            $score = $res ? ($res['computed_score'] ?? $res['total_score'] ?? null) : null;
+                                            $grade = $res ? ($res['grade_letter'] ?? $res['grade'] ?? null) : null;
+                                            if ($score !== null && $score !== '') {
+                                                $studentScores[] = (float)$score;
+                                            }
                                         ?>
                                             <td class="py-3 px-3 text-center font-mono">
-                                                <?php if ($score !== null): ?>
-                                                    <span class="font-bold text-slate-800"><?= number_format((float)$score, 0) ?></span>
-                                                    <?php if ($grade): ?>
-                                                        <span class="text-[10px] ml-0.5 px-1 py-0.2 rounded bg-slate-100 text-slate-600 font-semibold"><?= e($grade) ?></span>
-                                                    <?php endif; ?>
+                                                <?php if ($score !== null && $score !== ''): ?>
+                                                    <div class="flex items-center justify-center gap-1">
+                                                        <span class="font-bold <?= (float)$score < 40 ? 'text-rose-600' : 'text-slate-800' ?>">
+                                                            <?= number_format((float)$score, 0) ?>
+                                                        </span>
+                                                        <?php if ($grade): ?>
+                                                            <span class="text-[9px] font-sans font-bold px-1 rounded <?= in_array($grade, ['A', 'A+'], true) ? 'bg-emerald-100 text-emerald-800' : (in_array($grade, ['B', 'C'], true) ? 'bg-sky-100 text-sky-800' : ($grade === 'D' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800')) ?>"><?= e($grade) ?></span>
+                                                        <?php endif; ?>
+                                                    </div>
                                                 <?php else: ?>
                                                     <span class="text-slate-300">&mdash;</span>
                                                 <?php endif; ?>
                                             </td>
                                         <?php endforeach; ?>
+                                        <?php
+                                        $rowTotal = !empty($studentScores) ? array_sum($studentScores) : ($summary?->totalScore !== null ? (float)$summary->totalScore : null);
+                                        $rowAvg = !empty($studentScores) ? ($rowTotal / count($studentScores)) : ($summary?->averageScore !== null ? (float)$summary->averageScore : null);
+                                        ?>
                                         <td class="py-3 px-3 text-center bg-slate-50 font-mono font-bold text-slate-900">
-                                            <?= $summary && $summary->totalScore !== null ? number_format((float)$summary->totalScore, 1) : '&mdash;' ?>
+                                            <?= $rowTotal !== null ? number_format((float)$rowTotal, 1) : '&mdash;' ?>
                                         </td>
                                         <td class="py-3 px-3 text-center bg-slate-50 font-mono font-bold text-blue-700">
-                                            <?= $summary && $summary->averageScore !== null ? number_format((float)$summary->averageScore, 1) . '%' : '&mdash;' ?>
+                                            <?= $rowAvg !== null ? number_format((float)$rowAvg, 1) . '%' : '&mdash;' ?>
+                                        </td>
+                                        <td class="screen-only py-3 px-3 text-center bg-slate-50/50 whitespace-nowrap">
+                                            <a href="/teacher/reports/student/<?= (int)$stu->id ?>/<?= (int)$selectedTermId ?>.pdf"
+                                                target="_blank"
+                                                title="View <?= e($stu->name) ?> Official Report Card Dossier"
+                                                class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200/80 transition shadow-2xs">
+                                                <svg class="w-3.5 h-3.5 text-brand-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                                </svg>
+                                                <span>PDF Report</span>
+                                            </a>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -291,11 +357,32 @@ foreach ($formClasses as $c) {
                                     <td class="py-3 px-3 bg-slate-200 font-mono text-blue-900">
                                         <?= $classMean !== null ? number_format($classMean, 1) . '%' : '&mdash;' ?>
                                     </td>
+                                    <td class="screen-only py-3 px-3 bg-slate-200 text-slate-400">&mdash;</td>
                                 </tr>
                             </tfoot>
                         </table>
                     </div>
                 <?php endif; ?>
+            </div>
+
+            <!-- Official Sign-off & Endorsements (Print Only) -->
+            <div class="print-only hidden pt-8 mt-6 border-t border-slate-300">
+                <div class="grid grid-cols-2 gap-12 text-xs text-slate-800">
+                    <div class="space-y-12">
+                        <p class="font-bold text-slate-700">Form Teacher (Class Master):</p>
+                        <div class="border-t border-slate-500 pt-1.5 flex justify-between">
+                            <span><?= e($selectedClass->formTeacherName ?? ($teacher->name ?? 'Name: ______________________')) ?></span>
+                            <span class="italic text-slate-400">Signature / Date</span>
+                        </div>
+                    </div>
+                    <div class="space-y-12">
+                        <p class="font-bold text-slate-700">Principal / Vice-Principal (Academics):</p>
+                        <div class="border-t border-slate-500 pt-1.5 flex justify-between">
+                            <span>Name: _______________________________</span>
+                            <span class="italic text-slate-400">Signature / Stamp / Date</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Submit Modal Component -->
@@ -356,3 +443,35 @@ foreach ($formClasses as $c) {
         <?php endif; ?>
     <?php endif; ?>
 </div>
+
+<style>
+@media print {
+    @page {
+        size: A4 landscape;
+        margin: 10mm;
+    }
+    body {
+        background: white !important;
+        color: black !important;
+        font-size: 9pt !important;
+    }
+    .screen-only, aside, header, nav, #submit-results-modal {
+        display: none !important;
+    }
+    .print-only {
+        display: block !important;
+    }
+    table {
+        width: 100% !important;
+        font-size: 8pt !important;
+        border-collapse: collapse !important;
+    }
+    th, td {
+        padding: 3px 4px !important;
+        border: 1px solid #cbd5e1 !important;
+    }
+    .sticky {
+        position: static !important;
+    }
+}
+</style>

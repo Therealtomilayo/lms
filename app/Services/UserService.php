@@ -124,6 +124,7 @@ class UserService
             'name' => $name,
             'email' => $email,
             'phone' => $phone,
+            'avatar_url' => $data['avatar_url'] ?? null,
             'password_hash' => $passwordHash,
             'status' => $status,
             'must_change_password' => !empty($data['must_change_password']) ? 1 : 0,
@@ -144,7 +145,8 @@ class UserService
                 lga: $data['lga'] ?? null,
                 nationality: $data['nationality'] ?? 'Nigerian',
                 religion: $data['religion'] ?? null,
-                admissionDate: $data['admission_date'] ?? null
+                admissionDate: $data['admission_date'] ?? null,
+                useSchoolBus: !empty($data['use_school_bus'])
             );
 
             if ($classId !== null && $classId > 0) {
@@ -218,6 +220,10 @@ class UserService
             $updateData['phone'] = !empty($data['phone']) ? trim($data['phone']) : null;
         }
 
+        if (array_key_exists('avatar_url', $data)) {
+            $updateData['avatar_url'] = $data['avatar_url'] ?: null;
+        }
+
         if (isset($data['status'])) {
             if ($data['status'] !== $user->status && !UserPolicy::canChangeUserStatus($actor, $user)) {
                 throw new DomainRuleException('You cannot change the status of this user account.');
@@ -279,7 +285,8 @@ class UserService
                     lga: $data['lga'] ?? null,
                     nationality: $data['nationality'] ?? 'Nigerian',
                     religion: $data['religion'] ?? null,
-                    admissionDate: $data['admission_date'] ?? null
+                    admissionDate: $data['admission_date'] ?? null,
+                    useSchoolBus: !empty($data['use_school_bus'])
                 );
 
                 if ($classId !== null && $classId > 0) {
@@ -303,7 +310,8 @@ class UserService
                     lga: array_key_exists('lga', $data) ? $data['lga'] : $existingStudent->lga,
                     nationality: array_key_exists('nationality', $data) ? $data['nationality'] : $existingStudent->nationality,
                     religion: array_key_exists('religion', $data) ? $data['religion'] : $existingStudent->religion,
-                    admissionDate: array_key_exists('admission_date', $data) ? $data['admission_date'] : $existingStudent->admissionDate
+                    admissionDate: array_key_exists('admission_date', $data) ? $data['admission_date'] : $existingStudent->admissionDate,
+                    useSchoolBus: array_key_exists('use_school_bus', $data) ? !empty($data['use_school_bus']) : (bool)$existingStudent->useSchoolBus
                 );
 
                 if ($classId !== null && $classId > 0 && $classId !== (int)$existingStudent->currentClassId) {

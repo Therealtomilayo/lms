@@ -113,11 +113,18 @@ class UserRepository
     public function create(array $data, array $roles = []): User
     {
         $now = date('Y-m-d H:i:s');
-        $sql = 'INSERT INTO `users` (`uuid`, `name`, `email`, `phone`, `password_hash`, `status`, `must_change_password`, `created_at`, `updated_at`)
-                VALUES (:uuid, :name, :email, :phone, :password_hash, :status, :must_change_password, :created_at, :updated_at)';
+        $hasAvatar = !empty($data['avatar_url']);
+
+        if ($hasAvatar) {
+            $sql = 'INSERT INTO `users` (`uuid`, `name`, `email`, `phone`, `avatar_url`, `password_hash`, `status`, `must_change_password`, `created_at`, `updated_at`)
+                    VALUES (:uuid, :name, :email, :phone, :avatar_url, :password_hash, :status, :must_change_password, :created_at, :updated_at)';
+        } else {
+            $sql = 'INSERT INTO `users` (`uuid`, `name`, `email`, `phone`, `password_hash`, `status`, `must_change_password`, `created_at`, `updated_at`)
+                    VALUES (:uuid, :name, :email, :phone, :password_hash, :status, :must_change_password, :created_at, :updated_at)';
+        }
 
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([
+        $params = [
             ':uuid' => $data['uuid'],
             ':name' => $data['name'],
             ':email' => strtolower(trim($data['email'])),
@@ -127,7 +134,11 @@ class UserRepository
             ':must_change_password' => !empty($data['must_change_password']) ? 1 : 0,
             ':created_at' => $now,
             ':updated_at' => $now,
-        ]);
+        ];
+        if ($hasAvatar) {
+            $params[':avatar_url'] = $data['avatar_url'];
+        }
+        $stmt->execute($params);
 
         $userId = (int)$this->pdo->lastInsertId();
 
@@ -190,12 +201,14 @@ class UserRepository
         return $row ?: null;
     }
 
-    public function updateSessionLastSeen(string $sessionHash): void
+    public function updateSessionLastSeen(string $sessionHash, int $slidingLifetime = 7200): void
     {
         $now = date('Y-m-d H:i:s');
-        $stmt = $this->pdo->prepare('UPDATE `user_sessions` SET `last_seen_at` = :now WHERE `session_hash` = :session_hash');
+        $expiresAt = date('Y-m-d H:i:s', time() + $slidingLifetime);
+        $stmt = $this->pdo->prepare('UPDATE `user_sessions` SET `last_seen_at` = :now, `expires_at` = :expires_at WHERE `session_hash` = :session_hash');
         $stmt->execute([
             ':now' => $now,
+            ':expires_at' => $expiresAt,
             ':session_hash' => $sessionHash,
         ]);
     }
@@ -356,6 +369,10 @@ class UserRepository
         if (array_key_exists('phone', $data)) {
             $fields[] = '`phone` = :phone';
             $params[':phone'] = $data['phone'];
+        }
+        if (array_key_exists('avatar_url', $data)) {
+            $fields[] = '`avatar_url` = :avatar_url';
+            $params[':avatar_url'] = $data['avatar_url'] ?: null;
         }
         if (isset($data['status'])) {
             $fields[] = '`status` = :status';

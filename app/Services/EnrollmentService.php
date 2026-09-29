@@ -14,6 +14,7 @@ use App\Models\SchoolClass;
 use App\Repositories\AcademicRepository;
 use App\Repositories\EnrollmentRepository;
 use App\Repositories\StudentRepository;
+use App\Services\FeeInvoiceService;
 
 /**
  * Application Service for Student Class & Subject Enrollments
@@ -24,15 +25,18 @@ class EnrollmentService
     private EnrollmentRepository $enrollmentRepository;
     private StudentRepository $studentRepository;
     private AcademicRepository $academicRepository;
+    private ?FeeInvoiceService $feeInvoiceService;
 
     public function __construct(
         ?EnrollmentRepository $enrollmentRepository = null,
         ?StudentRepository $studentRepository = null,
-        ?AcademicRepository $academicRepository = null
+        ?AcademicRepository $academicRepository = null,
+        ?FeeInvoiceService $feeInvoiceService = null
     ) {
         $this->enrollmentRepository = $enrollmentRepository ?? new EnrollmentRepository();
         $this->studentRepository = $studentRepository ?? new StudentRepository();
         $this->academicRepository = $academicRepository ?? new AcademicRepository();
+        $this->feeInvoiceService = $feeInvoiceService;
     }
 
     /**
@@ -82,6 +86,14 @@ class EnrollmentService
         // Auto-enroll in active subjects for that class in this session
         if ($autoEnrollSubjects) {
             $this->autoEnrollClassSubjects($studentId, $classId, $sessionId);
+        }
+
+        // Auto-generate invoice if billing has commenced for this session
+        try {
+            $invoiceService = $this->feeInvoiceService ?? new FeeInvoiceService();
+            $invoiceService->ensureInvoiceForStudent($studentId, $sessionId);
+        } catch (\Throwable $e) {
+            error_log('[EnrollmentService] Auto-invoice note: ' . $e->getMessage());
         }
 
         return ServiceResult::success($enrollment);

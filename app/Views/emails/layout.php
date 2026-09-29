@@ -1,9 +1,32 @@
+<?php
+if (!isset($settings)) {
+    try {
+        $stmt = \App\Core\Database::getInstance()->query("SELECT setting_key, setting_value FROM system_settings");
+        $raw = $stmt ? $stmt->fetchAll(PDO::FETCH_KEY_PAIR) : [];
+    } catch (\Throwable) {
+        $raw = [];
+    }
+    $settings = [
+        'school_name' => $raw['school_name'] ?? 'School Portal',
+        'school_motto' => $raw['school_motto'] ?? '',
+        'school_address' => $raw['school_address'] ?? '',
+        'school_phone' => $raw['school_phone'] ?? '',
+        'school_email' => $raw['school_email'] ?? ($raw['contact_email'] ?? ''),
+        'school_website' => $raw['school_website'] ?? '',
+    ];
+}
+$schoolName = htmlspecialchars($settings['school_name'] ?: 'School Portal');
+$schoolMotto = htmlspecialchars($settings['school_motto'] ?? '');
+$schoolAddress = htmlspecialchars($settings['school_address'] ?? '');
+$schoolPhone = htmlspecialchars($settings['school_phone'] ?? '');
+$schoolEmail = htmlspecialchars($settings['school_email'] ?? '');
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($subject ?? 'Notification from Claret International School') ?></title>
+    <title><?= htmlspecialchars($subject ?? ("Notification from " . $schoolName)) ?></title>
     <style>
         body { margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; line-height: 1.6; }
         .wrapper { width: 100%; table-layout: fixed; background-color: #f8fafc; padding: 30px 15px; }
@@ -33,8 +56,10 @@
                         <!-- Brand Header -->
                         <div class="header">
                             <div class="crest-badge">🎓</div>
-                            <h1>Claret International School</h1>
-                            <p>Excellence • Discipline • Leadership</p>
+                            <h1><?= $schoolName ?></h1>
+                            <?php if ($schoolMotto): ?>
+                                <p><?= $schoolMotto ?></p>
+                            <?php endif; ?>
                         </div>
 
                         <!-- Email Body Slot -->
@@ -44,11 +69,18 @@
 
                         <!-- Footer -->
                         <div class="footer">
-                            <p><strong>Claret International School LMS Portal</strong></p>
-                            <p>Plot 12/14 Claret Avenue, Off Institutional Road, Port Harcourt / Owerri</p>
-                            <p>Phone: +234 (0) 803 000 1234 &bull; Email: <a href="mailto:info@claret.edu.ng" style="color:#7B3046;text-decoration:none;">info@claret.edu.ng</a></p>
+                            <p><strong><?= $schoolName ?> LMS Portal</strong></p>
+                            <?php if ($schoolAddress): ?>
+                                <p><?= $schoolAddress ?></p>
+                            <?php endif; ?>
+                            <?php if ($schoolPhone || $schoolEmail): ?>
+                                <p>
+                                    <?php if ($schoolPhone): ?>Phone: <?= $schoolPhone ?><?php if ($schoolEmail): ?> &bull; <?php endif; ?><?php endif; ?>
+                                    <?php if ($schoolEmail): ?>Email: <a href="mailto:<?= $schoolEmail ?>" style="color:#7B3046;text-decoration:none;"><?= $schoolEmail ?></a><?php endif; ?>
+                                </p>
+                            <?php endif; ?>
                             <p style="margin-top:10px;font-size:11px;color:#94a3b8;">
-                                This is an automated official transmission from the Claret School Information System. If you received this in error, please contact the administrative registrar.
+                                This is an automated official transmission from the <?= $schoolName ?> Information System. If you received this in error, please contact the administrative registrar.
                             </p>
                         </div>
                     </div>

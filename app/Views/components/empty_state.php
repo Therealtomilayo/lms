@@ -10,6 +10,8 @@
  * @var string|null $class Custom CSS classes (optional)
  */
 
+$title = $title ?? '';
+$message = $message ?? ($description ?? '');
 $icon = $icon ?? '<svg class="mx-auto h-12 w-12 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 012.008 1.24l.885 1.77a2.25 2.25 0 002.007 1.24h1.98a2.25 2.25 0 002.007-1.24l.885-1.77a2.25 2.25 0 012.007-1.24h3.86m-18 0h18M2.25 13.5l1.625-7.311A2.248 2.248 0 016.077 4.5h11.846a2.248 2.248 0 012.202 1.689l1.625 7.312M12 9v6m-3-3h6" /></svg>';
 ?>
 

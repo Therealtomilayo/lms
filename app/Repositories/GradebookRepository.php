@@ -19,7 +19,7 @@ use PDO;
 /**
  * Repository for Gradebook, Assessment Scores, Term Results and Summaries
  */
-final class GradebookRepository
+class GradebookRepository
 {
     private readonly PDO $pdo;
 
@@ -819,7 +819,17 @@ final class GradebookRepository
 
         $matrix = [];
         foreach ($rows as $row) {
-            $matrix[(int)$row['student_id']][(int)$row['subject_id']] = $row;
+            $studentId = (int)$row['student_id'];
+            $subjectId = (int)$row['subject_id'];
+            $classSubjectId = (int)$row['class_subject_id'];
+
+            // Provide compatibility aliases
+            $row['total_score'] = $row['computed_score'];
+            $row['grade'] = $row['grade_letter'];
+
+            // Index by both subject ID and class subject ID for full lookup resilience
+            $matrix[$studentId][$subjectId] = $row;
+            $matrix[$studentId][$classSubjectId] = $row;
         }
 
         return $matrix;

@@ -127,7 +127,8 @@ class StudentRepository
         ?string $lga = null,
         string $nationality = 'Nigerian',
         ?string $religion = null,
-        ?string $admissionDate = null
+        ?string $admissionDate = null,
+        bool $useSchoolBus = false
     ): Student {
         $now = date('Y-m-d H:i:s');
         $available = $this->getStudentColumns();
@@ -150,6 +151,7 @@ class StudentRepository
             'nationality' => $nationality ?: 'Nigerian',
             'religion' => $religion ?: null,
             'admission_date' => $admissionDate ?: null,
+            'use_school_bus' => $useSchoolBus ? 1 : 0,
         ];
 
         foreach ($optionals as $colName => $colVal) {
@@ -179,7 +181,8 @@ class StudentRepository
         ?string $lga = null,
         ?string $nationality = null,
         ?string $religion = null,
-        ?string $admissionDate = null
+        ?string $admissionDate = null,
+        ?bool $useSchoolBus = null
     ): bool {
         $now = date('Y-m-d H:i:s');
         $available = $this->getStudentColumns();
@@ -220,6 +223,10 @@ class StudentRepository
         if ($admissionDate !== null && (empty($available) || in_array('admission_date', $available, true))) {
             $fields[] = '`admission_date` = :admission_date';
             $params[':admission_date'] = $admissionDate ?: null;
+        }
+        if ($useSchoolBus !== null && (empty($available) || in_array('use_school_bus', $available, true))) {
+            $fields[] = '`use_school_bus` = :use_school_bus';
+            $params[':use_school_bus'] = $useSchoolBus ? 1 : 0;
         }
         if ($currentClassId !== null) {
             $fields[] = '`current_class_id` = :current_class_id';

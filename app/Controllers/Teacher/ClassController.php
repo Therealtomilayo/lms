@@ -57,14 +57,41 @@ class ClassController extends Controller
         $activeTerm = $this->academicRepo->findCurrentTerm();
         $sessionId = $activeSession?->id ?? 0;
 
+        // 1. Classes where teacher is the designated Class Teacher (Form Teacher)
+        $formClasses = $teacherId !== null
+            ? $this->academicRepo->getClassesByFormTeacherId($teacherId)
+            : [];
+        if ($userContext->isAdmin() && empty($formClasses)) {
+            $formClasses = $this->academicRepo->getAllClasses();
+        }
+
+        $formClassIds = array_map(fn($c) => (int)$c->id, $formClasses);
+        $assignedClassesData = [];
+        $uniqueStudentIds = [];
+        $distinctClassIds = [];
+
+        foreach ($formClasses as $fc) {
+            $students = $this->enrollmentRepo->getStudentsByClassAndSession($fc->id, $sessionId);
+            $enrolledCount = count($students);
+
+            foreach ($students as $st) {
+                $uniqueStudentIds[$st->id] = true;
+            }
+            $distinctClassIds[$fc->id] = true;
+
+            $assignedClassesData[] = [
+                'class' => $fc,
+                'enrolledCount' => $enrolledCount,
+            ];
+        }
+
+        // 2. Subject Allocations where teacher is the Subject Teacher
         $classSubjects = $teacherId !== null
             ? $this->academicRepo->findClassSubjectsByTeacherId($teacherId)
             : $this->academicRepo->findAllClassSubjects();
 
-        // Calculate cohort roster sizes & distinct student count
+        $subjectAllocationsData = [];
         $cohortData = [];
-        $uniqueStudentIds = [];
-        $distinctClassIds = [];
 
         foreach ($classSubjects as $cs) {
             $students = $this->enrollmentRepo->getStudentsBySubjectAndSession(
@@ -79,12 +106,17 @@ class ClassController extends Controller
             }
             $distinctClassIds[$cs->classId] = true;
 
-            $cohortData[] = [
+            $isClassTeacherForThisClass = in_array((int)$cs->classId, $formClassIds, true) || $userContext->isAdmin();
+
+            $row = [
                 'classSubject' => $cs,
                 'enrolledCount' => $enrolledCount,
                 'class' => $cs->schoolClass,
                 'subject' => $cs->subject,
+                'isClassTeacher' => $isClassTeacherForThisClass,
             ];
+            $subjectAllocationsData[] = $row;
+            $cohortData[] = $row;
         }
 
         return Response::html($this->render('teacher/classes/index', [
@@ -94,7 +126,11 @@ class ClassController extends Controller
             'teacher' => $teacher,
             'activeSession' => $activeSession,
             'activeTerm' => $activeTerm,
+            'assignedClassesData' => $assignedClassesData,
+            'subjectAllocationsData' => $subjectAllocationsData,
             'cohortData' => $cohortData,
+            'totalAssignedClasses' => count($assignedClassesData),
+            'totalSubjectAllocations' => count($subjectAllocationsData),
             'totalCohorts' => count($cohortData),
             'totalStudents' => count($uniqueStudentIds),
             'totalClasses' => count($distinctClassIds),
@@ -102,7 +138,7 @@ class ClassController extends Controller
     }
 
     /**
-     * Show detailed candidate student roster for an assigned class-subject cohort
+     * Show detailed candidate student roster for an assigned class-subject allocation
      * Route: GET /teacher/classes/{classSubjectId}
      */
     public function show(Request $request, array|string|int $classSubjectId): Response
@@ -121,7 +157,7 @@ class ClassController extends Controller
 
         $classSubject = $this->academicRepo->findClassSubjectById($csId);
         if (!$classSubject) {
-            return $this->notFound('Class subject cohort not found.');
+            return $this->notFound('Class subject allocation not found.');
         }
 
         if (!GradebookPolicy::canView($userContext, $classSubject, $this->teacherRepo)) {
@@ -138,7 +174,97 @@ class ClassController extends Controller
             $sessionId
         );
 
-        // Fetch guardian info for each candidate
+        $schoolClass = $this->academicRepo->findClassById($classSubject->classId) ?? $classSubject->schoolClass;
+        $isClassTeacher = $userContext->isAdmin() || (
+            $teacherId !== null &&
+            $schoolClass !== null &&
+            (int)$schoolClass->formTeacherId === (int)$teacherId
+        );
+
+        $roster = [];
+        $maleCount = 0;
+        $femaleCount = 0;
+        $guardiansLinkedCount = 0;
+
+        foreach ($students as $student) {
+            // Privacy rule: Only assigned Class Teacher or Admin can view student parent contacts
+            $guardians = $isClassTeacher ? $this->parentRepo->getGuardiansForStudent($student->id) : [];
+            if (!empty($guardians)) {
+                $guardiansLinkedCount++;
+            }
+
+            $gender = strtolower((string)$student->gender);
+            if ($gender === 'male' || $gender === 'm') {
+                $maleCount++;
+            } elseif ($gender === 'female' || $gender === 'f') {
+                $femaleCount++;
+            }
+
+            $roster[] = [
+                'student' => $student,
+                'guardians' => $guardians,
+            ];
+        }
+
+        $className = method_exists($schoolClass, 'getFullName') ? $schoolClass->getFullName() : ($schoolClass?->name ?? 'Class');
+        $subjectName = $classSubject->subject?->name ?? 'Subject';
+
+        return Response::html($this->render('teacher/classes/show', [
+            'title' => "{$className} — {$subjectName} Roster — Claret Faculty",
+            'headerTitle' => "{$className} Roster",
+            'user' => $userContext,
+            'teacher' => $teacher,
+            'classSubject' => $classSubject,
+            'class' => $schoolClass,
+            'isClassTeacher' => $isClassTeacher,
+            'canViewParentContacts' => $isClassTeacher,
+            'activeSession' => $activeSession,
+            'activeTerm' => $activeTerm,
+            'roster' => $roster,
+            'totalStudents' => count($roster),
+            'maleCount' => $maleCount,
+            'femaleCount' => $femaleCount,
+            'guardiansLinkedCount' => $guardiansLinkedCount,
+        ], 'layouts/teacher'));
+    }
+
+    /**
+     * Show full class roster for assigned Class Teacher
+     * Route: GET /teacher/classes/class/{classId}
+     */
+    public function showClass(Request $request, array|string|int $classId): Response
+    {
+        $userContext = $this->requireAuthContext($request);
+        $teacher = $this->teacherRepo->findTeacherByUserId($userContext->id);
+        $teacherId = $teacher ? $teacher->id : null;
+
+        if (!$teacherId && !$userContext->isAdmin()) {
+            throw new AuthorizationException('Teacher profile required.');
+        }
+
+        $cId = is_array($classId) 
+            ? (int)($classId['classId'] ?? $classId['id'] ?? 0) 
+            : (int)$classId;
+
+        $class = $this->academicRepo->findClassById($cId);
+        if (!$class) {
+            return $this->notFound('Class not found.');
+        }
+
+        $isClassTeacher = $userContext->isAdmin() || (
+            $teacherId !== null && (int)$class->formTeacherId === (int)$teacherId
+        );
+
+        if (!$isClassTeacher) {
+            return $this->forbidden('Only the assigned Class Teacher can access the full class roster.');
+        }
+
+        $activeSession = $this->academicRepo->findCurrentSession();
+        $activeTerm = $this->academicRepo->findCurrentTerm();
+        $sessionId = $activeSession?->id ?? 0;
+
+        $students = $this->enrollmentRepo->getStudentsByClassAndSession($cId, $sessionId);
+
         $roster = [];
         $maleCount = 0;
         $femaleCount = 0;
@@ -163,15 +289,17 @@ class ClassController extends Controller
             ];
         }
 
-        $className = $classSubject->schoolClass?->name ?? 'Class';
-        $subjectName = $classSubject->subject?->name ?? 'Subject';
+        $className = method_exists($class, 'getFullName') ? $class->getFullName() : $class->name;
 
         return Response::html($this->render('teacher/classes/show', [
-            'title' => "{$className} — {$subjectName} Roster — Claret Faculty",
-            'headerTitle' => "{$className} Roster",
+            'title' => "{$className} — Class Roster (Class Teacher) — Claret Faculty",
+            'headerTitle' => "{$className} Class Roster",
             'user' => $userContext,
             'teacher' => $teacher,
-            'classSubject' => $classSubject,
+            'class' => $class,
+            'classSubject' => null,
+            'isClassTeacher' => true,
+            'canViewParentContacts' => true,
             'activeSession' => $activeSession,
             'activeTerm' => $activeTerm,
             'roster' => $roster,

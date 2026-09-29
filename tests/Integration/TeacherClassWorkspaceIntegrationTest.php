@@ -117,6 +117,7 @@ final class TeacherClassWorkspaceIntegrationTest extends TestCase
                 `section_arm` VARCHAR(20) NOT NULL,
                 `academic_level_id` INTEGER NOT NULL,
                 `class_teacher_id` INTEGER NULL,
+                `form_teacher_id` INTEGER NULL,
                 `status` VARCHAR(20) NOT NULL DEFAULT 'active',
                 `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -281,6 +282,8 @@ final class TeacherClassWorkspaceIntegrationTest extends TestCase
             VALUES ({$this->teacher2UserId}, 'TCH-002', 'Mrs.');
         ");
         $this->teacher2Id = (int)$this->pdo->lastInsertId();
+
+        $this->pdo->exec("UPDATE `classes` SET `form_teacher_id` = {$this->teacherId} WHERE `id` = {$this->classId}");
 
         // Class Subjects
         $this->pdo->exec("
@@ -497,5 +500,81 @@ final class TeacherClassWorkspaceIntegrationTest extends TestCase
         $response = $controller->show($req, 99999);
 
         $this->assertSame(404, $response->getStatusCode());
+    }
+
+    public function testSubjectOnlyTeacherCannotViewParentContacts(): void
+    {
+        // Teacher 2 is assigned to classSubject2, but is NOT the class teacher of class 1
+        $teacher2Ctx = $this->makeUserContext($this->teacher2UserId, 'teacher');
+        $auth = $this->createAuthenticator($teacher2Ctx);
+
+        $controller = new ClassController(
+            $auth,
+            $this->teacherRepo,
+            $this->academicRepo,
+            $this->enrollmentRepo,
+            $this->parentRepo
+        );
+
+        $req = new Request([], [], ['REQUEST_METHOD' => 'GET', 'REQUEST_URI' => "/teacher/classes/{$this->classSubject2Id}"]);
+        $response = $controller->show($req, $this->classSubject2Id);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $body = (string)$response->getContent();
+
+        // Student candidate details are visible
+        $this->assertStringContainsString('Chidi Okafor', $body);
+        $this->assertStringContainsString('STD/2026/001', $body);
+
+        // Guardian contact details MUST NOT be visible to subject-only teacher
+        $this->assertStringNotContainsString('Dr. Emeka Okafor', $body);
+        $this->assertStringNotContainsString('08055555555', $body);
+        $this->assertStringContainsString('Restricted to Class Teacher', $body);
+    }
+
+    public function testClassTeacherCanViewFullClassRosterViaClassRoute(): void
+    {
+        $teacherCtx = $this->makeUserContext($this->teacherUserId, 'teacher');
+        $auth = $this->createAuthenticator($teacherCtx);
+
+        $controller = new ClassController(
+            $auth,
+            $this->teacherRepo,
+            $this->academicRepo,
+            $this->enrollmentRepo,
+            $this->parentRepo
+        );
+
+        $req = new Request([], [], ['REQUEST_METHOD' => 'GET', 'REQUEST_URI' => "/teacher/classes/class/{$this->classId}"]);
+        $response = $controller->showClass($req, $this->classId);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $body = (string)$response->getContent();
+
+        $this->assertStringContainsString('Chidi Okafor', $body);
+        $this->assertStringContainsString('Dr. Emeka Okafor', $body);
+        $this->assertStringContainsString('08055555555', $body);
+        $this->assertStringContainsString('Class Teacher', $body);
+    }
+
+    public function testNonClassTeacherCannotViewFullClassRosterViaClassRoute(): void
+    {
+        $teacher2Ctx = $this->makeUserContext($this->teacher2UserId, 'teacher');
+        $auth = $this->createAuthenticator($teacher2Ctx);
+
+        $controller = new ClassController(
+            $auth,
+            $this->teacherRepo,
+            $this->academicRepo,
+            $this->enrollmentRepo,
+            $this->parentRepo
+        );
+
+        $req = new Request([], [], ['REQUEST_METHOD' => 'GET', 'REQUEST_URI' => "/teacher/classes/class/{$this->classId}"]);
+        $response = $controller->showClass($req, $this->classId);
+
+        $this->assertSame(403, $response->getStatusCode());
+        $body = (string)$response->getContent();
+        $this->assertStringContainsString('Only the assigned Class Teacher can access the full class roster.', $body);
     }
 }

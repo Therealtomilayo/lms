@@ -52,10 +52,20 @@ class AttendancePolicy
             return (int)$csStmt->fetchColumn() > 0;
         }
 
-        // Daily roll call: Teacher must teach at least one subject in this class
-        $cStmt = $this->db->prepare("SELECT COUNT(*) FROM class_subjects WHERE class_id = :cid AND teacher_id = :tid");
-        $cStmt->execute([':cid' => $classId, ':tid' => $teacherId]);
-        return (int)$cStmt->fetchColumn() > 0;
+        // Daily roll call: ONLY the assigned Class Teacher (form_teacher_id) of this class can take daily roll call
+        try {
+            $cStmt = $this->db->prepare("SELECT COUNT(*) FROM classes WHERE id = :cid AND form_teacher_id = :tid");
+            $cStmt->execute([':cid' => $classId, ':tid' => $teacherId]);
+            return (int)$cStmt->fetchColumn() > 0;
+        } catch (\Throwable) {
+            try {
+                $cStmt = $this->db->prepare("SELECT COUNT(*) FROM classes WHERE id = :cid AND class_teacher_id = :tid");
+                $cStmt->execute([':cid' => $classId, ':tid' => $teacherId]);
+                return (int)$cStmt->fetchColumn() > 0;
+            } catch (\Throwable) {
+                return false;
+            }
+        }
     }
 
     /**
@@ -101,7 +111,18 @@ class AttendancePolicy
         $userId = $user->getUserId();
 
         if ($user->isTeacher()) {
-            return $this->canMark($user, $classId, null);
+            if ($this->canMark($user, $classId, null)) {
+                return true;
+            }
+            $stmt = $this->db->prepare("SELECT id FROM teachers WHERE user_id = :uid LIMIT 1");
+            $stmt->execute([':uid' => $userId]);
+            $teacherId = (int)$stmt->fetchColumn();
+            if ($teacherId <= 0) {
+                return false;
+            }
+            $csStmt = $this->db->prepare("SELECT COUNT(*) FROM class_subjects WHERE class_id = :cid AND teacher_id = :tid");
+            $csStmt->execute([':cid' => $classId, ':tid' => $teacherId]);
+            return (int)$csStmt->fetchColumn() > 0;
         }
 
         if ($user->isStudent()) {

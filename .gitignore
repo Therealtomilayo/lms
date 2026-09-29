@@ -26,6 +26,8 @@
 /storage/uploads/*
 !/storage/uploads/.gitkeep
 !/storage/uploads/.htaccess
+/public/assets/uploads/*
+!/public/assets/uploads/**/.gitkeep
 
 # IDE & OS Specific
 .idea/

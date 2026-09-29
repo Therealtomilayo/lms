@@ -199,6 +199,17 @@ $this->layout('layouts/admin', [
                                             <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase <?= $ward->gender === 'male' ? 'bg-blue-50 text-blue-700' : 'bg-pink-50 text-pink-700' ?>">
                                                 <?= htmlspecialchars($ward->gender, ENT_QUOTES, 'UTF-8') ?>
                                             </span>
+                                            <?php if (!empty($ward->useSchoolBus)): ?>
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                                    <i data-lucide="bus" class="w-3 h-3 text-amber-600"></i>
+                                                    <span>School Bus: Yes</span>
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-50 text-slate-500 border border-slate-200">
+                                                    <i data-lucide="bus" class="w-3 h-3 text-slate-400"></i>
+                                                    <span>School Bus: No</span>
+                                                </span>
+                                            <?php endif; ?>
                                         </div>
                                         <p class="text-xs text-slate-500 mt-0.5">
                                             Applying for: <span class="font-bold text-slate-800"><?= htmlspecialchars($ward->classGrade ?? ($ward->academicLevelName ?? 'N/A'), ENT_QUOTES, 'UTF-8') ?></span>

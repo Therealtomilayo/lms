@@ -151,6 +151,7 @@ class ResultReviewController extends Controller
         $subjectAverages = [];
         $classMean = null;
         $isPublished = false;
+        $submission = null;
 
         if ($selectedTerm && $selectedClass) {
             $sessionId = $selectedTerm->sessionId;
@@ -161,12 +162,27 @@ class ResultReviewController extends Controller
             $summaries = $this->gradebookRepo->getSummariesByClassAndTerm($selectedClassId, $selectedTerm->id);
             $isPublished = $this->publicationRepo->isPublished($selectedTerm->id, $selectedClassId);
 
-            $totalSum = 0;
-            $countSum = 0;
             foreach ($summaries as $sm) {
                 $summaryMap[$sm->studentId] = $sm;
-                if ($sm->averageScore !== null) {
-                    $totalSum += (float)$sm->averageScore;
+            }
+
+            $totalSum = 0;
+            $countSum = 0;
+            foreach ($students as $stu) {
+                $scores = [];
+                foreach ($classSubjects as $cs) {
+                    $res = $resultsMatrix[$stu->id][$cs->subjectId] ?? $resultsMatrix[$stu->id][$cs->id] ?? null;
+                    $sc = $res ? ($res['computed_score'] ?? $res['total_score'] ?? null) : null;
+                    if ($sc !== null && $sc !== '') {
+                        $scores[] = (float)$sc;
+                    }
+                }
+                $avg = !empty($scores)
+                    ? (array_sum($scores) / count($scores))
+                    : ($summaryMap[$stu->id]->averageScore ?? null);
+
+                if ($avg !== null) {
+                    $totalSum += (float)$avg;
                     $countSum++;
                 }
             }
@@ -288,19 +304,25 @@ class ResultReviewController extends Controller
                 $st->gender ? ucfirst($st->gender) : '—',
             ];
 
+            $studentScores = [];
             foreach ($classSubjects as $cs) {
-                $subRes = $resultsMatrix[$st->id][$cs->subjectId] ?? null;
+                $subRes = $resultsMatrix[$st->id][$cs->subjectId] ?? $resultsMatrix[$st->id][$cs->id] ?? null;
                 if ($subRes) {
-                    $row[] = number_format((float)($subRes['computed_score'] ?? $subRes['total_score'] ?? 0), 1);
-                    $row[] = $subRes['grade_letter'] ?? '—';
+                    $scoreVal = (float)($subRes['computed_score'] ?? $subRes['total_score'] ?? 0);
+                    $studentScores[] = $scoreVal;
+                    $row[] = number_format($scoreVal, 1);
+                    $row[] = $subRes['grade_letter'] ?? $subRes['grade'] ?? '—';
                 } else {
                     $row[] = '—';
                     $row[] = '—';
                 }
             }
 
-            $row[] = $sm ? number_format((float)$sm->totalScore, 1) : '—';
-            $row[] = $sm && $sm->averageScore !== null ? number_format((float)$sm->averageScore, 1) . '%' : '—';
+            $computedTotal = !empty($studentScores) ? array_sum($studentScores) : ($sm?->totalScore !== null ? (float)$sm->totalScore : null);
+            $computedAvg = !empty($studentScores) ? ($computedTotal / count($studentScores)) : ($sm?->averageScore !== null ? (float)$sm->averageScore : null);
+
+            $row[] = $computedTotal !== null ? number_format($computedTotal, 1) : '—';
+            $row[] = $computedAvg !== null ? number_format($computedAvg, 1) . '%' : '—';
             $row[] = $sm?->classRank ?? '—';
             $row[] = $sm?->classTeacherRemark ?? '';
             $row[] = $sm?->principalRemark ?? '';
