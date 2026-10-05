@@ -38,7 +38,7 @@
         </div>
     </div>
 
-    <!-- Staff Duty Geofenced Clock-In Banner (SRS §22, §23) -->
+    <!-- Staff Duty Geofenced Clock-In Banner -->
     <div class="rounded-2xl border p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition <?= !empty($todayStaffAttendance) ? ($todayStaffAttendance->isClockedOut() ? 'bg-slate-50 border-slate-200' : 'bg-emerald-50/80 border-emerald-200') : 'bg-brand-50/60 border-brand-200' ?>">
         <div class="flex items-center gap-3.5">
             <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 <?= !empty($todayStaffAttendance) ? ($todayStaffAttendance->isClockedOut() ? 'bg-slate-200 text-slate-700' : 'bg-emerald-600 text-white shadow-xs') : 'bg-brand-700 text-white shadow-xs' ?>">

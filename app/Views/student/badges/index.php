@@ -1,6 +1,6 @@
 <?php
 /**
- * Student Badges & Honors Showcase Screen (SRS §33, §57 Phase 3)
+ * Student Badges & Honors Showcase Screen
  * Displays all gamified credentials, commendations, and achievements earned by the student.
  *
  * @var \App\Models\Student|null $student

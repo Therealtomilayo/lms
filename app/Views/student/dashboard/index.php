@@ -109,7 +109,7 @@
         </a>
     </div>
 
-    <!-- Honors & Achievement Badges Shelf (SRS §33, §57 Phase 3) -->
+    <!-- Honors & Achievement Badges Shelf -->
     <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
@@ -178,7 +178,7 @@
         <?php endif; ?>
     </div>
 
-    <!-- Live Online Classes Widget (SRS §31) -->
+    <!-- Live Online Classes Widget -->
     <?php if (!empty($upcomingLiveClasses)): ?>
         <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
             <div class="flex items-center justify-between">

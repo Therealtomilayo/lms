@@ -72,6 +72,35 @@ class Config
                 'public_key' => $_ENV['PAYSTACK_PUBLIC_KEY'] ?? '',
                 'payment_url' => $_ENV['PAYSTACK_PAYMENT_URL'] ?? 'https://api.paystack.co',
             ],
+            'mail' => [
+                'mailer' => $_ENV['MAIL_MAILER'] ?? 'log',
+                'host' => $_ENV['MAIL_HOST'] ?? '127.0.0.1',
+                'port' => (int)($_ENV['MAIL_PORT'] ?? 587),
+                'username' => $_ENV['MAIL_USERNAME'] ?? '',
+                'password' => $_ENV['MAIL_PASSWORD'] ?? '',
+                'encryption' => $_ENV['MAIL_ENCRYPTION'] ?? 'tls',
+                'from_address' => $_ENV['MAIL_FROM_ADDRESS'] ?? 'notifications@claret.edu.ng',
+                'from_name' => $_ENV['MAIL_FROM_NAME'] ?? 'Claret International School',
+            ],
+            'sms' => [
+                'gateway' => $_ENV['SMS_GATEWAY'] ?? 'log',
+                'sender_id' => $_ENV['SMS_SENDER_ID'] ?? $_ENV['TERMII_SENDER_ID'] ?? 'ClaretSch',
+            ],
+            'termii' => [
+                'api_key' => $_ENV['TERMII_API_KEY'] ?? '',
+                'sender_id' => $_ENV['TERMII_SENDER_ID'] ?? $_ENV['SMS_SENDER_ID'] ?? 'ClaretSch',
+                'base_url' => $_ENV['TERMII_BASE_URL'] ?? $_ENV['TERMII_API_URL'] ?? 'https://api.ng.termii.com',
+            ],
+            'twilio' => [
+                'sid' => $_ENV['TWILIO_SID'] ?? '',
+                'token' => $_ENV['TWILIO_TOKEN'] ?? $_ENV['TWILIO_AUTH_TOKEN'] ?? '',
+                'from_number' => $_ENV['TWILIO_FROM_NUMBER'] ?? $_ENV['TWILIO_FROM'] ?? '',
+            ],
+            'whatsapp' => [
+                'gateway' => $_ENV['WHATSAPP_GATEWAY'] ?? 'log',
+                'device_number' => $_ENV['WHATSAPP_DEVICE_NUMBER'] ?? '',
+                'device_id' => $_ENV['WHATSAPP_DEVICE_ID'] ?? '',
+            ],
         ];
 
         self::$loaded = true;

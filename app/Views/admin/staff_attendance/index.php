@@ -1,6 +1,6 @@
 <?php
 /**
- * Admin Institutional Staff Geofenced Attendance Register (SRS §22, §23)
+ * Admin Institutional Staff Geofenced Attendance Register
  */
 ?>
 
@@ -23,7 +23,7 @@
                     </span>
                 </h1>
                 <p class="text-xs text-slate-500 mt-1">
-                    Claret International School • Daily faculty and administrative attendance verification (SRS §22–§24).
+                    Claret International School • Daily faculty and administrative attendance verification.
                 </p>
             </div>
 
@@ -242,7 +242,7 @@
                 </div>
                 <div>
                     <h3 class="text-base font-extrabold text-slate-900">Geofence Perimeter & Rules</h3>
-                    <p class="text-xs text-slate-500">Configure school coordinates and punctuality limits (SRS §23).</p>
+                    <p class="text-xs text-slate-500">Configure school coordinates and punctuality limits.</p>
                 </div>
             </div>
             <button type="button" onclick="closeSettingsModal()" class="text-slate-400 hover:text-slate-600">

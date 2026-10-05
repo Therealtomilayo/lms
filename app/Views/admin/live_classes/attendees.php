@@ -43,7 +43,7 @@
                     Attendee Forensic Audit Trail (<?= count($attendees) ?> Logged)
                 </h2>
                 <p class="text-xs text-slate-500 mt-0.5">
-                    Tamper-evident logs of student video conference entry under SRS §31.
+                    Tamper-evident logs of student video conference entry.
                 </p>
             </div>
             <a href="<?= htmlspecialchars($liveClass->meetingLink) ?>" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition border border-slate-200">

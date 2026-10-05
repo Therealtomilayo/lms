@@ -1,6 +1,6 @@
 <?php
 /**
- * Parent Child Class Discussions View (SRS §47, §57 Phase 3)
+ * Parent Child Class Discussions View
  * Parents monitor their child's instructional discussions across enrolled subjects (Read-Only).
  *
  * @var \App\Models\Student $student

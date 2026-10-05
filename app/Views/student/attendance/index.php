@@ -52,7 +52,7 @@
         $absentDays = (int)($summary['absent_days'] ?? 0);
     ?>
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <!-- Attendance Rate (Weighted SRS §26) -->
+        <!-- Attendance Rate (Weighted Rate) -->
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
             <div class="flex items-center justify-between">
                 <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Attendance Rate</p>

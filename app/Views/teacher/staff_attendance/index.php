@@ -1,6 +1,6 @@
 <?php
 /**
- * Teacher/Staff Geofenced Attendance Clock-In & History View (SRS §22, §23, §24)
+ * Teacher/Staff Geofenced Attendance Clock-In & History View
  */
 $today = $statusBundle['today'];
 $attendance = $statusBundle['attendance'];
@@ -30,7 +30,7 @@ $workday = $statusBundle['workday'];
                     </span>
                 </h1>
                 <p class="text-xs text-slate-500 mt-1">
-                    Claret International School • Verified physical presence within campus perimeter (SRS §22–§24).
+                    Claret International School • Verified physical presence within campus perimeter.
                 </p>
             </div>
 
@@ -80,7 +80,7 @@ $workday = $statusBundle['workday'];
             </svg>
             <div>
                 <p class="text-xs font-bold text-amber-900" id="offlineStatusText">You are currently operating in Offline Mode.</p>
-                <p class="text-[11px] text-amber-700">Attendance will be captured securely locally and synced once connectivity returns (SRS §24).</p>
+                <p class="text-[11px] text-amber-700">Attendance will be captured securely locally and synced once connectivity returns.</p>
             </div>
         </div>
         <button type="button" onclick="syncPendingRecords()" class="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition">
@@ -603,7 +603,7 @@ $workday = $statusBundle['workday'];
     // Auto-detect on page load
     detectLocation();
 
-    // 5. Offline Queue Management (SRS §24)
+    // 5. Offline Queue Management
     function updateOfflineStatus() {
         const isOffline = !navigator.onLine;
         const banner = document.getElementById('offlineBanner');

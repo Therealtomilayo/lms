@@ -1,7 +1,7 @@
 <?php
 /**
  * Applicant / Prospective Parent Dedicated Minimalist Layout Shell
- * (SRS §10, Requirement 12: Intentionally simple sidebar)
+ * (Requirement 12: Intentionally simple sidebar)
  * 
  * @var string $content Injected view content
  * @var string|null $title Document title

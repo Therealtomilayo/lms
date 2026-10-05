@@ -1,6 +1,6 @@
 <?php
 /**
- * ADMIN-34 — Badges & Rewards Central Management (SRS §33, §57 Phase 3)
+ * ADMIN-34 — Badges & Rewards Central Management
  *
  * @var \App\Models\Badge[] $badges
  * @var \App\Models\SchoolClass[] $classes

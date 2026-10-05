@@ -14,7 +14,7 @@
                         Institutional Live Classes Register
                     </h1>
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-sky-50 text-sky-800 border border-sky-200">
-                        SRS §31 Oversight
+                        Virtual Classes Oversight
                     </span>
                 </div>
                 <p class="text-xs text-slate-500 mt-1">

@@ -1,6 +1,6 @@
 <?php
 /**
- * ADMIN-35 — Moderate Single Class Discussion Thread (SRS §47, §57 Phase 3)
+ * ADMIN-35 — Moderate Single Class Discussion Thread
  *
  * @var \App\Models\ClassSubject $classSubject
  * @var \App\Models\ClassDiscussion $discussion

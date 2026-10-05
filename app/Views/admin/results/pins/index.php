@@ -30,7 +30,7 @@ $this->layout('layouts/admin');
                 <span class="text-brand-600">Scratch-Card PINs</span>
             </div>
             <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Result Access Scratch-Card PINs</h1>
-            <p class="text-xs text-slate-500 mt-1">Generate, audit, print, and manage security PINs that gate terminal report cards (SRS §38–§40).</p>
+            <p class="text-xs text-slate-500 mt-1">Generate, audit, print, and manage security PINs that gate terminal report cards.</p>
         </div>
         <div class="flex flex-wrap items-center gap-2.5">
             <a href="/admin/results/pins/export" class="px-3.5 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition inline-flex items-center gap-1.5">

@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Admin Student Promotions & Cohort Advancement Overview (SRS §17, §18, §58.3)
+ * Admin Student Promotions & Cohort Advancement Overview
  *
  * @var array<int, \App\Models\AcademicSession> $sessions
  * @var \App\Models\AcademicSession|null $currentSession
@@ -12,7 +12,7 @@
 $this->layout('layouts/admin', [
     'title' => 'Student Promotions & Cohort Advancement — Claret LMS',
     'headerTitle' => 'Student Promotions & Advancement',
-    'headerSubtitle' => 'Session-end cumulative academic performance evaluation, graduation, and cohort advancement (SRS §17, §18)',
+    'headerSubtitle' => 'Session-end cumulative academic performance evaluation, graduation, and cohort advancement',
 ]);
 
 $session = $overview['session'] ?? null;

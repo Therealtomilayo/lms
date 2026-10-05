@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Admin Class Cohort Promotion Evaluation & Advancement Matrix (SRS §17, §18, §58.3)
+ * Admin Class Cohort Promotion Evaluation & Advancement Matrix
  *
  * @var int $classId
  * @var array<int, \App\Models\AcademicSession> $sessions
@@ -374,7 +374,7 @@ $passRate = $totalStudents > 0 ? round(($passCount / $totalStudents) * 100, 1) :
     </form>
 </div>
 
-<!-- Borderline Repetition Review Modal (Two-Tier Governance §58.3) -->
+<!-- Borderline Repetition Review Modal (Two-Tier Governance) -->
 <div id="repetitionModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center hidden p-4">
     <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden">
         <form method="POST" action="/admin/promotions/stage-repetition">
@@ -389,7 +389,7 @@ $passRate = $totalStudents > 0 ? round(($passCount / $totalStudents) * 100, 1) :
                     </span>
                     <div>
                         <h3 class="font-black text-slate-900 text-base">Stage Repetition Request</h3>
-                        <p class="text-xs text-slate-500">Super Admin Two-Tier Governance Queue (SRS §58.3)</p>
+                        <p class="text-xs text-slate-500">Super Admin Two-Tier Governance Queue</p>
                     </div>
                 </div>
                 <button type="button" onclick="closeRepetitionModal()" class="text-slate-400 hover:text-slate-600">

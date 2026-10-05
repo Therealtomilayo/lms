@@ -1,6 +1,6 @@
 <?php
 /**
- * ADMIN-35 — Class Discussions Oversight & Moderation (SRS §47, §57 Phase 3)
+ * ADMIN-35 — Class Discussions Oversight & Moderation
  *
  * @var array $sessions
  * @var int $selectedSessionId
@@ -26,7 +26,7 @@
             </div>
             <h1 class="text-2xl font-black text-slate-900 tracking-tight">Class Discussions Oversight &amp; Moderation</h1>
             <p class="text-xs text-slate-500 mt-1">
-                SRS §47 Child Safeguarding Compliance: All instructional communication is strictly group-based and cohort-scoped. No 1-on-1 private messaging channels exist.
+                Child Safeguarding Compliance: All instructional communication is strictly group-based and cohort-scoped. No 1-on-1 private messaging channels exist.
             </p>
         </div>
         <div class="flex items-center gap-2">

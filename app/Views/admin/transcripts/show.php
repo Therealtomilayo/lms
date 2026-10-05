@@ -276,7 +276,7 @@ $sessions = $transcript['sessions'];
             <!-- 5. Cumulative Career Performance Summary Ribbon -->
             <div class="border-2 border-slate-900 rounded-lg overflow-hidden break-inside-avoid">
                 <div class="bg-slate-900 text-white px-4 py-2 font-black uppercase text-xs tracking-wider flex items-center justify-between">
-                    <span>Cumulative Academic Career Standing (SRS §26, §51)</span>
+                    <span>Cumulative Academic Career Standing</span>
                     <span class="text-[10px] font-medium text-slate-300">Certified Official Metric</span>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-5 divide-y sm:divide-y-0 divide-x divide-slate-200 bg-slate-50/60 text-center">

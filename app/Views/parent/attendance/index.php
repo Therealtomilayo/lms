@@ -175,7 +175,7 @@ $excusedDays = isset($summary['excused_days']) ? (int)$summary['excused_days'] :
     <!-- 4. 4-CARD OVERVIEW STATS STRIP -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
-        <!-- Attendance Rate % Card (Weighted SRS §26) -->
+        <!-- Attendance Rate % Card (Weighted Rate) -->
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
             <div class="flex items-center justify-between">
                 <div>

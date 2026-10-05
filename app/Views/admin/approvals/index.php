@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Super Admin Two-Tier Approval Queue Workspace (ADMIN-30, §6, §58.1-§58.3)
+ * Super Admin Two-Tier Approval Queue Workspace (ADMIN-30)
  * 
  * @var array<int, \App\Models\ApprovalRequest> $requests
  * @var array{total: int, pending: int, approved: int, rejected: int, student_reg: int, teacher_reg: int, repetition: int} $counts
@@ -12,7 +12,7 @@
 $this->layout('layouts/admin', [
     'title' => 'Super Admin Approval Queue — Claret LMS',
     'headerTitle' => 'Super Admin Approval Queue',
-    'headerSubtitle' => 'Two-tier administrative governance queue for candidate user activations and repetition requests (§6, §58.1–§58.3)',
+    'headerSubtitle' => 'Two-tier administrative governance queue for candidate user activations and repetition requests',
 ]);
 
 $pendingCount = $counts['pending'] ?? 0;
@@ -36,7 +36,7 @@ $pendingCount = $counts['pending'] ?? 0;
                     </div>
                 </div>
                 <p class="text-xs text-slate-600 max-w-3xl leading-relaxed">
-                    Under the institutional governance charter (SRS §6, §58.1–§58.3), high-risk operations initiated by Standard Administrators—such as user account deletions, administrative role elevations, and student academic repetitions—are staged for Super Admin authorization.
+                    Under the institutional governance charter, high-risk operations initiated by Standard Administrators—such as user account deletions, administrative role elevations, and student academic repetitions—are staged for Super Admin authorization.
                 </p>
             </div>
 

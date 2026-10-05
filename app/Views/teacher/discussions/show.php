@@ -1,6 +1,6 @@
 <?php
 /**
- * Teacher Single Discussion Thread & Moderation Screen (SRS §47, §57 Phase 3)
+ * Teacher Single Discussion Thread & Moderation Screen
  *
  * @var \App\Models\ClassDiscussion $discussion
  * @var \App\Models\ClassSubject $classSubject

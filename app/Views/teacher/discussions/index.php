@@ -1,6 +1,6 @@
 <?php
 /**
- * Teacher Class Discussions Feed (SRS §47, §57 Phase 3)
+ * Teacher Class Discussions Feed
  * Controlled class group communication feed with moderation tools (Pin, Lock, Delete).
  *
  * @var \App\Models\ClassSubject $classSubject

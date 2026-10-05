@@ -1,6 +1,6 @@
 <?php
 /**
- * Parent Child Badges & Honors View (SRS §33, §57 Phase 3)
+ * Parent Child Badges & Honors View
  * Parents monitor digital badges and teacher commendations earned by their child.
  *
  * @var \App\Models\Student $student

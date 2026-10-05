@@ -1,6 +1,6 @@
 <?php
 /**
- * Student Class Subject Discussions Feed (SRS §47, §57 Phase 3)
+ * Student Class Subject Discussions Feed
  *
  * @var \App\Models\ClassSubject $classSubject
  * @var \App\Models\ClassDiscussion[] $discussions

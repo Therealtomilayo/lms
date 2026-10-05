@@ -43,7 +43,7 @@
                     Verified Attendees Log (<?= count($attendees) ?>)
                 </h2>
                 <p class="text-xs text-slate-500 mt-0.5">
-                    Attendance records are automatically stamped upon joining the video room per SRS §31.
+                    Attendance records are automatically stamped upon joining the video room.
                 </p>
             </div>
             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">

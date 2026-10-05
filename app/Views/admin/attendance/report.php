@@ -153,7 +153,7 @@ $overallWeightedRate = $totalStudentsSum > 0 ? round(($effectiveAttended / $tota
     <!-- KPI Aggregate Stats -->
     <?php if (!empty($reportData)): ?>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <!-- Overall Rate Card (Weighted SRS §26) -->
+            <!-- Overall Rate Card (Weighted Rate) -->
             <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Weighted Rate</span>

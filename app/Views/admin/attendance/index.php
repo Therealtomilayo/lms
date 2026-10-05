@@ -82,7 +82,7 @@
         <?php endif; ?>
     </div>
 
-    <!-- Attendance Policy & Weights Configuration Card (SRS §26) -->
+    <!-- Attendance Policy & Weights Configuration Card -->
     <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
@@ -90,7 +90,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                     </svg>
-                    Institutional Attendance Calculation Policy (SRS §26)
+                    Institutional Attendance Calculation Policy
                 </h2>
                 <p class="text-xs text-slate-500 mt-0.5">
                     Configure institutional credit weights for late attendance. This dynamically computes student term percentages and report card rates.

@@ -1,6 +1,6 @@
 <?php
 /**
- * Admin Geofence Security Breaches & Out-of-Perimeter Violation Audit Log (SRS §23)
+ * Admin Geofence Security Breaches & Out-of-Perimeter Violation Audit Log
  */
 ?>
 
@@ -23,7 +23,7 @@
                     </span>
                 </h1>
                 <p class="text-xs text-slate-500 mt-1">
-                    Claret International School • Audit trail of blocked out-of-bounds clock-in attempts (SRS §23).
+                    Claret International School • Audit trail of blocked out-of-bounds clock-in attempts.
                 </p>
             </div>
 

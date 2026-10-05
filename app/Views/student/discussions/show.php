@@ -1,6 +1,6 @@
 <?php
 /**
- * Student Discussion Thread Screen (SRS §47, §57 Phase 3)
+ * Student Discussion Thread Screen
  *
  * @var \App\Models\ClassDiscussion $discussion
  * @var \App\Models\ClassSubject $classSubject

@@ -1,6 +1,6 @@
 <?php
 /**
- * Teacher Badges & Honors Management Screen (SRS §33, §57 Phase 3)
+ * Teacher Badges & Honors Management Screen
  * Allows teachers to review badge catalog and award achievements to enrolled students.
  *
  * @var \App\Models\Badge[] $badges

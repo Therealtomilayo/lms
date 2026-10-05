@@ -15,7 +15,7 @@
                     </h1>
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        SRS §31 Verified
+                        Virtual Live Sessions
                     </span>
                 </div>
                 <p class="text-xs text-slate-500 mt-1">
