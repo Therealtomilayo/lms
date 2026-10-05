@@ -60,14 +60,15 @@ $statusOptions = [
 
     <!-- Search & Filters -->
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-        <form method="GET" action="/admin/users" class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+        <form method="GET" action="/admin/users" data-lms-filter="true" class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
             <div class="sm:col-span-2">
                 <?php $this->include('components/input', [
                     'name' => 'q',
                     'id' => 'filter_search',
                     'label' => 'Search Users',
                     'placeholder' => 'Search name, email, or phone...',
-                    'value' => $search ?? ''
+                    'value' => $search ?? '',
+                    'attributes' => 'autocomplete="off"'
                 ]); ?>
             </div>
 
@@ -104,10 +105,11 @@ $statusOptions = [
         </form>
     </div>
 
-    <!-- Users Table -->
-    <?php if (empty($users)): ?>
-        <?php $this->include('components/empty_state', [
-            'title' => 'No Users Found',
+    <!-- Users Table Container -->
+    <div data-lms-table-container="true" class="space-y-4">
+        <?php if (empty($users)): ?>
+            <?php $this->include('components/empty_state', [
+                'title' => 'No Users Found',
             'message' => 'No user records matched your selected criteria or search term.'
         ]); ?>
     <?php else: ?>
@@ -128,7 +130,9 @@ $statusOptions = [
                         <?php foreach ($users as $user): ?>
                             <tr class="hover:bg-slate-50/60 transition-colors">
                                 <td class="px-6 py-4">
-                                    <div class="font-bold text-slate-900"><?= e($user->name) ?></div>
+                                    <a href="/admin/users/<?= e($user->id) ?>/edit" class="font-bold text-slate-900 hover:text-brand-600 transition block">
+                                        <?= e($user->name) ?>
+                                    </a>
                                     <div class="text-xs text-slate-500 font-normal mt-0.5"><?= e($user->email) ?></div>
                                 </td>
                                 <td class="px-6 py-4">
@@ -173,7 +177,7 @@ $statusOptions = [
                                      <?php $this->include('components/button', [
                                          'href' => '/admin/users/' . e($user->id) . '/edit',
                                          'variant' => 'secondary',
-                                         'label' => 'Edit',
+                                         'label' => 'Profile',
                                          'class' => 'px-3 py-1.5 text-xs font-semibold'
                                      ]); ?>
 
@@ -201,6 +205,7 @@ $statusOptions = [
              ]); ?>
          </div>
      <?php endif; ?>
+    </div>
  </div>
 
 <!-- User Deletion / Deletion Request Modal -->

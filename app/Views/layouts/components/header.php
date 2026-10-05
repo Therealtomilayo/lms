@@ -9,19 +9,19 @@
  * @var object|null $activeChild Currently selected student info (optional; parent portal only)
  */
 ?>
-<header class="bg-white border-b border-slate-200 min-h-[64px] flex items-center justify-between px-6 py-3.5 flex-shrink-0 shadow-xs z-20 print:hidden no-print">
+<header class="bg-white border-b border-slate-200 min-h-[64px] flex items-center justify-between px-3.5 sm:px-6 py-3 flex-shrink-0 shadow-xs z-20 print:hidden no-print">
     <!-- Title & Navigation Toggle -->
-    <div class="flex items-center gap-4 min-w-0">
+    <div class="flex items-center gap-2 sm:gap-4 min-w-0 max-w-[55%] sm:max-w-none">
         <!-- Mobile Sidebar Hamburger Toggle -->
         <button type="button" 
                 onclick="window.LMS ? window.LMS.toggleSidebar() : (document.getElementById('sidebar-navigation').classList.toggle('hidden'), document.getElementById('sidebar-navigation').classList.toggle('flex'), document.getElementById('sidebar-backdrop')?.classList.toggle('hidden'))" 
-                class="md:hidden p-2 -ml-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer"
+                class="md:hidden p-2 -ml-1 sm:-ml-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 min-w-[40px] min-h-[40px] flex items-center justify-center cursor-pointer flex-shrink-0"
                 aria-label="Toggle Navigation Sidebar">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
 
-        <div class="truncate">
-            <h1 class="text-lg md:text-xl font-bold text-slate-900 leading-tight truncate">
+        <div class="truncate min-w-0">
+            <h1 class="text-base sm:text-lg md:text-xl font-bold text-slate-900 leading-tight truncate">
                 <?= e($headerTitle ?? $title ?? 'Dashboard') ?>
             </h1>
             <?php if (!empty($headerSubtitle)): ?>
@@ -33,7 +33,45 @@
     </div>
 
     <!-- Right-aligned Utilities & Badges -->
-    <div class="flex items-center gap-3.5 flex-shrink-0">
+    <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+        <?php
+        $activeSessionName = null;
+        $activeTermName = null;
+        $activeTermElapsed = false;
+        try {
+            $acadRepo = new \App\Repositories\AcademicRepository();
+            $currSession = $acadRepo->findActiveSession();
+            if ($currSession) {
+                $activeSessionName = $currSession->name;
+                $currTerm = $acadRepo->findActiveTermForSession((int)$currSession->id);
+                if ($currTerm) {
+                    $activeTermName = $currTerm->name;
+                    if ($currTerm->endDate && strtotime($currTerm->endDate) < strtotime(date('Y-m-d'))) {
+                        $activeTermElapsed = true;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {}
+        ?>
+
+        <!-- Institutional Active Session & Term Indicator -->
+        <?php if ($activeTermName): ?>
+            <a href="<?= in_array($role, ['admin', 'super_admin'], true) ? '/admin/terms' : '#' ?>" 
+               class="hidden md:flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-full text-xs transition group"
+               title="<?= $activeTermElapsed ? 'Active term end date has passed. Moderation grace period is currently active.' : 'Current active institutional academic session & term' ?>">
+                <span class="flex h-2 w-2 relative">
+                    <span class="<?= $activeTermElapsed ? 'bg-amber-400' : 'bg-emerald-400' ?> animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 <?= $activeTermElapsed ? 'bg-amber-500' : 'bg-emerald-500' ?>"></span>
+                </span>
+                <span class="text-slate-600 font-medium tracking-tight">
+                    <?= e($activeSessionName ? $activeSessionName . ' • ' : '') ?><strong class="text-slate-800 group-hover:text-brand-700 font-bold"><?= e($activeTermName) ?></strong>
+                </span>
+                <?php if ($activeTermElapsed): ?>
+                    <span class="text-[9px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">Grace</span>
+                <?php endif; ?>
+            </a>
+        <?php endif; ?>
+
         <!-- Parent Child Context Status Indicator -->
         <?php if ($role === 'parent' && !empty($activeChild)): ?>
             <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-full text-xs">
@@ -168,8 +206,8 @@
             </span>
         <?php endif; ?>
 
-        <!-- Profile & Password Links -->
-        <div class="border-l border-slate-200 pl-3.5 flex items-center gap-2.5">
+        <!-- Profile & Password Links (Hidden on devices viewing in low resolution to prevent icon collision) -->
+        <div class="hidden lg:flex items-center gap-2.5 border-l border-slate-200 pl-3.5">
             <a href="/profile" class="text-sm font-medium text-slate-600 hover:text-brand-600 focus:outline-none focus:underline transition">
                 Profile
             </a>

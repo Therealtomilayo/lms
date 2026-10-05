@@ -13,6 +13,7 @@ use App\Core\Response;
 use App\Core\UserContext;
 use App\Policies\AcademicPolicy;
 use App\Repositories\AcademicRepository;
+use App\Repositories\StudentRepository;
 use App\Repositories\TeacherRepository;
 use App\Services\AcademicStructureService;
 
@@ -24,15 +25,18 @@ class ClassController extends Controller
     private AcademicStructureService $structureService;
     private AcademicRepository $repository;
     private TeacherRepository $teacherRepository;
+    private StudentRepository $studentRepository;
 
     public function __construct(
         ?AcademicStructureService $structureService = null,
         ?AcademicRepository $repository = null,
-        ?TeacherRepository $teacherRepository = null
+        ?TeacherRepository $teacherRepository = null,
+        ?StudentRepository $studentRepository = null
     ) {
         $this->structureService = $structureService ?? new AcademicStructureService();
         $this->repository = $repository ?? new AcademicRepository();
         $this->teacherRepository = $teacherRepository ?? new TeacherRepository();
+        $this->studentRepository = $studentRepository ?? new StudentRepository();
     }
 
     public function index(Request $request): Response
@@ -42,16 +46,45 @@ class ClassController extends Controller
             return $this->forbidden('You are not authorized to manage classes.');
         }
 
+        $search = trim((string)$request->query('search', '')) ?: null;
+        $levelId = (int)$request->query('level_id', 0) ?: null;
+        $page = max(1, (int)$request->query('page', 1));
+        $limit = 25;
+        $offset = ($page - 1) * $limit;
+
         $classes = $this->repository->getAllClasses();
         $levels = $this->repository->getAllLevels();
         $teachers = $this->teacherRepository->getAllTeachers();
 
+        if ($levelId !== null) {
+            $classes = array_filter($classes, fn($c) => (int)$c->academicLevelId === $levelId);
+        }
+
+        if ($search !== null) {
+            $sLower = strtolower($search);
+            $classes = array_filter($classes, function($c) use ($sLower) {
+                return str_contains(strtolower($c->name), $sLower) ||
+                       str_contains(strtolower((string)$c->sectionArm), $sLower);
+            });
+        }
+
+        $classes = array_values($classes);
+        $totalClasses = count($classes);
+        $totalPages = max(1, (int)ceil($totalClasses / $limit));
+        $pagedClasses = array_slice($classes, $offset, $limit);
+
         return $this->view('admin/classes/index', [
             'title' => 'Classes & Arms — Claret LMS',
             'headerTitle' => 'Classes & Arms',
-            'classes' => $classes,
+            'classes' => $pagedClasses,
             'levels' => $levels,
             'teachers' => $teachers,
+            'search' => $search,
+            'selectedLevelId' => $levelId,
+            'currentPage' => $page,
+            'totalPages' => $totalPages,
+            'totalResults' => $totalClasses,
+            'perPage' => $limit,
         ]);
     }
 
@@ -120,5 +153,53 @@ class ClassController extends Controller
         } catch (DomainRuleException $e) {
             return $this->redirectWithError('/admin/classes', $e->getMessage());
         }
+    }
+
+    public function show(Request $request, string|int $id = 0): Response
+    {
+        $userContext = $request->getAttribute('user_context');
+        if (!$userContext instanceof UserContext || !AcademicPolicy::canManageAcademicStructure($userContext)) {
+            return $this->forbidden('You are not authorized to view class details.');
+        }
+
+        $classId = (int)$id;
+        $class = $this->repository->findClassById($classId);
+        if (!$class) {
+            return Response::html('Class not found.', 404);
+        }
+
+        $level = $this->repository->findLevelById($class->academicLevelId);
+        $formTeacher = $class->formTeacherId ? $this->teacherRepository->findTeacherById($class->formTeacherId) : null;
+        $students = $this->studentRepository->getStudentsWithDetails(classId: $classId, limit: 300);
+
+        // Fetch subjects allocated to this class
+        $pdo = $this->repository->getPdo();
+        $stmt = $pdo->prepare(
+            'SELECT cs.id as class_subject_id, cs.status, s.name as subject_name, s.code as subject_code,
+                    tu.name as teacher_name, t.staff_id as teacher_staff_id, tu.phone as teacher_phone
+             FROM `class_subjects` cs
+             JOIN `subjects` s ON s.id = cs.subject_id
+             LEFT JOIN `teachers` t ON t.id = cs.teacher_id
+             LEFT JOIN `users` tu ON tu.id = t.user_id
+             WHERE cs.class_id = :class_id
+             ORDER BY s.name ASC'
+        );
+        $stmt->execute([':class_id' => $classId]);
+        $subjects = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+
+        $maleCount = count(array_filter($students, fn($s) => strtolower($s['gender'] ?? '') === 'male'));
+        $femaleCount = count(array_filter($students, fn($s) => strtolower($s['gender'] ?? '') === 'female'));
+
+        return $this->view('admin/classes/show', [
+            'title' => "Class Dossier: {$class->name} — Claret LMS",
+            'headerTitle' => 'Class Cohort & Subject Allocation',
+            'class' => $class,
+            'level' => $level,
+            'formTeacher' => $formTeacher,
+            'students' => $students,
+            'subjects' => $subjects,
+            'maleCount' => $maleCount,
+            'femaleCount' => $femaleCount,
+        ]);
     }
 }

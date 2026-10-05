@@ -14,6 +14,23 @@ $classOptions = [];
 foreach ($classes as $c) {
     $classOptions[$c->id] = method_exists($c, 'getFullName') ? $c->getFullName() : ($c->name . (!empty($c->sectionArm) ? ' (' . $c->sectionArm . ')' : ''));
 }
+
+$selectedTerm = null;
+foreach ($terms as $t) {
+    if ((int)$t->id === $selectedTermId) {
+        $selectedTerm = $t;
+        break;
+    }
+}
+
+$selectedClass = null;
+foreach ($classes as $c) {
+    if ((int)$c->id === $selectedClassId) {
+        $selectedClass = $c;
+        break;
+    }
+}
+$selectedClassName = $selectedClass ? (method_exists($selectedClass, 'getFullName') ? $selectedClass->getFullName() : $selectedClass->name) : 'Selected Class';
 ?>
 
 <div class="space-y-6 pb-12">
@@ -150,32 +167,23 @@ foreach ($classes as $c) {
                     </form>
 
                     <?php if (!$isPublished): ?>
-                        <!-- Publish -->
-                        <form method="POST" action="/admin/results/publish">
-                            <?= csrf_field() ?>
-                            <input type="hidden" name="term_id"  value="<?= e((string)$selectedTermId) ?>">
-                            <input type="hidden" name="class_id" value="<?= e((string)$selectedClassId) ?>">
-                            <?php $this->include('components/button', [
-                                'type'    => 'submit',
-                                'variant' => 'primary',
-                                'label'   => 'Publish Results',
-                                'icon'    => '<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>',
-                            ]); ?>
-                        </form>
+                        <!-- Authorize & Release Results Trigger -->
+                        <?php $this->include('components/button', [
+                            'type'    => 'button',
+                            'variant' => 'primary',
+                            'label'   => 'Authorize & Publish Results',
+                            'icon'    => '<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>',
+                            'attributes' => 'onclick="window.LMS.showModal(\'publish-modal\')"'
+                        ]); ?>
                     <?php else: ?>
-                        <!-- Unpublish -->
-                        <form method="POST" action="/admin/results/unpublish">
-                            <?= csrf_field() ?>
-                            <input type="hidden" name="term_id"  value="<?= e((string)$selectedTermId) ?>">
-                            <input type="hidden" name="class_id" value="<?= e((string)$selectedClassId) ?>">
-                            <input type="hidden" name="reason"   value="Administrative Review">
-                            <?php $this->include('components/button', [
-                                'type'    => 'submit',
-                                'variant' => 'danger',
-                                'label'   => 'Unpublish Results',
-                                'icon'    => '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>',
-                            ]); ?>
-                        </form>
+                        <!-- Unpublish Trigger -->
+                        <?php $this->include('components/button', [
+                            'type'    => 'button',
+                            'variant' => 'danger',
+                            'label'   => 'Unpublish Results',
+                            'icon'    => '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>',
+                            'attributes' => 'onclick="window.LMS.showModal(\'unpublish-modal\')"'
+                        ]); ?>
                     <?php endif; ?>
 
                 </div>
@@ -257,6 +265,120 @@ foreach ($classes as $c) {
             ]); ?>
         </div>
 
+    <?php endif; ?>
+
+    <!-- Authorize & Release Results Confirmation Modal -->
+    <?php if ($selectedTermId > 0 && $selectedClassId > 0): ?>
+        <?php ob_start(); ?>
+        <form method="POST" action="/admin/results/publish" class="space-y-5" novalidate>
+            <?= csrf_field() ?>
+            <input type="hidden" name="term_id" value="<?= e((string)$selectedTermId) ?>">
+            <input type="hidden" name="class_id" value="<?= e((string)$selectedClassId) ?>">
+
+            <div class="bg-amber-50/80 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+                <svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <div class="text-xs text-amber-900 leading-relaxed">
+                    <strong class="font-bold">Administrative Result Release Authorization:</strong>
+                    Releasing these results lifts the administrative seal. Official terminal report cards will immediately become accessible to students and parents via their portals, and automated notification alerts will be dispatched.
+                </div>
+            </div>
+
+            <div class="bg-slate-50 rounded-xl p-4 border border-slate-200/80 space-y-2.5 text-xs">
+                <div class="flex justify-between items-center py-1 border-b border-slate-200">
+                    <span class="text-slate-500 font-medium">Academic Term:</span>
+                    <span class="font-bold text-slate-800"><?= e($selectedTerm?->name ?? 'Term #' . $selectedTermId) ?></span>
+                </div>
+                <div class="flex justify-between items-center py-1 border-b border-slate-200">
+                    <span class="text-slate-500 font-medium">Class Arm:</span>
+                    <span class="font-bold text-slate-800"><?= e($selectedClassName) ?></span>
+                </div>
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-slate-500 font-medium">Students in Cohort:</span>
+                    <span class="font-bold text-slate-800"><?= count($summaries) ?> Students</span>
+                </div>
+            </div>
+
+            <?php $this->include('components/input', [
+                'name' => 'reason',
+                'id' => 'publish_reason',
+                'label' => 'Executive Approval Note / Reason (Optional)',
+                'placeholder' => 'e.g. End of term board moderation approved',
+                'required' => false,
+                'helpText' => 'Recorded in the administrative audit log for transparency.'
+            ]); ?>
+
+            <div class="pt-4 border-t border-slate-200 flex justify-end gap-3">
+                <?php $this->include('components/button', [
+                    'type' => 'button',
+                    'variant' => 'secondary',
+                    'label' => 'Cancel',
+                    'attributes' => 'onclick="window.LMS.hideModal(\'publish-modal\')"'
+                ]); ?>
+                <?php $this->include('components/button', [
+                    'type' => 'submit',
+                    'variant' => 'primary',
+                    'label' => 'Confirm & Release Results',
+                    'icon' => '<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>'
+                ]); ?>
+            </div>
+        </form>
+        <?php $publishModalBody = ob_get_clean(); ?>
+
+        <?php $this->include('components/modal', [
+            'id' => 'publish-modal',
+            'title' => 'Authorize & Release Official Term Results',
+            'body' => $publishModalBody,
+            'size' => 'md'
+        ]); ?>
+
+        <!-- Unpublish Results Confirmation Modal -->
+        <?php ob_start(); ?>
+        <form method="POST" action="/admin/results/unpublish" class="space-y-5" novalidate>
+            <?= csrf_field() ?>
+            <input type="hidden" name="term_id" value="<?= e((string)$selectedTermId) ?>">
+            <input type="hidden" name="class_id" value="<?= e((string)$selectedClassId) ?>">
+
+            <div class="bg-red-50/80 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+                <svg class="w-5 h-5 text-red-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <div class="text-xs text-red-900 leading-relaxed">
+                    <strong class="font-bold">Administrative Seal Warning:</strong>
+                    Unpublishing will place these results back under administrative seal. Students and parents will immediately lose access to their report cards until re-published.
+                </div>
+            </div>
+
+            <?php $this->include('components/input', [
+                'name' => 'reason',
+                'id' => 'unpublish_reason',
+                'label' => 'Reason for Revocation / Unpublishing',
+                'placeholder' => 'e.g. Score adjustment or moderation discrepancy',
+                'required' => true,
+                'value' => 'Administrative Score Moderation',
+                'helpText' => 'Mandatory explanation recorded in the audit trail.'
+            ]); ?>
+
+            <div class="pt-4 border-t border-slate-200 flex justify-end gap-3">
+                <?php $this->include('components/button', [
+                    'type' => 'button',
+                    'variant' => 'secondary',
+                    'label' => 'Cancel',
+                    'attributes' => 'onclick="window.LMS.hideModal(\'unpublish-modal\')"'
+                ]); ?>
+                <?php $this->include('components/button', [
+                    'type' => 'submit',
+                    'variant' => 'danger',
+                    'label' => 'Revoke & Unpublish Results',
+                    'icon' => '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>'
+                ]); ?>
+            </div>
+        </form>
+        <?php $unpublishModalBody = ob_get_clean(); ?>
+
+        <?php $this->include('components/modal', [
+            'id' => 'unpublish-modal',
+            'title' => 'Revoke Term Results Publication',
+            'body' => $unpublishModalBody,
+            'size' => 'md'
+        ]); ?>
     <?php endif; ?>
 
 </div>

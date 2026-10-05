@@ -228,7 +228,7 @@ class AcademicRepository
      */
     public function findAllTerms(): array
     {
-        $stmt = $this->pdo->query('SELECT * FROM `terms` ORDER BY `start_date` DESC, `id` DESC');
+        $stmt = $this->pdo->query('SELECT * FROM `terms` ORDER BY `session_id` DESC, `start_date` ASC, `id` ASC');
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         return array_map(fn(array $row) => Term::fromArray($row), $rows);
@@ -240,6 +240,31 @@ class AcademicRepository
     public function getAllTerms(): array
     {
         return $this->findAllTerms();
+    }
+
+    public function findOverlappingTermInSession(int $sessionId, string $startDate, string $endDate, ?int $excludeTermId = null): ?Term
+    {
+        $sql = 'SELECT * FROM `terms` 
+                WHERE `session_id` = :session_id 
+                  AND `start_date` <= :end_date 
+                  AND `end_date` >= :start_date';
+        $params = [
+            ':session_id' => $sessionId,
+            ':start_date' => $startDate,
+            ':end_date' => $endDate,
+        ];
+
+        if ($excludeTermId !== null && $excludeTermId > 0) {
+            $sql .= ' AND `id` != :exclude_id';
+            $params[':exclude_id'] = $excludeTermId;
+        }
+
+        $sql .= ' LIMIT 1';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        return $row ? Term::fromArray($row) : null;
     }
 
     public function findCurrentTerm(): ?Term
@@ -399,6 +424,32 @@ class AcademicRepository
      {
          return $this->getAllLevels();
      }
+
+    /**
+     * @return array<int, array{classes: int, students: int}>
+     */
+    public function getLevelCohortCounts(): array
+    {
+        $sql = "
+            SELECT 
+                al.id,
+                COUNT(DISTINCT c.id) as class_count,
+                COUNT(DISTINCT s.id) as student_count
+            FROM `academic_levels` al
+            LEFT JOIN `classes` c ON c.academic_level_id = al.id
+            LEFT JOIN `students` s ON s.current_class_id = c.id
+            GROUP BY al.id
+        ";
+        $rows = $this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+        $counts = [];
+        foreach ($rows as $r) {
+            $counts[(int)$r['id']] = [
+                'classes' => (int)$r['class_count'],
+                'students' => (int)$r['student_count'],
+            ];
+        }
+        return $counts;
+    }
 
     /**
      * @return AcademicStage[]
@@ -1009,8 +1060,13 @@ class AcademicRepository
     /**
      * @return ClassSubject[]
      */
-    public function getClassSubjectsBySession(int $sessionId, ?int $classId = null): array
-    {
+    public function getClassSubjectsBySession(
+        int $sessionId,
+        ?int $classId = null,
+        ?string $search = null,
+        ?int $limit = null,
+        ?int $offset = null
+    ): array {
         $sql = 'SELECT cs.*,
                        s.name as session_name, s.start_date as session_start, s.end_date as session_end, s.status as session_status,
                        c.name as class_name, c.section_arm as class_section_arm, c.academic_level_id as class_level_id, c.status as class_status,
@@ -1032,13 +1088,67 @@ class AcademicRepository
             $params[':class_id'] = $classId;
         }
 
+        if (!empty($search)) {
+            $sql .= ' AND (c.name LIKE :search_c OR sub.name LIKE :search_sn OR sub.code LIKE :search_sc OR u.name LIKE :search_un OR t.staff_id LIKE :search_st)';
+            $searchWild = '%' . trim($search) . '%';
+            $params[':search_c'] = $searchWild;
+            $params[':search_sn'] = $searchWild;
+            $params[':search_sc'] = $searchWild;
+            $params[':search_un'] = $searchWild;
+            $params[':search_st'] = $searchWild;
+        }
+
         $sql .= ' ORDER BY c.name ASC, sub.name ASC';
+
+        if ($limit !== null && $limit > 0) {
+            $sql .= ' LIMIT ' . (int)$limit;
+            if ($offset !== null && $offset > 0) {
+                $sql .= ' OFFSET ' . (int)$offset;
+            }
+        }
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         return array_map(fn(array $row) => $this->hydrateClassSubject($row), $rows);
+    }
+
+    public function countClassSubjectsBySession(
+        int $sessionId,
+        ?int $classId = null,
+        ?string $search = null
+    ): int {
+        $sql = 'SELECT COUNT(*)
+                FROM `class_subjects` cs
+                JOIN `sessions` s ON s.id = cs.session_id
+                JOIN `classes` c ON c.id = cs.class_id
+                JOIN `subjects` sub ON sub.id = cs.subject_id
+                JOIN `teachers` t ON t.id = cs.teacher_id
+                JOIN `users` u ON u.id = t.user_id
+                WHERE cs.session_id = :session_id';
+
+        $params = [':session_id' => $sessionId];
+
+        if ($classId !== null && $classId > 0) {
+            $sql .= ' AND cs.class_id = :class_id';
+            $params[':class_id'] = $classId;
+        }
+
+        if (!empty($search)) {
+            $sql .= ' AND (c.name LIKE :search_c OR sub.name LIKE :search_sn OR sub.code LIKE :search_sc OR u.name LIKE :search_un OR t.staff_id LIKE :search_st)';
+            $searchWild = '%' . trim($search) . '%';
+            $params[':search_c'] = $searchWild;
+            $params[':search_sn'] = $searchWild;
+            $params[':search_sc'] = $searchWild;
+            $params[':search_un'] = $searchWild;
+            $params[':search_st'] = $searchWild;
+        }
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+
+        return (int)$stmt->fetchColumn();
     }
 
     /**

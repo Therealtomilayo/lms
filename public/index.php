@@ -151,6 +151,7 @@ try {
     // Terms
     $router->get('/admin/terms', [\App\Controllers\Admin\TermController::class, 'index'], $adminAuth);
     $router->post('/admin/terms', [\App\Controllers\Admin\TermController::class, 'store'], $adminFormAuth);
+    $router->post('/admin/terms/switch', [\App\Controllers\Admin\TermController::class, 'makeCurrent'], $adminFormAuth);
     $router->post('/admin/terms/{id}', [\App\Controllers\Admin\TermController::class, 'update'], $adminFormAuth);
     $router->post('/admin/terms/{id}/make-current', [\App\Controllers\Admin\TermController::class, 'makeCurrent'], $adminFormAuth);
     $router->post('/admin/terms/{id}/status', [\App\Controllers\Admin\TermController::class, 'status'], $adminFormAuth);
@@ -163,9 +164,18 @@ try {
 
     // Classes
     $router->get('/admin/classes', [\App\Controllers\Admin\ClassController::class, 'index'], $adminAuth);
+    $router->get('/admin/classes/{id}', [\App\Controllers\Admin\ClassController::class, 'show'], $adminAuth);
     $router->post('/admin/classes', [\App\Controllers\Admin\ClassController::class, 'store'], $adminFormAuth);
     $router->post('/admin/classes/{id}', [\App\Controllers\Admin\ClassController::class, 'update'], $adminFormAuth);
     $router->post('/admin/classes/{id}/status', [\App\Controllers\Admin\ClassController::class, 'status'], $adminFormAuth);
+
+    // Dedicated Teachers & Personnel Directory
+    $router->get('/admin/teachers', [\App\Controllers\Admin\TeacherController::class, 'index'], $adminAuth);
+    $router->get('/admin/teachers/{id}', [\App\Controllers\Admin\TeacherController::class, 'show'], $adminAuth);
+
+    // Dedicated Students & Enrollment Roster Directory
+    $router->get('/admin/students', [\App\Controllers\Admin\StudentController::class, 'index'], $adminAuth);
+    $router->get('/admin/students/{id}', [\App\Controllers\Admin\StudentController::class, 'show'], $adminAuth);
 
     // Subjects
     $router->get('/admin/subjects', [\App\Controllers\Admin\SubjectController::class, 'index'], $adminAuth);
@@ -232,7 +242,7 @@ try {
     $router->post('/admin/results/publish', [\App\Controllers\Admin\ResultPublicationController::class, 'publish'], $adminFormAuth);
     $router->post('/admin/results/unpublish', [\App\Controllers\Admin\ResultPublicationController::class, 'unpublish'], $adminFormAuth);
     $router->post('/admin/results/approve-submission', [\App\Controllers\Admin\ResultReviewController::class, 'approveSubmission'], $adminFormAuth);
-    $router->get('/admin/reports/student/{studentId}/{termId}.pdf', [\App\Controllers\Admin\ReportController::class, 'pdf'], ['auth']);
+    $router->get('/admin/reports/student/{studentId}/{termId}.pdf', [\App\Controllers\Admin\ReportController::class, 'pdf'], $adminAuth);
 
     // Admin Cumulative Student Transcripts & Dossier Generator (SRS §26, §51)
     $router->get('/admin/transcripts', [\App\Controllers\Admin\TranscriptController::class, 'index'], $adminAuth);
@@ -654,8 +664,34 @@ try {
             'message' => $e->getMessage(),
         ], 403);
     } else {
+        $userId = $_SESSION['user_id'] ?? null;
+        $returnUrl = '/login';
+        if ($userId) {
+            $userRole = $_SESSION['user_role'] ?? null;
+            if ($userRole === 'parent') {
+                $childId = $_SESSION['_selected_child_id'] ?? null;
+                $returnUrl = $childId ? "/parent/children/{$childId}/grades" : '/parent/dashboard';
+            } elseif ($userRole === 'student') {
+                $returnUrl = '/student/grades';
+            } elseif ($userRole === 'teacher') {
+                $returnUrl = '/teacher/results/overview';
+            } elseif (in_array($userRole, ['admin', 'super_admin'], true)) {
+                $returnUrl = '/admin/results/review';
+            } else {
+                $returnUrl = '/dashboard';
+            }
+        }
+        $referer = $_SERVER['HTTP_REFERER'] ?? null;
+        if ($referer && !str_contains($referer, '/report-card')) {
+            $returnUrl = $referer;
+        }
+
+        $view = new \App\Core\View();
         $response = Response::html(
-            '<h1>403 Forbidden</h1><p>' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') . '</p>',
+            $view->render('errors/403', [
+                'message' => $e->getMessage(),
+                'returnUrl' => $returnUrl,
+            ]),
             403
         );
     }

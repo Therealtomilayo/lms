@@ -43,13 +43,18 @@ class TermController extends Controller
 
         $selectedSessionId = (int)$request->query('session_id', $activeSession?->id ?? ($sessions[0]->id ?? 0));
         $terms = $selectedSessionId > 0 ? $this->repository->getTermsBySession($selectedSessionId) : [];
+        $activeTerm = $selectedSessionId > 0 ? $this->repository->findActiveTermForSession($selectedSessionId) : null;
+        $today = date('Y-m-d');
 
         return $this->view('admin/terms/index', [
-            'title' => 'Academic Terms — Claret LMS',
+            'title' => 'Academic Terms & Session Lifecycle — Claret LMS',
             'headerTitle' => 'Academic Terms',
             'sessions' => $sessions,
+            'activeSession' => $activeSession,
             'selectedSessionId' => $selectedSessionId,
             'terms' => $terms,
+            'activeTerm' => $activeTerm,
+            'today' => $today,
         ]);
     }
 
@@ -113,13 +118,16 @@ class TermController extends Controller
             return Response::html('Forbidden', 403);
         }
 
-        $id = (int)($id ?: $request->post('id', 0));
+        $id = (int)($id ?: $request->post('term_id', $request->post('id', 0)));
         $term = $this->repository->findTermById($id);
-        $sessionId = $term?->sessionId ?? 0;
+        if (!$term) {
+            return $this->redirectWithError('/admin/terms', 'Selected term was not found.');
+        }
+        $sessionId = $term->sessionId;
 
         try {
             $this->sessionService->makeTermActive($id);
-            return $this->redirectWithSuccess("/admin/terms?session_id={$sessionId}", 'Term activated as current active term.');
+            return $this->redirectWithSuccess("/admin/terms?session_id={$sessionId}", "Current active term successfully switched to '{$term->name}' across the entire system.");
         } catch (ResourceNotFoundException $e) {
             return Response::html($e->getMessage(), 404);
         } catch (DomainRuleException $e) {

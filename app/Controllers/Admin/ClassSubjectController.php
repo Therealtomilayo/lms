@@ -47,10 +47,29 @@ class ClassSubjectController extends Controller
 
         $selectedSessionId = (int)$request->query('session_id', $activeSession ? $activeSession->id : ($sessions[0]->id ?? 0));
         $selectedClassId = (int)$request->query('class_id', 0);
+        $search = trim((string)$request->query('search', '')) ?: null;
+        $page = max(1, (int)$request->query('page', 1));
+        $limit = 25;
+        $offset = ($page - 1) * $limit;
 
         $classSubjects = [];
+        $totalClassSubjects = 0;
+        $totalPages = 1;
+
         if ($selectedSessionId > 0) {
-            $classSubjects = $this->academicRepository->getClassSubjectsBySession($selectedSessionId, $selectedClassId > 0 ? $selectedClassId : null);
+            $totalClassSubjects = $this->academicRepository->countClassSubjectsBySession(
+                $selectedSessionId,
+                $selectedClassId > 0 ? $selectedClassId : null,
+                $search
+            );
+            $totalPages = max(1, (int)ceil($totalClassSubjects / $limit));
+            $classSubjects = $this->academicRepository->getClassSubjectsBySession(
+                $selectedSessionId,
+                $selectedClassId > 0 ? $selectedClassId : null,
+                $search,
+                $limit,
+                $offset
+            );
         }
 
         $classes = $this->academicRepository->getAllClasses();
@@ -63,10 +82,15 @@ class ClassSubjectController extends Controller
             'sessions' => $sessions,
             'selectedSessionId' => $selectedSessionId,
             'selectedClassId' => $selectedClassId,
+            'search' => $search,
             'classSubjects' => $classSubjects,
             'classes' => $classes,
             'subjects' => $subjects,
             'teachers' => $teachers,
+            'currentPage' => $page,
+            'totalPages' => $totalPages,
+            'totalResults' => $totalClassSubjects,
+            'perPage' => $limit,
         ]);
     }
 

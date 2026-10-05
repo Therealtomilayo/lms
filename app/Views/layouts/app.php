@@ -214,5 +214,7 @@
         document.addEventListener('DOMContentLoaded', initUniversalPasswordToggles);
         initUniversalPasswordToggles();
     </script>
+    <!-- Universal AJAX Table, Filter & Pagination Driver -->
+    <script src="/assets/js/lms-ajax-table.js"></script>
 </body>
 </html>

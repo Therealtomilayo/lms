@@ -76,28 +76,30 @@ $this->layout('layouts/admin');
 
     <!-- Filter & Search Toolbar -->
     <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <form method="GET" action="/admin/results/pins" class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+        <form method="GET" action="/admin/results/pins" data-lms-filter="true" class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
             <input type="text" 
+                   id="pin_search"
                    name="q" 
                    value="<?= e($search ?? '') ?>" 
                    placeholder="Search serial, PIN, student, or admission..."
-                   class="text-xs border border-slate-300 rounded-xl px-3.5 py-2 w-full sm:w-64 focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
+                   autocomplete="off"
+                   class="text-xs border border-slate-300 rounded-xl px-3.5 py-2 w-full sm:w-64 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none">
 
-            <select name="status" class="text-xs border border-slate-300 rounded-xl px-3.5 py-2 focus:ring-2 focus:ring-brand-500">
+            <select name="status" id="filter_pin_status" class="text-xs border border-slate-300 rounded-xl px-3.5 py-2 focus:ring-2 focus:ring-brand-500 outline-none cursor-pointer">
                 <option value="">All Statuses</option>
                 <option value="active" <?= $status === 'active' ? 'selected' : '' ?>>Active</option>
                 <option value="depleted" <?= $status === 'depleted' ? 'selected' : '' ?>>Depleted (5/5)</option>
                 <option value="revoked" <?= $status === 'revoked' ? 'selected' : '' ?>>Revoked</option>
             </select>
 
-            <select name="term_id" class="text-xs border border-slate-300 rounded-xl px-3.5 py-2 focus:ring-2 focus:ring-brand-500">
+            <select name="term_id" id="filter_pin_term" class="text-xs border border-slate-300 rounded-xl px-3.5 py-2 focus:ring-2 focus:ring-brand-500 outline-none cursor-pointer">
                 <option value="">All Academic Terms</option>
                 <?php foreach ($terms as $t): ?>
                     <option value="<?= $t->id ?>" <?= $termId === $t->id ? 'selected' : '' ?>><?= e($t->name) ?></option>
                 <?php endforeach; ?>
             </select>
 
-            <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs transition">
+            <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer">
                 Filter
             </button>
             <?php if (!empty($status) || !empty($termId) || !empty($search)): ?>
@@ -107,8 +109,9 @@ $this->layout('layouts/admin');
         <span class="text-xs text-slate-500 font-medium">Showing <?= count($pins) ?> of <?= $total ?> PINs</span>
     </div>
 
-    <!-- PINs Roster Table -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+    <!-- PINs Roster Table Container -->
+    <div data-lms-table-container="true" class="space-y-4">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         <?php if (empty($pins)): ?>
             <div class="p-12 text-center text-slate-500 text-xs">No Scratch-Card PINs matching your criteria.</div>
         <?php else: ?>
@@ -192,7 +195,24 @@ $this->layout('layouts/admin');
                     </tbody>
                 </table>
             </div>
+
+            <!-- Pagination Component -->
+            <?php
+            $paginationBaseUrl = '/admin/results/pins?' . http_build_query(array_filter([
+                'status' => !empty($status) ? $status : null,
+                'term_id' => !empty($termId) ? $termId : null,
+                'q' => !empty($search) ? $search : null,
+            ]));
+            $this->include('components/pagination', [
+                'currentPage' => $page ?? 1,
+                'totalPages' => (int)ceil(($total ?? 0) / ($limit ?? 25)),
+                'totalResults' => $total ?? count($pins),
+                'perPage' => $limit ?? 25,
+                'baseUrl' => $paginationBaseUrl,
+            ]);
+            ?>
         <?php endif; ?>
+        </div>
     </div>
 </div>
 

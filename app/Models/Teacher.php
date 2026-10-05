@@ -58,6 +58,8 @@ final class Teacher
         return match ($name) {
             'name', 'userName', 'teacherName' => $this->user?->name ?? '',
             'email', 'userEmail' => $this->user?->email ?? '',
+            'phone' => $this->user?->phone ?? '',
+            'userStatus', 'status' => $this->user?->status ?? 'active',
             'staff_id' => $this->staffId,
             default => null,
         };
@@ -65,6 +67,6 @@ final class Teacher
 
     public function __isset(string $name): bool
     {
-        return in_array($name, ['name', 'userName', 'teacherName', 'email', 'userEmail', 'staff_id'], true);
+        return in_array($name, ['name', 'userName', 'teacherName', 'email', 'userEmail', 'phone', 'userStatus', 'status', 'staff_id'], true);
     }
 }

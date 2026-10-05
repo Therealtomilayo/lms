@@ -207,6 +207,33 @@ $actionUrl = $isEdit ? "/applicant/wards/{$ward->id}" : "/applicant/wards";
                     <span>Enrollment &amp; Program Options</span>
                 </h3>
 
+                <?php
+                // Dynamically resolve stages and group academic levels
+                $stagesMap = [];
+                try {
+                    $acadRepo = new \App\Repositories\AcademicRepository();
+                    $dbStages = $acadRepo->getAllStages();
+                    foreach ($dbStages as $stg) {
+                        $stagesMap[$stg->key] = $stg->name;
+                    }
+                } catch (\Throwable $e) {}
+
+                if (empty($stagesMap)) {
+                    $stagesMap = [
+                        'eyfs' => 'Early Years Foundation (EYFS)',
+                        'primary' => 'Primary School',
+                        'junior_secondary' => 'Junior Secondary School',
+                        'senior_secondary' => 'Senior Secondary School',
+                    ];
+                }
+
+                $levelsByStage = [];
+                foreach ($levels as $lvl) {
+                    $stageKey = $lvl->stage ?? 'other';
+                    $levelsByStage[$stageKey][] = $lvl;
+                }
+                ?>
+
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <!-- Academic Level -->
                     <div>
@@ -216,12 +243,19 @@ $actionUrl = $isEdit ? "/applicant/wards/{$ward->id}" : "/applicant/wards";
                         <select id="applying_for_level_id" 
                                 name="applying_for_level_id" 
                                 required 
+                                onchange="syncAcademicLevelToGrade(this.value)"
                                 class="w-full px-3.5 py-2.5 text-sm rounded-xl border <?= !empty($errors['applying_for_level_id']) ? 'border-red-400 bg-red-50/30' : 'border-slate-200 bg-slate-50/50' ?> text-slate-900 focus:bg-white focus:border-[#7B3046] focus:ring-4 focus:ring-[#7B3046]/10 outline-none transition-all">
                             <option value="">Select Academic Level</option>
-                            <?php foreach ($levels as $lvl): ?>
-                                <option value="<?= $lvl->id ?>" <?= (int)old('applying_for_level_id', (string)($ward?->applyingForLevelId ?? '')) === $lvl->id ? 'selected' : '' ?>>
-                                    <?= e($lvl->name) ?> (<?= e(ucfirst($lvl->stage)) ?>)
-                                </option>
+                            <?php foreach ($levelsByStage as $stgKey => $stageLevels): ?>
+                                <optgroup label="<?= e($stagesMap[$stgKey] ?? ucwords(str_replace('_', ' ', $stgKey))) ?>">
+                                    <?php foreach ($stageLevels as $lvl): ?>
+                                        <option value="<?= $lvl->id ?>" 
+                                                data-level-name="<?= e($lvl->name) ?>"
+                                                <?= (int)old('applying_for_level_id', (string)($ward?->applyingForLevelId ?? '')) === $lvl->id ? 'selected' : '' ?>>
+                                            <?= e($lvl->name) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </optgroup>
                             <?php endforeach; ?>
                         </select>
                         <?php if (!empty($errors['applying_for_level_id'])): ?>
@@ -238,33 +272,35 @@ $actionUrl = $isEdit ? "/applicant/wards/{$ward->id}" : "/applicant/wards";
                         <select id="class_grade" 
                                 name="class_grade" 
                                 required 
+                                onchange="syncGradeToAcademicLevel(this.value)"
                                 class="w-full px-3.5 py-2.5 text-sm rounded-xl border <?= !empty($errors['class_grade']) ? 'border-red-400 bg-red-50/30' : 'border-slate-200 bg-slate-50/50' ?> text-slate-900 focus:bg-white focus:border-[#7B3046] focus:ring-4 focus:ring-[#7B3046]/10 outline-none transition-all">
                             <option value="">Select Grade to Enter</option>
-                            <optgroup label="Early Years Foundation (EYFS)">
-                                <option value="Creche" <?= $selectedGrade === 'Creche' ? 'selected' : '' ?>>Creche / Daycare</option>
-                                <option value="Pre-Nursery" <?= $selectedGrade === 'Pre-Nursery' ? 'selected' : '' ?>>Pre-Nursery</option>
-                                <option value="Nursery 1" <?= $selectedGrade === 'Nursery 1' ? 'selected' : '' ?>>Nursery 1</option>
-                                <option value="Nursery 2" <?= $selectedGrade === 'Nursery 2' ? 'selected' : '' ?>>Nursery 2</option>
-                            </optgroup>
-                            <optgroup label="Primary School">
-                                <option value="Primary 1" <?= $selectedGrade === 'Primary 1' ? 'selected' : '' ?>>Primary 1</option>
-                                <option value="Primary 2" <?= $selectedGrade === 'Primary 2' ? 'selected' : '' ?>>Primary 2</option>
-                                <option value="Primary 3" <?= $selectedGrade === 'Primary 3' ? 'selected' : '' ?>>Primary 3</option>
-                                <option value="Primary 4" <?= $selectedGrade === 'Primary 4' ? 'selected' : '' ?>>Primary 4</option>
-                                <option value="Primary 5" <?= $selectedGrade === 'Primary 5' ? 'selected' : '' ?>>Primary 5</option>
-                                <option value="Primary 6" <?= $selectedGrade === 'Primary 6' ? 'selected' : '' ?>>Primary 6</option>
-                            </optgroup>
-                            <optgroup label="Junior Secondary School">
-                                <option value="JSS 1" <?= $selectedGrade === 'JSS 1' ? 'selected' : '' ?>>JSS 1 (Grade 7 / Year 7)</option>
-                                <option value="JSS 2" <?= $selectedGrade === 'JSS 2' ? 'selected' : '' ?>>JSS 2 (Grade 8 / Year 8)</option>
-                                <option value="JSS 3" <?= $selectedGrade === 'JSS 3' ? 'selected' : '' ?>>JSS 3 (Grade 9 / Year 9)</option>
-                            </optgroup>
-                            <optgroup label="Senior Secondary School">
-                                <option value="SS 1" <?= $selectedGrade === 'SS 1' ? 'selected' : '' ?>>SS 1 (Grade 10 / Year 10)</option>
-                                <option value="SS 2" <?= $selectedGrade === 'SS 2' ? 'selected' : '' ?>>SS 2 (Grade 11 / Year 11)</option>
-                                <option value="SS 3" <?= $selectedGrade === 'SS 3' ? 'selected' : '' ?>>SS 3 (Grade 12 / Year 12)</option>
-                            </optgroup>
-                            <?php if (!empty($selectedGrade) && !in_array($selectedGrade, ['Creche', 'Pre-Nursery', 'Nursery 1', 'Nursery 2', 'Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'JSS 1', 'JSS 2', 'JSS 3', 'SS 1', 'SS 2', 'SS 3'])): ?>
+                            <?php foreach ($levelsByStage as $stgKey => $stageLevels): ?>
+                                <optgroup label="<?= e($stagesMap[$stgKey] ?? ucwords(str_replace('_', ' ', $stgKey))) ?>">
+                                    <?php foreach ($stageLevels as $lvl): ?>
+                                        <?php 
+                                            $niceGradeLabel = match($lvl->name) {
+                                                'Creche' => 'Creche / Daycare',
+                                                'JSS 1' => 'JSS 1 (Grade 7 / Year 7)',
+                                                'JSS 2' => 'JSS 2 (Grade 8 / Year 8)',
+                                                'JSS 3' => 'JSS 3 (Grade 9 / Year 9)',
+                                                'SS 1' => 'SS 1 (Grade 10 / Year 10)',
+                                                'SS 2' => 'SS 2 (Grade 11 / Year 11)',
+                                                'SS 3' => 'SS 3 (Grade 12 / Year 12)',
+                                                default => $lvl->name
+                                            };
+                                        ?>
+                                        <option value="<?= e($lvl->name) ?>" 
+                                                data-level-id="<?= $lvl->id ?>"
+                                                <?= $selectedGrade === $lvl->name ? 'selected' : '' ?>>
+                                            <?= e($niceGradeLabel) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </optgroup>
+                            <?php endforeach; ?>
+                            <?php 
+                            $knownLevelNames = array_map(fn($l) => $l->name, $levels);
+                            if (!empty($selectedGrade) && !in_array($selectedGrade, $knownLevelNames, true)): ?>
                                 <optgroup label="Current Value">
                                     <option value="<?= e($selectedGrade) ?>" selected><?= e($selectedGrade) ?></option>
                                 </optgroup>
@@ -494,6 +530,32 @@ $actionUrl = $isEdit ? "/applicant/wards/{$ward->id}" : "/applicant/wards";
 </div>
 
 <script>
+    function syncGradeToAcademicLevel(gradeName) {
+        const gradeSelect = document.getElementById('class_grade');
+        const levelSelect = document.getElementById('applying_for_level_id');
+        if (!gradeSelect || !levelSelect) return;
+        const opt = gradeSelect.options[gradeSelect.selectedIndex];
+        if (opt && opt.dataset.levelId) {
+            levelSelect.value = opt.dataset.levelId;
+        }
+    }
+
+    function syncAcademicLevelToGrade(levelId) {
+        const levelSelect = document.getElementById('applying_for_level_id');
+        const gradeSelect = document.getElementById('class_grade');
+        if (!levelSelect || !gradeSelect) return;
+        const opt = levelSelect.options[levelSelect.selectedIndex];
+        if (opt && opt.dataset.levelName) {
+            const targetName = opt.dataset.levelName;
+            for (let i = 0; i < gradeSelect.options.length; i++) {
+                if (gradeSelect.options[i].value === targetName) {
+                    gradeSelect.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+    }
+
     function handleAttachmentFileChange(type, input) {
         const card = document.getElementById(`card-${type}`);
         const badge = document.getElementById(`badge-${type}`);

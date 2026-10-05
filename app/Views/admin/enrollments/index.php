@@ -60,14 +60,13 @@ $enrollStatusOptions = [
     </div>
 
     <!-- Filter Bar: Session & Class Selector -->
-    <form method="GET" action="/admin/enrollments" class="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+    <form method="GET" action="/admin/enrollments" data-lms-filter="true" class="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
         <?php $this->include('components/select', [
             'name' => 'session_id',
             'id' => 'filter_session_id',
             'label' => 'Academic Session',
             'options' => $sessionOptions,
             'selected' => $selectedSessionId,
-            'attributes' => 'onchange="this.form.submit()"'
         ]); ?>
 
         <?php $this->include('components/select', [
@@ -76,7 +75,6 @@ $enrollStatusOptions = [
             'label' => 'Class / Arm',
             'options' => $classOptions,
             'selected' => $selectedClassId,
-            'attributes' => 'onchange="this.form.submit()"'
         ]); ?>
 
         <?php $this->include('components/select', [
@@ -85,15 +83,15 @@ $enrollStatusOptions = [
             'label' => 'Status Filter',
             'options' => $statusOptions,
             'selected' => $selectedStatus ?? '',
-            'attributes' => 'onchange="this.form.submit()"'
         ]); ?>
     </form>
 
-    <!-- Roster Table -->
-    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
-            <h3 class="font-bold text-slate-900">Enrolled Students (<?= count($roster) ?>)</h3>
-        </div>
+    <!-- Roster Table Container -->
+    <div data-lms-table-container="true" class="space-y-4">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
+                <h3 class="font-bold text-slate-900">Enrolled Students (<?= count($roster) ?>)</h3>
+            </div>
         <?php if (empty($roster)): ?>
             <div class="p-6">
                 <?php $this->include('components/empty_state', [
@@ -174,6 +172,7 @@ $enrollStatusOptions = [
                 </table>
             </div>
         <?php endif; ?>
+        </div>
     </div>
 </div>
 

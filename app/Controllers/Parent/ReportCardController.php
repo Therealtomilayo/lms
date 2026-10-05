@@ -79,15 +79,23 @@ class ReportCardController extends Controller
 
         $activeTerm = $this->academicRepo->getCurrentTerm();
         $termId = (int)($request->query('term_id', 0) ?: ($activeTerm ? $activeTerm->id : 0));
+        $targetTerm = $termId > 0 ? $this->academicRepo->findTermById($termId) : $activeTerm;
         $activeStartDate = $activeTerm ? $activeTerm->startDate : date('Y-m-d');
+        $targetSessionId = $targetTerm ? $targetTerm->sessionId : ($activeTerm?->sessionId ?? 0);
 
         $terms = $this->academicRepo->getAllTerms();
-        $isPublished = $termId > 0 && $this->publicationRepo->isPublished($termId);
+        $classId = $student->currentClassId ?: null;
+        $isPublished = $termId > 0 && $this->publicationRepo->isPublished($termId, $classId);
+
+        $isCleared = $this->feeRepo->isStudentClearedForResult($sId, $targetSessionId, $termId);
+        Session::start();
+        $sessionKey = "_unlocked_pin_{$sId}_{$termId}";
+        $isPinUnlocked = !empty(Session::get($sessionKey));
 
         $subjectResults = [];
         $summary = null;
 
-        if ($isPublished) {
+        if ($isPublished && $isCleared && $isPinUnlocked) {
             $subjectResults = $this->gradebookRepo->getTermResultsByStudent($sId, $termId);
             $summary = $this->gradebookRepo->findStudentTermSummary($sId, $termId);
         }
@@ -95,12 +103,11 @@ class ReportCardController extends Controller
         $parent = $this->parentRepo->findByUserId($userContext->getUserId());
         $children = $parent ? $this->parentRepo->getLinkedStudents($parent->id) : [];
 
-        Session::start();
         Session::set('_selected_child_id', $sId);
 
         $termsData = [];
         foreach ($terms as $t) {
-            $tPub = $this->publicationRepo->isPublished($t->id);
+            $tPub = $this->publicationRepo->isPublished($t->id, $classId);
             $tCleared = $this->feeRepo->isStudentClearedForResult($sId, $t->sessionId, $t->id);
             $tPinUnlocked = !empty(Session::get("_unlocked_pin_{$sId}_{$t->id}"));
             $isFuture = ($t->startDate > $activeStartDate) && !in_array($t->status, ['active', 'grading_open', 'completed', 'archived'], true);
@@ -123,6 +130,8 @@ class ReportCardController extends Controller
             'activeTerm' => $activeTerm,
             'selectedTermId' => $termId,
             'isPublished' => $isPublished,
+            'isCleared' => $isCleared,
+            'isPinUnlocked' => $isPinUnlocked,
             'subjectResults' => $subjectResults,
             'summary' => $summary,
             'user' => $userContext,
@@ -146,7 +155,15 @@ class ReportCardController extends Controller
 
         $isPublished = $tId > 0 && $this->publicationRepo->isPublished($tId);
         if (!ParentPolicy::canViewReportCard($userContext, $sId, $tId, $this->parentRepo, $this->publicationRepo)) {
-            throw new AuthorizationException('You are not authorized to view these results or they are not yet published.');
+            $student = $this->studentRepo->findById($sId);
+            $targetTerm = $this->academicRepo->findTermById($tId);
+            $termName = $targetTerm?->name ?? 'Selected Term';
+            $stuName = $student?->name ?? 'this student';
+            if (!ParentPolicy::canViewStudent($userContext, $sId, $this->parentRepo)) {
+                throw new AuthorizationException("You are not authorized to view academic records for {$stuName}. Please verify your parent account links with school administration.");
+            } else {
+                throw new AuthorizationException("Terminal report card results for {$stuName} ({$termName}) are currently pending official publication by school administration. Please check back once official publication has been approved.");
+            }
         }
 
         $student = $this->studentRepo->findById($sId);

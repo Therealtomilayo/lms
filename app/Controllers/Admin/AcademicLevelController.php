@@ -41,6 +41,7 @@ class AcademicLevelController extends Controller
         $levels = $this->repository->getAllLevels();
         $gradingScales = $this->repository->getAllGradingScales();
         $stages = $this->repository->getAllStages();
+        $levelStats = $this->repository->getLevelCohortCounts();
 
         return $this->view('admin/academic_levels/index', [
             'title' => 'Academic Levels — Claret LMS',
@@ -48,6 +49,7 @@ class AcademicLevelController extends Controller
             'levels' => $levels,
             'gradingScales' => $gradingScales,
             'stages' => $stages,
+            'levelStats' => $levelStats,
         ]);
     }
 

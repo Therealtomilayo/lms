@@ -122,6 +122,98 @@ class TeacherRepository
         return array_map(fn(array $row) => Teacher::fromArray($row), $rows);
     }
 
+    /**
+     * Get all teachers with form classes, subject count, and allocations stats.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getAllTeachersWithStats(?string $search = null, ?string $filter = null): array
+    {
+        $where = [];
+        $params = [];
+
+        if (!empty($search)) {
+            $where[] = '(u.name LIKE :search_name OR u.email LIKE :search_email OR t.staff_id LIKE :search_staff)';
+            $params[':search_name'] = '%' . $search . '%';
+            $params[':search_email'] = '%' . $search . '%';
+            $params[':search_staff'] = '%' . $search . '%';
+        }
+
+        $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
+
+        $sql = "SELECT t.*, u.name as user_name, u.email as user_email, u.phone as user_phone, u.status as user_status,
+                       u.created_at as user_created_at,
+                       (SELECT COUNT(*) FROM `class_subjects` cs WHERE cs.teacher_id = t.id) as subjects_count,
+                       (SELECT GROUP_CONCAT(c.name SEPARATOR ', ') FROM `classes` c WHERE c.form_teacher_id = t.id) as form_classes
+                FROM `teachers` t
+                JOIN `users` u ON u.id = t.user_id
+                {$whereClause}
+                ORDER BY u.name ASC";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        if ($filter === 'form_teachers') {
+            $rows = array_filter($rows, fn($r) => !empty($r['form_classes']));
+        } elseif ($filter === 'subject_teachers') {
+            $rows = array_filter($rows, fn($r) => (int)$r['subjects_count'] > 0);
+        }
+
+        return array_values($rows);
+    }
+
+    /**
+     * Get classes where this teacher is assigned as Form Teacher (Class Master).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getFormClasses(int $teacherId): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT c.*, al.name as level_name, al.stage as stage_name,
+                    (SELECT COUNT(*) FROM `students` s WHERE s.current_class_id = c.id) as student_count
+             FROM `classes` c
+             LEFT JOIN `academic_levels` al ON al.id = c.academic_level_id
+             WHERE c.form_teacher_id = :teacher_id
+             ORDER BY c.name ASC'
+        );
+        $stmt->execute([':teacher_id' => $teacherId]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    /**
+     * Get all teaching allocations for a teacher across all sessions or specific session.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getAllocations(int $teacherId, ?int $sessionId = null): array
+    {
+        $sql = 'SELECT cs.id as class_subject_id, cs.class_id, cs.subject_id, cs.session_id, cs.status,
+                       c.name as class_name, c.section_arm, al.name as academic_level_name, al.stage as stage_name,
+                       s.name as subject_name, s.code as subject_code,
+                       (SELECT COUNT(*) FROM `student_subject_enrollments` sse WHERE sse.class_subject_id = cs.id AND sse.status = \'active\') as student_count
+                FROM `class_subjects` cs
+                JOIN `classes` c ON c.id = cs.class_id
+                LEFT JOIN `academic_levels` al ON al.id = c.academic_level_id
+                JOIN `subjects` s ON s.id = cs.subject_id
+                WHERE cs.teacher_id = :teacher_id';
+
+        $params = [':teacher_id' => $teacherId];
+        if ($sessionId !== null && $sessionId > 0) {
+            $sql .= ' AND cs.session_id = :session_id';
+            $params[':session_id'] = $sessionId;
+        }
+
+        $sql .= ' ORDER BY c.name ASC, s.name ASC';
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
     public function createTeacher(int $userId, string $staffId): Teacher
     {
         $now = date('Y-m-d H:i:s');

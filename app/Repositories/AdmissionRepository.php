@@ -24,6 +24,12 @@ class AdmissionRepository
         $this->pdo = $pdo ?? Database::getInstance();
     }
 
+    public function countPendingApplications(): int
+    {
+        $sql = "SELECT COUNT(*) FROM `admission_applications` WHERE `status` IN ('submitted', 'under_review')";
+        return (int)$this->pdo->query($sql)->fetchColumn();
+    }
+
     /* -------------------------------------------------------------------------
      * ADMISSION SESSIONS CONFIGURATION
      * ------------------------------------------------------------------------- */

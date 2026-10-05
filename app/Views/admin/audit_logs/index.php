@@ -87,7 +87,7 @@
 
     <!-- Filter Bar Card -->
     <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
-        <form method="GET" action="/admin/audit-logs" class="flex flex-col sm:flex-row items-stretch sm:items-end gap-4">
+        <form method="GET" action="/admin/audit-logs" data-lms-filter="true" class="flex flex-col sm:flex-row items-stretch sm:items-end gap-4">
             <!-- Action Filter -->
             <div class="flex-1 min-w-[200px]">
                 <label for="filter_action" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
@@ -158,7 +158,7 @@
     </div>
 
     <!-- Audit Logs Table Card -->
-    <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+    <div data-lms-table-container="true" class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
         <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
             <h2 class="text-base font-bold text-slate-900">Event Stream</h2>
             <span class="text-xs text-slate-500 font-medium">

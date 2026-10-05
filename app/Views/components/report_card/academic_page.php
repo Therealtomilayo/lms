@@ -4,8 +4,12 @@
  * Enhanced replica supporting both Terminal Progress Report (DOCX) and Cumulative Dossier (PDF)
  */
 
-$studentUser = $student->user ?? null;
-$studentFullName = strtoupper($studentUser?->name ?? $student->name ?? 'STUDENT');
+$rawStudentName = $studentUser?->name ?? $student->name ?? 'STUDENT';
+$gender = strtolower(trim((string)($student->gender ?? '')));
+$isFemale = ($gender === 'female' || $gender === 'girl');
+$salutation = $isFemale ? 'Lady' : 'Master';
+$studentFullName = strtoupper($salutation . ' ' . $rawStudentName);
+$passportPhoto = $passport_url ?? $student->user?->avatarUrl ?? (!empty($student->avatarUrl) ? $student->avatarUrl : null);
 $admissionNo = $student->admissionNumber ?? 'N/A';
 $dob = !empty($student->dateOfBirth) ? date('d/m/Y', strtotime($student->dateOfBirth)) : 'N/A';
 $admissionDate = !empty($student->admissionDate) ? date('d/m/Y', strtotime($student->admissionDate)) : (!empty($student->enrollmentDate) ? date('d/m/Y', strtotime($student->enrollmentDate)) : 'N/A');
@@ -23,43 +27,26 @@ $isFinalTerm = !empty($is_final_term);
 $demographics = $demographics ?? ['boys' => 7, 'girls' => 6, 'total' => 13];
 $attendanceStats = $attendance_stats ?? ['opened' => 120, 'present' => 116, 'absent' => 4];
 
-// Default psychomotor & affective traits matching sample PDF
-$defaultPsychomotor = [
-    'Handwriting' => 5,
-    'Games' => 4,
-    'Sports' => 5,
-    'Handling Tools' => 4,
-    'Drawing & Painting' => 5,
-    'Musical Skills' => 4,
-];
-
-$defaultAffective = [
-    'Punctuality' => 5,
-    'Neatness' => 5,
-    'Politeness' => 5,
-    'Honesty' => 5,
-    'Cooperation' => 4,
-    'Leadership' => 5,
-    'Helping Stability' => 4,
-    'Health' => 5,
-    'Attitude to School Work' => 5,
-    'Attentiveness' => 5,
-    'Speaking' => 5,
-    'Diction' => 4,
-];
-
-// Merge with database ratings if available
-$psychomotorMap = $defaultPsychomotor;
+// Psychomotor & Affective domain traits strictly dynamic from teacher evaluations
+$psychomotorMap = [];
 if (!empty($psychomotor_ratings)) {
     foreach ($psychomotor_ratings as $pr) {
-        $psychomotorMap[$pr['name']] = (int)($pr['rating'] ?? 5);
+        $name = is_array($pr) ? ($pr['name'] ?? $pr['skill_name'] ?? '') : ($pr->name ?? $pr->skillName ?? '');
+        $rating = is_array($pr) ? ($pr['rating'] ?? 0) : ($pr->rating ?? 0);
+        if ($name !== '') {
+            $psychomotorMap[$name] = (int)$rating;
+        }
     }
 }
 
-$affectiveMap = $defaultAffective;
+$affectiveMap = [];
 if (!empty($affective_ratings)) {
     foreach ($affective_ratings as $ar) {
-        $affectiveMap[$ar['name']] = (int)($ar['rating'] ?? 5);
+        $name = is_array($ar) ? ($ar['name'] ?? $ar['skill_name'] ?? '') : ($ar->name ?? $ar->skillName ?? '');
+        $rating = is_array($ar) ? ($ar['rating'] ?? 0) : ($ar->rating ?? 0);
+        if ($name !== '') {
+            $affectiveMap[$name] = (int)$rating;
+        }
     }
 }
 ?>
@@ -87,46 +74,58 @@ if (!empty($affective_ratings)) {
             </div>
         </div>
 
-        <!-- Student Biographical Information Table -->
-        <div class="border border-slate-300 rounded overflow-hidden shadow-xs bg-slate-50/60">
-            <table class="w-full text-[8.5px] border-collapse">
-                <tbody>
-                    <tr class="border-b border-slate-200">
-                        <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80 w-[12%]">Name:</td>
-                        <td class="py-1 px-2.5 font-black text-slate-900 w-[38%]"><?= $studentFullName ?></td>
-                        <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80 w-[15%]">Admission No:</td>
-                        <td class="py-1 px-2.5 font-extrabold text-slate-900 w-[35%]"><?= htmlspecialchars($admissionNo) ?></td>
-                    </tr>
-                    <tr class="border-b border-slate-200">
-                        <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">DOB:</td>
-                        <td class="py-1 px-2.5 font-medium text-slate-800"><?= $dob ?></td>
-                        <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">Admission Date:</td>
-                        <td class="py-1 px-2.5 font-medium text-slate-800"><?= $admissionDate ?></td>
-                    </tr>
-                    <tr class="border-b border-slate-200">
-                        <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">State:</td>
-                        <td class="py-1 px-2.5 font-medium text-slate-800"><?= htmlspecialchars((string)$state) ?></td>
-                        <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">L.G.A:</td>
-                        <td class="py-1 px-2.5 font-medium text-slate-800"><?= htmlspecialchars((string)$lga) ?></td>
-                    </tr>
-                    <tr class="border-b border-slate-200">
-                        <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">Nationality:</td>
-                        <td class="py-1 px-2.5 font-medium text-slate-800"><?= htmlspecialchars((string)$nationality) ?></td>
-                        <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">Religion:</td>
-                        <td class="py-1 px-2.5 font-medium text-slate-800"><?= htmlspecialchars((string)$religion) ?></td>
-                    </tr>
-                    <tr>
-                        <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">Homeroom:</td>
-                        <td class="py-1 px-2.5 font-black text-slate-900"><?= htmlspecialchars((string)$homeroom) ?></td>
-                        <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">Homeroom Teacher:</td>
-                        <td class="py-1 px-2.5 font-extrabold text-slate-900"><?= htmlspecialchars((string)$homeroomTeacher) ?></td>
-                    </tr>
-                </tbody>
-            </table>
+        <!-- Student Biographical Information Section with Passport / School Crest -->
+        <div class="flex items-stretch gap-2.5">
+            <div class="flex-1 border border-slate-300 rounded overflow-hidden shadow-xs bg-slate-50/60 overflow-x-auto">
+                <table class="w-full text-[8.5px] border-collapse min-w-[340px]">
+                    <tbody>
+                        <tr class="border-b border-slate-200">
+                            <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80 w-[14%]">Name:</td>
+                            <td class="py-1 px-2.5 font-black text-slate-900 w-[40%] text-[9px] text-[#7B3046]"><?= $studentFullName ?></td>
+                            <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80 w-[16%]">Admission No:</td>
+                            <td class="py-1 px-2.5 font-extrabold text-slate-900 w-[30%]"><?= htmlspecialchars($admissionNo) ?></td>
+                        </tr>
+                        <tr class="border-b border-slate-200">
+                            <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">DOB:</td>
+                            <td class="py-1 px-2.5 font-medium text-slate-800"><?= $dob ?></td>
+                            <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">Admission Date:</td>
+                            <td class="py-1 px-2.5 font-medium text-slate-800"><?= $admissionDate ?></td>
+                        </tr>
+                        <tr class="border-b border-slate-200">
+                            <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">State:</td>
+                            <td class="py-1 px-2.5 font-medium text-slate-800"><?= htmlspecialchars((string)$state) ?></td>
+                            <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">L.G.A:</td>
+                            <td class="py-1 px-2.5 font-medium text-slate-800"><?= htmlspecialchars((string)$lga) ?></td>
+                        </tr>
+                        <tr class="border-b border-slate-200">
+                            <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">Nationality:</td>
+                            <td class="py-1 px-2.5 font-medium text-slate-800"><?= htmlspecialchars((string)$nationality) ?></td>
+                            <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">Religion:</td>
+                            <td class="py-1 px-2.5 font-medium text-slate-800"><?= htmlspecialchars((string)$religion) ?></td>
+                        </tr>
+                        <tr>
+                            <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">Homeroom:</td>
+                            <td class="py-1 px-2.5 font-black text-slate-900"><?= htmlspecialchars((string)$homeroom) ?></td>
+                            <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">Homeroom Teacher:</td>
+                            <td class="py-1 px-2.5 font-extrabold text-slate-900"><?= htmlspecialchars((string)$homeroomTeacher) ?></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Student Passport / Crest Badge -->
+            <div class="w-20 sm:w-24 flex-shrink-0 border border-slate-300 rounded overflow-hidden bg-slate-50 flex flex-col items-center justify-center p-1 text-center shadow-xs">
+                <?php if (!empty($passportPhoto)): ?>
+                    <img src="<?= htmlspecialchars($passportPhoto) ?>" alt="<?= $studentFullName ?>" class="w-full h-full object-cover rounded max-h-[82px]">
+                <?php else: ?>
+                    <img src="<?= htmlspecialchars(!empty($school['logo']) ? $school['logo'] : '/assets/img/logo.png') ?>" alt="School Crest" class="h-9 w-9 object-contain opacity-75 mb-0.5 drop-shadow-2xs">
+                    <span class="text-[7px] font-black text-slate-800 leading-tight tracking-tight uppercase line-clamp-2"><?= $studentFullName ?></span>
+                <?php endif; ?>
+            </div>
         </div>
 
         <!-- Dual Performance Visualizations (Pure Vector SVG) -->
-        <div class="grid grid-cols-2 gap-3 items-center">
+        <div class="dual-charts-grid grid grid-cols-1 sm:grid-cols-2 print:!grid-cols-2 gap-3 items-center">
             <!-- Line Chart: Comparison with Class Extremes -->
             <div class="border border-slate-200 rounded p-2 bg-white/90 shadow-2xs">
                 <div class="flex items-center justify-between mb-1">
@@ -151,8 +150,8 @@ if (!empty($affective_ratings)) {
         </div>
 
         <!-- Cognitive Domain / Subject Assessment Table with Authentic Claret DOCX Palette -->
-        <div class="border border-[#E28BE2] rounded overflow-hidden shadow-xs">
-            <table class="w-full text-center border-collapse text-[7.5px] leading-tight">
+        <div class="academic-subjects-scroll-wrapper border border-[#E28BE2] rounded overflow-x-auto print:overflow-visible shadow-xs w-full max-w-full">
+            <table class="academic-subjects-table w-full text-center border-collapse text-[7.5px] leading-tight min-w-[700px] print:min-w-0">
                 <thead>
                     <tr class="bg-[#FFABFF] text-[#2A0845] font-extrabold uppercase">
                         <th class="py-1 px-1 text-center border-r border-[#E28BE2] w-6">S/N</th>
@@ -223,10 +222,10 @@ if (!empty($affective_ratings)) {
         </div>
 
         <!-- Four Sub-Tables Grid (Attendance, Class Demographics, Grading Scale, Behavioral Domain) -->
-        <div class="grid grid-cols-12 gap-2.5 pt-0.5">
+        <div class="academic-subtables-grid grid grid-cols-1 md:grid-cols-12 print:!grid-cols-12 gap-2.5 pt-0.5">
             
             <!-- Column 1: Attendance & Class Population & Grading System (5 cols) -->
-            <div class="col-span-5 flex flex-col gap-2">
+            <div class="subtable-col-1 col-span-1 md:col-span-5 print:!col-span-5 flex flex-col gap-2">
                 
                 <!-- Attendance Table -->
                 <div class="border border-slate-300 rounded overflow-hidden">
@@ -335,7 +334,7 @@ if (!empty($affective_ratings)) {
             </div>
 
             <!-- Column 2: Psychomotor Skills (3 cols) -->
-            <div class="col-span-3 border border-slate-300 rounded overflow-hidden">
+            <div class="subtable-col-2 col-span-1 md:col-span-3 print:!col-span-3 border border-slate-300 rounded overflow-hidden">
                 <div class="bg-[#FFABFF] text-[#2A0845] font-black text-[8px] uppercase px-2 py-0.5 tracking-wider text-center border-b border-[#E28BE2]">
                     Psychomotor Skills
                 </div>
@@ -351,22 +350,30 @@ if (!empty($affective_ratings)) {
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-200 bg-white">
-                        <?php foreach ($psychomotorMap as $skill => $rating): ?>
+                        <?php if (empty($psychomotorMap)): ?>
                             <tr>
-                                <td class="py-0.5 px-1 text-left font-medium text-slate-800 border-r border-slate-200"><?= htmlspecialchars($skill) ?></td>
-                                <?php for ($r = 5; $r >= 1; $r--): ?>
-                                    <td class="py-0.5 px-0.5 <?= $r > 1 ? 'border-r border-slate-200' : '' ?>">
-                                        <?= ($rating === $r) ? '<span class="font-black text-sky-700 text-[9px] leading-none">&#10003;</span>' : '' ?>
-                                    </td>
-                                <?php endfor; ?>
+                                <td colspan="6" class="py-3 px-2 text-center text-slate-400 italic text-[7.5px]">
+                                    Homeroom evaluation pending
+                                </td>
                             </tr>
-                        <?php endforeach; ?>
+                        <?php else: ?>
+                            <?php foreach ($psychomotorMap as $skill => $rating): ?>
+                                <tr>
+                                    <td class="py-0.5 px-1 text-left font-medium text-slate-800 border-r border-slate-200"><?= htmlspecialchars($skill) ?></td>
+                                    <?php for ($r = 5; $r >= 1; $r--): ?>
+                                        <td class="py-0.5 px-0.5 <?= $r > 1 ? 'border-r border-slate-200' : '' ?>">
+                                            <?= ($rating === $r) ? '<span class="font-black text-sky-700 text-[9px] leading-none">&#10003;</span>' : '' ?>
+                                        </td>
+                                    <?php endfor; ?>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
 
             <!-- Column 3: Affective Domain Traits (4 cols) -->
-            <div class="col-span-4 border border-slate-300 rounded overflow-hidden">
+            <div class="subtable-col-3 col-span-1 md:col-span-4 print:!col-span-4 border border-slate-300 rounded overflow-hidden">
                 <div class="bg-[#FFABFF] text-[#2A0845] font-black text-[8px] uppercase px-2 py-0.5 tracking-wider text-center border-b border-[#E28BE2]">
                     Affective Traits
                 </div>
@@ -382,16 +389,24 @@ if (!empty($affective_ratings)) {
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-200 bg-white">
-                        <?php foreach ($affectiveMap as $trait => $rating): ?>
+                        <?php if (empty($affectiveMap)): ?>
                             <tr>
-                                <td class="py-0.5 px-1 text-left font-medium text-slate-800 border-r border-slate-200"><?= htmlspecialchars($trait) ?></td>
-                                <?php for ($r = 5; $r >= 1; $r--): ?>
-                                    <td class="py-0.5 px-0.5 <?= $r > 1 ? 'border-r border-slate-200' : '' ?>">
-                                        <?= ($rating === $r) ? '<span class="font-black text-sky-700 text-[9px] leading-none">&#10003;</span>' : '' ?>
-                                    </td>
-                                <?php endfor; ?>
+                                <td colspan="6" class="py-3 px-2 text-center text-slate-400 italic text-[7.5px]">
+                                    Homeroom evaluation pending
+                                </td>
                             </tr>
-                        <?php endforeach; ?>
+                        <?php else: ?>
+                            <?php foreach ($affectiveMap as $trait => $rating): ?>
+                                <tr>
+                                    <td class="py-0.5 px-1 text-left font-medium text-slate-800 border-r border-slate-200"><?= htmlspecialchars($trait) ?></td>
+                                    <?php for ($r = 5; $r >= 1; $r--): ?>
+                                        <td class="py-0.5 px-0.5 <?= $r > 1 ? 'border-r border-slate-200' : '' ?>">
+                                            <?= ($rating === $r) ? '<span class="font-black text-sky-700 text-[9px] leading-none">&#10003;</span>' : '' ?>
+                                        </td>
+                                    <?php endfor; ?>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>

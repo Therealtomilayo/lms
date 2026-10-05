@@ -56,11 +56,9 @@ $fullClassName = $childClass . $arm;
                         <span>Terminal Assessment & Examination Records</span>
                     </div>
                 </div>
-            </div>
-
-            <!-- Quick Action Toolbar -->
+            </div>            <!-- Quick Action Toolbar -->
             <div class="flex flex-wrap items-center gap-2">
-                <?php if ($isPublished && !empty($results)): ?>
+                <?php if ($isPublished && $isCleared && $isPinUnlocked && !empty($results)): ?>
                     <a href="/parent/children/<?= (int)$student->id ?>/grades/report-card?term_id=<?= (int)$selectedTermId ?>" target="_blank" 
                        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-700 text-white shadow-xs transition">
                         <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
@@ -95,7 +93,6 @@ $fullClassName = $childClass . $arm;
     </div>
 
     <!-- Academic Term Selector Toolbar -->
-    <!-- Academic Term Selector Toolbar -->
     <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <form method="GET" action="/parent/children/<?= (int)$student->id ?>/grades" class="flex items-center gap-3 w-full sm:w-auto">
             <label for="term_id" class="text-xs font-bold text-slate-700 uppercase tracking-wider whitespace-nowrap">Academic Term:</label>
@@ -115,13 +112,21 @@ $fullClassName = $childClass . $arm;
 
         <div class="text-xs font-semibold text-slate-500 flex items-center gap-2">
             <span>Result Status:</span>
-            <?php if ($isPublished): ?>
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                    Published Live
-                </span>
-            <?php else: ?>
+            <?php if (!$isPublished): ?>
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
                     Results Processing
+                </span>
+            <?php elseif (!$isCleared): ?>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200">
+                    Bursary Clearance Required
+                </span>
+            <?php elseif (!$isPinUnlocked): ?>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold bg-sky-50 text-sky-800 border border-sky-200">
+                    Scratch PIN Locked
+                </span>
+            <?php else: ?>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    Published Live &amp; Unlocked
                 </span>
             <?php endif; ?>
         </div>
@@ -200,9 +205,16 @@ $fullClassName = $childClass . $arm;
                                     Term Inactive
                                 </span>
                             <?php else: ?>
-                                <a href="<?= $td['reportUrl'] ?>" target="_blank"
-                                   class="flex-1 text-center py-2 px-3 rounded-xl text-xs font-bold transition <?= $td['isCleared'] && $td['isPublished'] ? 'bg-brand-600 hover:bg-brand-700 text-white shadow-xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-700' ?>">
-                                    <?= !$td['isCleared'] ? 'Clear Fees &amp; View' : ($td['isPinUnlocked'] ? 'View Report Card' : 'Unlock &amp; View Report') ?>
+                                <?php
+                                $reportBtnUrl = !$td['isCleared']
+                                    ? "/parent/children/{$student->id}/fees"
+                                    : (!$td['isPinUnlocked']
+                                        ? "/parent/children/{$student->id}/grades/report-card?term_id={$tObj->id}"
+                                        : $td['reportUrl']);
+                                ?>
+                                <a href="<?= $reportBtnUrl ?>" <?= $td['isCleared'] && $td['isPinUnlocked'] ? 'target="_blank"' : '' ?>
+                                   class="flex-1 text-center py-2 px-3 rounded-xl text-xs font-bold transition <?= $td['isCleared'] && $td['isPublished'] && $td['isPinUnlocked'] ? 'bg-brand-600 hover:bg-brand-700 text-white shadow-xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-700' ?>">
+                                    <?= !$td['isCleared'] ? 'Clear Fees &amp; View' : (!$td['isPinUnlocked'] ? 'Unlock &amp; View Report' : 'View Report Card') ?>
                                 </a>
                                 <?php if (!$isCur): ?>
                                     <a href="/parent/children/<?= (int)$student->id ?>/grades?term_id=<?= (int)$tObj->id ?>" 
@@ -230,6 +242,54 @@ $fullClassName = $childClass . $arm;
             <p class="text-xs mt-1.5 text-amber-700 max-w-md mx-auto leading-relaxed">
                 Official scores and terminal report cards for this term have not yet been approved and published by school administration. Please check back after official release.
             </p>
+        </div>
+    <?php elseif (!$isCleared): ?>
+        <!-- Bursary Clearance Gate -->
+        <div class="bg-white border border-rose-200 rounded-2xl p-10 text-center shadow-xs">
+            <div class="w-14 h-14 rounded-2xl bg-rose-100 text-rose-600 mx-auto flex items-center justify-center mb-3">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                </svg>
+            </div>
+            <h3 class="text-base font-extrabold text-slate-900">Bursary Clearance Required</h3>
+            <p class="text-xs mt-1.5 text-slate-600 max-w-md mx-auto leading-relaxed">
+                School fees and required levies for this academic term must be fully settled with the bursary before continuous assessment coursework, terminal scores, and official report cards can be accessed.
+            </p>
+            <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+                <a href="/parent/children/<?= (int)$student->id ?>/fees" 
+                   class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-700 text-white shadow-xs transition">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                    </svg>
+                    <span>View Invoices &amp; Pay Fees</span>
+                </a>
+            </div>
+        </div>
+    <?php elseif (!$isPinUnlocked): ?>
+        <!-- Scratch Card PIN Gate -->
+        <div class="bg-white border border-sky-200 rounded-2xl p-10 text-center shadow-xs">
+            <div class="w-14 h-14 rounded-2xl bg-sky-100 text-brand-600 mx-auto flex items-center justify-center mb-3">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                </svg>
+            </div>
+            <h3 class="text-base font-extrabold text-slate-900">Scratch Card PIN Required</h3>
+            <p class="text-xs mt-1.5 text-slate-600 max-w-md mx-auto leading-relaxed">
+                An active result checker scratch card PIN is required to unlock this term's continuous assessment records and official report card. You may redeem an existing physical card PIN or purchase a scratch card securely online.
+            </p>
+            <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+                <a href="/parent/children/<?= (int)$student->id ?>/grades/report-card?term_id=<?= (int)$selectedTermId ?>" 
+                   class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-700 text-white shadow-xs transition">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                    <span>Enter PIN to Unlock Results</span>
+                </a>
+                <a href="/parent/scratch-cards/buy" 
+                   class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition">
+                    <span>Purchase Scratch Card Online</span>
+                </a>
+            </div>
         </div>
     <?php else: ?>
         <!-- 4-Card Overview Stats Strip -->

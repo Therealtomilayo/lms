@@ -46,7 +46,8 @@ final class ParentPolicy
         int $studentId,
         int $termId,
         ?ParentRepository $parentRepo = null,
-        ?ResultPublicationRepository $pubRepo = null
+        ?ResultPublicationRepository $pubRepo = null,
+        ?int $classId = null
     ): bool {
         if ($user->isSuperAdmin() || $user->isAdmin()) {
             return true;
@@ -56,8 +57,14 @@ final class ParentPolicy
             return false;
         }
 
+        if ($classId === null) {
+            $studentRepo = new \App\Repositories\StudentRepository();
+            $st = $studentRepo->findById($studentId);
+            $classId = $st?->currentClassId ?: null;
+        }
+
         $publicationRepo = $pubRepo ?? new ResultPublicationRepository();
-        return $publicationRepo->isPublished($termId);
+        return $publicationRepo->isPublished($termId, $classId);
     }
 
     /**

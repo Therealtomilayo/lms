@@ -38,12 +38,35 @@ class SubjectController extends Controller
             return $this->forbidden('You are not authorized to manage subjects.');
         }
 
+        $search = trim((string)$request->query('search', '')) ?: null;
+        $page = max(1, (int)$request->query('page', 1));
+        $limit = 25;
+        $offset = ($page - 1) * $limit;
+
         $subjects = $this->repository->getAllSubjects();
+
+        if ($search !== null) {
+            $sLower = strtolower($search);
+            $subjects = array_filter($subjects, function($s) use ($sLower) {
+                return str_contains(strtolower($s->name), $sLower) ||
+                       str_contains(strtolower($s->code), $sLower);
+            });
+        }
+
+        $subjects = array_values($subjects);
+        $totalSubjects = count($subjects);
+        $totalPages = max(1, (int)ceil($totalSubjects / $limit));
+        $pagedSubjects = array_slice($subjects, $offset, $limit);
 
         return $this->view('admin/subjects/index', [
             'title' => 'Subjects — Claret LMS',
             'headerTitle' => 'Subjects',
-            'subjects' => $subjects,
+            'subjects' => $pagedSubjects,
+            'search' => $search,
+            'currentPage' => $page,
+            'totalPages' => $totalPages,
+            'totalResults' => $totalSubjects,
+            'perPage' => $limit,
         ]);
     }
 

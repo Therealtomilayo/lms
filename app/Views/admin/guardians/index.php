@@ -52,7 +52,7 @@ $relationshipOptions = [
     </div>
 
     <!-- Search Form -->
-    <form method="GET" action="/admin/guardians" class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-end gap-4">
+    <form method="GET" action="/admin/guardians" data-lms-filter="true" class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-end gap-4">
         <div class="flex-1 w-full">
             <?php $this->include('components/input', [
                 'name' => 'q',
@@ -80,8 +80,8 @@ $relationshipOptions = [
         </div>
     </form>
 
-    <!-- Guardians Table -->
-    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    <!-- Guardians Table Container -->
+    <div data-lms-table-container="true" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <?php if (empty($parents)): ?>
             <div class="p-6">
                 <?php $this->include('components/empty_state', [

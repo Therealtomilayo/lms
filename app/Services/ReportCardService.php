@@ -517,7 +517,65 @@ class ReportCardService
         foreach ($subjectAnalytics as $sa) {
             $totalObtained += (float)($sa['pupil_score'] ?? 0);
         }
-        $pupilAverage = count($subjectAnalytics) > 0 ? round($totalObtained / count($subjectAnalytics), 1) : (float)($summary?->averageScore ?? 0.0);
+        $countSubjects = count($subjectAnalytics);
+        $pupilAverage = $summary?->averageScore !== null
+            ? (float)$summary->averageScore
+            : ($countSubjects > 0 ? round($totalObtained / $countSubjects, 2) : 0.0);
+
+        // Student gender salutation ("Master" for male, "Lady" for female)
+        $gender = strtolower(trim((string)($student->gender ?? '')));
+        $isFemale = ($gender === 'female' || $gender === 'girl');
+        $salutation = $isFemale ? 'Lady' : 'Master';
+        $rawStudentName = $student->user?->name ?? $student->name ?? 'Student';
+        $studentSalutedName = $salutation . ' ' . $rawStudentName;
+
+        // Resolve student passport photograph (or null if none uploaded)
+        $passportUrl = null;
+        if (!empty($student->user?->avatarUrl)) {
+            $passportUrl = $student->user->avatarUrl;
+        } elseif (!empty($student->avatarUrl)) {
+            $passportUrl = $student->avatarUrl;
+        } else {
+            try {
+                $stmt = $pdo->prepare('
+                    SELECT passport_photo_file_id 
+                    FROM admission_wards 
+                    WHERE converted_student_id = :sid AND passport_photo_file_id IS NOT NULL 
+                    LIMIT 1
+                ');
+                $stmt->execute([':sid' => $studentId]);
+                $passportFileId = $stmt->fetchColumn();
+                if ($passportFileId) {
+                    $passportUrl = '/files/' . (int)$passportFileId . '/stream';
+                }
+            } catch (\Throwable) {
+            }
+        }
+
+        // Psychomotor and Affective Domain Evaluations from teacher ratings
+        $psychomotorRatings = [];
+        $affectiveRatings = [];
+        try {
+            $studentRatings = $this->skillRepo->getStudentRatings($studentId, $termId);
+            foreach ($studentRatings as $sr) {
+                $skill = $sr->skill;
+                $name = $skill?->name ?? '';
+                $cat = strtolower((string)($skill?->category ?? ''));
+                $entry = [
+                    'id' => $sr->skillId,
+                    'name' => $name,
+                    'rating' => (int)$sr->rating,
+                    'category' => $cat,
+                ];
+                if ($cat === 'psychomotor' || ($skill && $skill->isPsychomotor())) {
+                    $psychomotorRatings[] = $entry;
+                } else {
+                    $affectiveRatings[] = $entry;
+                }
+            }
+        } catch (\Throwable) {
+            // Fail safe
+        }
 
         return [
             'student' => $student,
@@ -551,6 +609,10 @@ class ReportCardService
             'expected_score' => $expectedScore,
             'total_obtained' => $totalObtained,
             'pupil_average' => $pupilAverage,
+            'salutation' => $salutation,
+            'student_saluted_name' => $studentSalutedName,
+            'passport_url' => $passportUrl,
+            'has_passport' => !empty($passportUrl),
             'is_promotion_visible' => $isPromotionVisible,
             'promotion_data' => $promotionData,
             'grading_scale' => $gradingScale,

@@ -50,9 +50,10 @@ if (!$activeChild && !empty($linkedChildren)) {
 }
 $activeChildId = $activeChild ? (int)$activeChild->id : 0;
 
-// Resolve unread announcements and pending approvals count for current user
+// Resolve unread announcements, pending approvals, and admissions count for current user
 $unreadAnnouncementsCount = 0;
 $pendingApprovalsCount = 0;
+$pendingApplicationsCount = 0;
 $isSuperAdmin = false;
 try {
     $userId = $_SESSION['user_id'] ?? null;
@@ -68,11 +69,16 @@ try {
                 $approvalRepo = new \App\Repositories\ApprovalRepository();
                 $pendingApprovalsCount = $approvalRepo->countPending();
             }
+            if ($user->hasAnyRole(['admin', 'super_admin'])) {
+                $admissionRepo = new \App\Repositories\AdmissionRepository();
+                $pendingApplicationsCount = $admissionRepo->countPendingApplications();
+            }
         }
     }
 } catch (\Throwable $e) {
     $unreadAnnouncementsCount = 0;
     $pendingApprovalsCount = 0;
+    $pendingApplicationsCount = 0;
 }
 
 // Helper to check active state
@@ -176,10 +182,12 @@ $navConfig = [
         ['label' => 'Class Subjects', 'route' => '/admin/class-subjects', 'icon' => 'clipboard'],
         ['label' => 'Timetable', 'route' => '/admin/timetable', 'icon' => 'timetable'],
         ['category' => 'Admissions & Applications'],
-        ['label' => 'Applications', 'route' => '/admin/admissions/applications', 'icon' => 'document-text'],
+        ['label' => 'Applications', 'route' => '/admin/admissions/applications', 'icon' => 'document-text', 'badge' => $pendingApplicationsCount],
         ['label' => 'Admission Sessions', 'route' => '/admin/admissions/sessions', 'icon' => 'calendar'],
         ['category' => 'People & Enrollment'],
-        ['label' => 'User Directory', 'route' => '/admin/users', 'icon' => 'directory'],
+        ['label' => 'Teachers Directory', 'route' => '/admin/teachers', 'icon' => 'academic'],
+        ['label' => 'Students Directory', 'route' => '/admin/students', 'icon' => 'directory'],
+        ['label' => 'User Directory', 'route' => '/admin/users', 'icon' => 'users'],
         ['label' => 'Class Enrollments', 'route' => '/admin/enrollments', 'icon' => 'document-text'],
         ['label' => 'Guardian Links', 'route' => '/admin/guardians', 'icon' => 'users-link'],
         ['label' => 'CSV Imports', 'route' => '/admin/imports/users', 'icon' => 'upload'],
@@ -409,7 +417,7 @@ if ($role === 'parent' && $activeChildId > 0) {
     <?php endif; ?>
 
     <!-- Navigation items list -->
-    <nav class="flex-1 p-4 space-y-1.5 overflow-y-auto" aria-label="Main Navigation">
+    <nav id="sidebar-scroll-container" data-sidebar-nav="true" class="flex-1 p-4 space-y-1.5 overflow-y-auto" aria-label="Main Navigation">
         <?php foreach ($menuItems as $item): ?>
             <?php if (isset($item['category'])): ?>
                 <div data-sidebar-category="true" class="pt-4 pb-1 px-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
@@ -423,7 +431,7 @@ if ($role === 'parent' && $activeChildId > 0) {
                     : 'flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition';
                 $isAnnouncementItem = str_contains($item['route'], 'announcements');
                 ?>
-                <a href="<?= e($item['route']) ?>" class="<?= $linkClasses ?>">
+                <a href="<?= e($item['route']) ?>" class="<?= $linkClasses ?>" <?= $isActive ? 'data-sidebar-active="true"' : '' ?>>
                     <div class="flex items-center gap-3 min-w-0 truncate">
                         <?= get_sidebar_icon($item['icon'], $isActive) ?>
                         <span class="truncate"><?= e($item['label']) ?></span>
@@ -441,6 +449,33 @@ if ($role === 'parent' && $activeChildId > 0) {
             <?php endif; ?>
         <?php endforeach; ?>
     </nav>
+    <script>
+        (function() {
+            const container = document.getElementById('sidebar-scroll-container') || document.querySelector('#sidebar-navigation nav');
+            if (!container) return;
+
+            const savedScroll = sessionStorage.getItem('sidebar_scroll_top');
+            const activeItem = container.querySelector('[data-sidebar-active="true"]');
+
+            if (activeItem) {
+                const containerRect = container.getBoundingClientRect();
+                const activeRect = activeItem.getBoundingClientRect();
+                const isOutOfView = (activeRect.top < containerRect.top + 40) || (activeRect.bottom > containerRect.bottom - 40);
+                
+                if (isOutOfView) {
+                    activeItem.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+                } else if (savedScroll !== null) {
+                    container.scrollTop = parseInt(savedScroll, 10);
+                }
+            } else if (savedScroll !== null) {
+                container.scrollTop = parseInt(savedScroll, 10);
+            }
+
+            container.addEventListener('scroll', function() {
+                sessionStorage.setItem('sidebar_scroll_top', container.scrollTop);
+            }, { passive: true });
+        })();
+    </script>
 
     <!-- Sidebar Footer / Logout -->
     <div class="p-4 border-t border-slate-800 bg-slate-950 flex items-center justify-between flex-shrink-0">

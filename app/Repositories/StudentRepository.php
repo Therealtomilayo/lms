@@ -24,13 +24,14 @@ class StudentRepository
 
     public function findById(int $id): ?Student
     {
-        $sql = 'SELECT s.*, 
-                       u.name as user_name, u.email as user_email, u.phone as user_phone, u.status as user_status,
+        $avatarCol = $this->hasUserAvatarColumn() ? 'u.avatar_url as user_avatar,' : 'NULL as user_avatar,';
+        $sql = "SELECT s.*, 
+                       u.name as user_name, u.email as user_email, u.phone as user_phone, u.status as user_status, {$avatarCol}
                        c.name as class_name, c.section_arm, c.academic_level_id, c.status as class_status
                 FROM `students` s
                 JOIN `users` u ON u.id = s.user_id
                 LEFT JOIN `classes` c ON c.id = s.current_class_id
-                WHERE s.id = :id LIMIT 1';
+                WHERE s.id = :id LIMIT 1";
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([':id' => $id]);
@@ -45,13 +46,14 @@ class StudentRepository
 
     public function findByUserId(int $userId): ?Student
     {
-        $sql = 'SELECT s.*, 
-                       u.name as user_name, u.email as user_email, u.phone as user_phone, u.status as user_status,
+        $avatarCol = $this->hasUserAvatarColumn() ? 'u.avatar_url as user_avatar,' : 'NULL as user_avatar,';
+        $sql = "SELECT s.*, 
+                       u.name as user_name, u.email as user_email, u.phone as user_phone, u.status as user_status, {$avatarCol}
                        c.name as class_name, c.section_arm, c.academic_level_id, c.status as class_status
                 FROM `students` s
                 JOIN `users` u ON u.id = s.user_id
                 LEFT JOIN `classes` c ON c.id = s.current_class_id
-                WHERE s.user_id = :user_id LIMIT 1';
+                WHERE s.user_id = :user_id LIMIT 1";
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([':user_id' => $userId]);
@@ -66,13 +68,14 @@ class StudentRepository
 
     public function findByAdmissionNumber(string $admissionNumber): ?Student
     {
-        $sql = 'SELECT s.*, 
-                       u.name as user_name, u.email as user_email, u.phone as user_phone, u.status as user_status,
+        $avatarCol = $this->hasUserAvatarColumn() ? 'u.avatar_url as user_avatar,' : 'NULL as user_avatar,';
+        $sql = "SELECT s.*, 
+                       u.name as user_name, u.email as user_email, u.phone as user_phone, u.status as user_status, {$avatarCol}
                        c.name as class_name, c.section_arm, c.academic_level_id, c.status as class_status
                 FROM `students` s
                 JOIN `users` u ON u.id = s.user_id
                 LEFT JOIN `classes` c ON c.id = s.current_class_id
-                WHERE LOWER(s.admission_number) = LOWER(:adm_no) LIMIT 1';
+                WHERE LOWER(s.admission_number) = LOWER(:adm_no) LIMIT 1";
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([':adm_no' => trim($admissionNumber)]);
@@ -86,6 +89,35 @@ class StudentRepository
     }
 
     private ?array $studentColumns = null;
+    private ?bool $hasUserAvatarColumn = null;
+
+    private function hasUserAvatarColumn(): bool
+    {
+        if ($this->hasUserAvatarColumn !== null) {
+            return $this->hasUserAvatarColumn;
+        }
+
+        try {
+            $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+            if ($driver === 'sqlite') {
+                $stmt = $this->pdo->query("PRAGMA table_info(`users`)");
+                $cols = [];
+                if ($stmt) {
+                    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                        $cols[] = $row['name'] ?? '';
+                    }
+                }
+                $this->hasUserAvatarColumn = in_array('avatar_url', $cols, true);
+            } else {
+                $stmt = $this->pdo->query("SHOW COLUMNS FROM `users` LIKE 'avatar_url'");
+                $this->hasUserAvatarColumn = (bool)($stmt && $stmt->fetch());
+            }
+        } catch (\Throwable) {
+            $this->hasUserAvatarColumn = false;
+        }
+
+        return $this->hasUserAvatarColumn;
+    }
 
     private function getStudentColumns(): array
     {
@@ -259,8 +291,9 @@ class StudentRepository
         }
 
         $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
+        $avatarCol = $this->hasUserAvatarColumn() ? 'u.avatar_url as user_avatar,' : 'NULL as user_avatar,';
         $sql = "SELECT s.*, 
-                       u.name as user_name, u.email as user_email, u.phone as user_phone, u.status as user_status,
+                       u.name as user_name, u.email as user_email, u.phone as user_phone, u.status as user_status, {$avatarCol}
                        c.name as class_name, c.section_arm, c.academic_level_id, c.status as class_status
                 FROM `students` s
                 JOIN `users` u ON u.id = s.user_id
@@ -311,6 +344,181 @@ class StudentRepository
         $stmt->execute($params);
 
         return (int)$stmt->fetchColumn();
+    }
+
+    /**
+     * Get detailed students list with class, level, stage, and guardian info for administration.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getStudentsWithDetails(?int $classId = null, ?string $stage = null, ?string $gender = null, ?string $search = null, int $limit = 50, int $offset = 0): array
+    {
+        $where = [];
+        $params = [];
+
+        if ($classId !== null && $classId > 0) {
+            $where[] = 's.current_class_id = :class_id';
+            $params[':class_id'] = $classId;
+        }
+
+        if (!empty($stage)) {
+            $where[] = 'al.stage = :stage';
+            $params[':stage'] = $stage;
+        }
+
+        if (!empty($gender)) {
+            $where[] = 's.gender = :gender';
+            $params[':gender'] = strtolower($gender);
+        }
+
+        if (!empty($search)) {
+            $where[] = '(u.name LIKE :search_name OR u.email LIKE :search_email OR s.admission_number LIKE :search_adm)';
+            $params[':search_name'] = '%' . $search . '%';
+            $params[':search_email'] = '%' . $search . '%';
+            $params[':search_adm'] = '%' . $search . '%';
+        }
+
+        $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
+        $sql = "SELECT s.*, 
+                       u.name as user_name, u.email as user_email, u.phone as user_phone, u.status as user_status,
+                       c.name as class_name, c.section_arm, al.name as level_name, al.stage as stage_name,
+                       (SELECT p.name FROM `parent_student` ps JOIN `parents` p ON p.id = ps.parent_id WHERE ps.student_id = s.id LIMIT 1) as parent_name,
+                       (SELECT p.phone FROM `parent_student` ps JOIN `parents` p ON p.id = ps.parent_id WHERE ps.student_id = s.id LIMIT 1) as parent_phone
+                FROM `students` s
+                JOIN `users` u ON u.id = s.user_id
+                LEFT JOIN `classes` c ON c.id = s.current_class_id
+                LEFT JOIN `academic_levels` al ON al.id = c.academic_level_id
+                {$whereClause}
+                ORDER BY c.name ASC, u.name ASC
+                LIMIT :limit OFFSET :offset";
+
+        $stmt = $this->pdo->prepare($sql);
+        foreach ($params as $k => $v) {
+            $stmt->bindValue($k, $v);
+        }
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    /**
+     * Count students matching filters for pagination
+     */
+    public function countStudentsWithDetails(?int $classId = null, ?string $stage = null, ?string $gender = null, ?string $search = null): int
+    {
+        $where = [];
+        $params = [];
+
+        if ($classId !== null && $classId > 0) {
+            $where[] = 's.current_class_id = :class_id';
+            $params[':class_id'] = $classId;
+        }
+
+        if (!empty($stage)) {
+            $where[] = 'al.stage = :stage';
+            $params[':stage'] = $stage;
+        }
+
+        if (!empty($gender)) {
+            $where[] = 's.gender = :gender';
+            $params[':gender'] = strtolower($gender);
+        }
+
+        if (!empty($search)) {
+            $where[] = '(u.name LIKE :search_name OR u.email LIKE :search_email OR s.admission_number LIKE :search_adm)';
+            $params[':search_name'] = '%' . $search . '%';
+            $params[':search_email'] = '%' . $search . '%';
+            $params[':search_adm'] = '%' . $search . '%';
+        }
+
+        $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
+        $sql = "SELECT COUNT(*)
+                FROM `students` s
+                JOIN `users` u ON u.id = s.user_id
+                LEFT JOIN `classes` c ON c.id = s.current_class_id
+                LEFT JOIN `academic_levels` al ON al.id = c.academic_level_id
+                {$whereClause}";
+
+        $stmt = $this->pdo->prepare($sql);
+        foreach ($params as $k => $v) {
+            $stmt->bindValue($k, $v);
+        }
+        $stmt->execute();
+
+        return (int)$stmt->fetchColumn();
+    }
+
+    /**
+     * Get single student with complete profile, class, level, and form teacher details.
+     */
+    public function getStudentWithFullDetails(int $id): ?array
+    {
+        $sql = "SELECT s.*, 
+                       u.name as user_name, u.email as user_email, u.phone as user_phone, u.status as user_status,
+                       u.created_at as user_created_at,
+                       c.name as class_name, c.section_arm, al.name as level_name, al.stage as stage_name,
+                       tu.name as form_teacher_name, t.staff_id as form_teacher_staff_id, tu.phone as form_teacher_phone
+                FROM `students` s
+                JOIN `users` u ON u.id = s.user_id
+                LEFT JOIN `classes` c ON c.id = s.current_class_id
+                LEFT JOIN `academic_levels` al ON al.id = c.academic_level_id
+                LEFT JOIN `teachers` t ON t.id = c.form_teacher_id
+                LEFT JOIN `users` tu ON tu.id = t.user_id
+                WHERE s.id = :id LIMIT 1";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':id' => $id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row ?: null;
+    }
+
+    /**
+     * Get enrolled subjects for a student with teacher information.
+     */
+    public function getEnrolledSubjects(int $studentId, ?int $sessionId = null): array
+    {
+        $sql = "SELECT cs.id as class_subject_id, s.name as subject_name, s.code as subject_code,
+                       c.name as class_name, tu.name as teacher_name, t.staff_id as teacher_staff_id
+                FROM `student_subject_enrollments` sse
+                JOIN `class_subjects` cs ON cs.id = sse.class_subject_id
+                JOIN `subjects` s ON s.id = cs.subject_id
+                JOIN `classes` c ON c.id = cs.class_id
+                LEFT JOIN `teachers` t ON t.id = cs.teacher_id
+                LEFT JOIN `users` tu ON tu.id = t.user_id
+                WHERE sse.student_id = :student_id AND sse.status = 'active'";
+
+        $params = [':student_id' => $studentId];
+        if ($sessionId !== null && $sessionId > 0) {
+            $sql .= " AND sse.session_id = :session_id";
+            $params[':session_id'] = $sessionId;
+        }
+
+        $sql .= " ORDER BY s.name ASC";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    /**
+     * Get linked parents/guardians for a student.
+     */
+    public function getParents(int $studentId): array
+    {
+        $sql = "SELECT p.*, ps.relationship_type
+                FROM `parent_student` ps
+                JOIN `parents` p ON p.id = ps.parent_id
+                WHERE ps.student_id = :student_id
+                ORDER BY p.name ASC";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':student_id' => $studentId]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
     /**

@@ -80,7 +80,7 @@ final class Term
             self::STATUS_PLANNING => in_array($targetStatus, [self::STATUS_ACTIVE, self::STATUS_ARCHIVED], true),
             self::STATUS_ACTIVE => in_array($targetStatus, [self::STATUS_GRADING_OPEN, self::STATUS_ARCHIVED], true),
             self::STATUS_GRADING_OPEN => in_array($targetStatus, [self::STATUS_GRADING_LOCKED, self::STATUS_ACTIVE], true),
-            self::STATUS_GRADING_LOCKED => in_array($targetStatus, [self::STATUS_GRADING_OPEN, self::STATUS_ARCHIVED], true),
+            self::STATUS_GRADING_LOCKED => in_array($targetStatus, [self::STATUS_ACTIVE, self::STATUS_GRADING_OPEN, self::STATUS_ARCHIVED], true),
             self::STATUS_ARCHIVED => false, // Immutable terminal state
             default => false,
         };

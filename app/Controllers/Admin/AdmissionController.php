@@ -66,13 +66,25 @@ class AdmissionController extends Controller
             'draft' => count($this->admissionService->getAllApplications(['session_id' => $sessionId, 'status' => AdmissionApplication::STATUS_DRAFT])),
         ];
 
+        $page = max(1, (int)$request->query('page', 1));
+        $limit = 25;
+        $offset = ($page - 1) * $limit;
+
+        $totalFiltered = count($applications);
+        $totalPages = max(1, (int)ceil($totalFiltered / $limit));
+        $pagedApplications = array_slice($applications, $offset, $limit);
+
         return $this->view('admin/admissions/index', [
-            'applications' => $applications,
+            'applications' => $pagedApplications,
             'sessions' => $sessions,
             'selectedSessionId' => $sessionId,
             'selectedStatus' => $status,
             'searchQuery' => $search,
             'counts' => $counts,
+            'currentPage' => $page,
+            'totalPages' => $totalPages,
+            'totalResults' => $totalFiltered,
+            'perPage' => $limit,
             'success' => Session::getFlash('success'),
             'error' => Session::getFlash('error'),
         ]);

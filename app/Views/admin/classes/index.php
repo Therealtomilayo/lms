@@ -36,14 +36,59 @@ if (!empty($teachers)) {
         </div>
     </div>
 
-    <!-- Classes Table -->
-    <?php if (empty($classes)): ?>
-        <?php $this->include('components/empty_state', [
-            'title' => 'No Classes Configured',
-            'message' => 'No classes or arms have been created yet. Click "Create Class" to get started.'
-        ]); ?>
-    <?php else: ?>
-        <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+    <!-- Filter Bar -->
+    <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+        <form method="GET" action="/admin/classes" data-lms-filter="true" class="flex flex-col md:flex-row items-stretch md:items-end gap-4">
+            <div class="flex-1 min-w-[200px]">
+                <label for="class_search" class="block text-sm font-semibold text-slate-700 mb-1.5">Search Classes</label>
+                <div class="relative">
+                    <input type="text" 
+                           id="class_search" 
+                           name="search" 
+                           value="<?= e($search ?? '') ?>" 
+                           placeholder="Search class name, section arm..." 
+                           autocomplete="off"
+                           class="block w-full min-h-[44px] pl-10 pr-3.5 py-2.5 rounded-lg text-sm text-slate-800 bg-white border border-slate-300 shadow-xs focus:ring-2 focus:ring-[#7B3046]/20 focus:border-[#7B3046] transition outline-none">
+                    <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="w-full md:w-64">
+                <label for="filter_level" class="block text-sm font-semibold text-slate-700 mb-1.5">Filter by Level</label>
+                <select id="filter_level" name="level_id" class="block w-full min-h-[44px] px-3.5 py-2.5 rounded-lg text-sm text-slate-800 bg-white border border-slate-300 shadow-xs focus:ring-2 focus:ring-[#7B3046]/20 focus:border-[#7B3046] transition outline-none cursor-pointer">
+                    <option value="">All Levels</option>
+                    <?php foreach ($levels as $lvl): ?>
+                        <option value="<?= $lvl->id ?>" <?= ($selectedLevelId ?? 0) === $lvl->id ? 'selected' : '' ?>>
+                            <?= e($lvl->name) ?> (<?= e($lvl->stage) ?>)
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button type="submit" class="inline-flex items-center justify-center min-h-[44px] px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#7B3046] hover:bg-[#652739] transition shadow-xs cursor-pointer">
+                    Filter
+                </button>
+                <?php if (!empty($search) || !empty($selectedLevelId)): ?>
+                    <a href="/admin/classes" class="inline-flex items-center justify-center min-h-[44px] px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition">
+                        Reset
+                    </a>
+                <?php endif; ?>
+            </div>
+        </form>
+    </div>
+
+    <!-- Classes Table Container -->
+    <div data-lms-table-container="true" class="space-y-4">
+        <?php if (empty($classes)): ?>
+            <?php $this->include('components/empty_state', [
+                'title' => 'No Classes Configured',
+                'message' => 'No classes or arms match your criteria. Click "Create Class" to get started.'
+            ]); ?>
+        <?php else: ?>
+            <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
                     <thead class="bg-slate-50 text-slate-600 font-semibold">
@@ -66,7 +111,9 @@ if (!empty($teachers)) {
                                     ]); ?>
                                 </td>
                                 <td class="px-6 py-4 font-semibold text-slate-900">
-                                    <?= e($cls->name) ?>
+                                    <a href="/admin/classes/<?= $cls->id ?>" class="text-[#7B3046] hover:underline font-bold">
+                                        <?= e($cls->name) ?>
+                                    </a>
                                 </td>
                                 <td class="px-6 py-4">
                                     <?php if ($cls->sectionArm): ?>
@@ -105,6 +152,11 @@ if (!empty($teachers)) {
                                 </td>
                                 <td class="px-6 py-4 text-right">
                                     <div class="inline-flex items-center gap-2 justify-end">
+                                        <a href="/admin/classes/<?= $cls->id ?>" class="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold bg-slate-100 hover:bg-[#7B3046] hover:text-white text-slate-700 transition">
+                                            <span>Details</span>
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                                        </a>
+
                                         <?php $this->include('components/button', [
                                             'type' => 'button',
                                             'variant' => 'secondary',
@@ -132,6 +184,21 @@ if (!empty($teachers)) {
                     </tbody>
                 </table>
             </div>
+
+            <!-- Pagination Component -->
+            <?php
+            $paginationBaseUrl = '/admin/classes?' . http_build_query(array_filter([
+                'level_id' => $selectedLevelId ?: null,
+                'search' => !empty($search) ? $search : null,
+            ]));
+            $this->include('components/pagination', [
+                'currentPage' => $currentPage ?? 1,
+                'totalPages' => $totalPages ?? 1,
+                'totalResults' => $totalResults ?? count($classes),
+                'perPage' => $perPage ?? 25,
+                'baseUrl' => $paginationBaseUrl,
+            ]);
+            ?>
         </div>
     <?php endif; ?>
 </div>

@@ -463,7 +463,7 @@ final class AssignmentLifecycleIntegrationTest extends TestCase
             'topic' => 'Differentiation',
             'title' => 'Product and Quotient Rules',
             'instructions' => 'Solve problems 1 through 10 in the attached worksheet.',
-            'due_at' => '2026-09-30 23:59:59',
+            'due_at' => date('Y-m-d H:i:s', strtotime('+14 days')),
             'max_score' => 50.00,
             'status' => 'published',
         ], $assignmentFile, $teacherContext);
