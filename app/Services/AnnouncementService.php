@@ -54,10 +54,10 @@ class AnnouncementService
         if (empty($body)) {
             $errors['body'] = 'Announcement body content is required.';
         }
-        if (!in_array($scope, ['school', 'class', 'class_subject'], true)) {
+        if (!in_array($scope, ['school', 'teachers', 'class', 'class_subject'], true)) {
             $errors['scope'] = 'Invalid announcement scope.';
         }
-        if ($scope !== 'school' && ($scopeId === null || $scopeId <= 0)) {
+        if (!in_array($scope, ['school', 'teachers'], true) && ($scopeId === null || $scopeId <= 0)) {
             $errors['scope_id'] = 'Scope target selection is required for class or subject announcements.';
         }
 
@@ -123,7 +123,7 @@ class AnnouncementService
         if (empty($body)) {
             $errors['body'] = 'Announcement body content is required.';
         }
-        if (!in_array($scope, ['school', 'class', 'class_subject'], true)) {
+        if (!in_array($scope, ['school', 'teachers', 'class', 'class_subject'], true)) {
             $errors['scope'] = 'Invalid announcement scope.';
         }
 

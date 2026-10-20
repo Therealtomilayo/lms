@@ -92,7 +92,8 @@ class BatchRemarkController extends Controller
         }
 
         // Fetch skills & ratings matrix
-        $skills = $this->skillRepo->getAllSkills(null, 'active');
+        $classStage = $selectedClass ? ($selectedClass->academicLevel?->stage ?? null) : null;
+        $skills = $this->skillRepo->getAllSkills(null, 'active', $classStage);
         $ratingsMatrix = ($selectedClassId > 0 && $selectedTermId > 0)
             ? $this->skillRepo->getClassRatingsMatrix($selectedClassId, $selectedTermId)
             : [];

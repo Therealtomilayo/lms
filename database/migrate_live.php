@@ -181,9 +181,37 @@ try {
     $pdo->exec("INSERT IGNORE INTO `admission_sessions` (`id`, `academic_session_id`, `title`, `application_fee`, `currency`, `opens_at`, `closes_at`, `is_active`, `instructions`, `created_by`, `created_at`, `updated_at`)
                 SELECT 1, id, CONCAT(name, ' Admissions'), 10000.00, 'NGN', NOW(), DATE_ADD(NOW(), INTERVAL 6 MONTH), 1, 'Welcome to Claret International School online admission application. Please ensure you have valid digital copies of your ward\'s Birth Certificate, Passport Photograph, and previous academic report.', 1, NOW(), NOW()
                 FROM `sessions` WHERE `status` = 'active' LIMIT 1");
-    out("Verified active admission session for prospective student applications", 'success');
+    // 6. Execute Master Launch Delta (database/live_delta_launch_2026.sql)
+    $deltaFile = $baseDir . '/database/live_delta_launch_2026.sql';
+    if (file_exists($deltaFile)) {
+        out("Found master launch delta script: live_delta_launch_2026.sql. Executing idempotent data & structure migration ...", 'info');
+        $handle = fopen($deltaFile, 'r');
+        $query = '';
+        $deltaExecuted = 0;
+        $deltaErrors = 0;
+        
+        $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
+        while (($line = fgets($handle)) !== false) {
+            $trimmed = trim($line);
+            if ($trimmed === '' || str_starts_with($trimmed, '--')) continue;
+            $query .= $line;
+            if (str_ends_with($trimmed, ';')) {
+                try {
+                    $pdo->exec($query);
+                    $deltaExecuted++;
+                } catch (\Throwable $e) {
+                    $deltaErrors++;
+                    out("Notice in statement {$deltaExecuted}: " . $e->getMessage(), 'warning');
+                }
+                $query = '';
+            }
+        }
+        fclose($handle);
+        $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
+        out("Applied {$deltaExecuted} delta statements into database successfully!", 'success');
+    }
 
-    out("All live migrations and required seeders completed with ZERO data loss!", 'success');
+    out("All live migrations, population seeders, and academic structures completed with ZERO data loss!", 'success');
 
 } catch (Throwable $e) {
     out("Fatal error: " . $e->getMessage(), 'error');

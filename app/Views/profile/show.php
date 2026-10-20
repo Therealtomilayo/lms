@@ -472,6 +472,48 @@ $displayRole = $roleLabels[$primaryRole] ?? ucfirst($primaryRole);
                     <?php endif; ?>
                 </div>
 
+                <!-- TEACHER SIGNATURE ATTESTATION CARD -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wide">
+                                    Official Digital Signature Attestation
+                                </h3>
+                                <p class="text-xs text-slate-500 mt-0.5">Rendered on terminal student report cards and official evaluation dossiers.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row items-center gap-5 p-4 bg-slate-50 rounded-xl border border-slate-200/80">
+                        <div class="h-20 w-44 bg-white border border-slate-200 rounded-xl p-2 flex items-center justify-center flex-shrink-0 shadow-2xs">
+                            <?php if (!empty($teacher->signatureUrl)): ?>
+                                <img src="<?= htmlspecialchars($teacher->signatureUrl) ?>" alt="My Signature" class="max-h-full max-w-full object-contain">
+                            <?php else: ?>
+                                <span class="text-xs text-slate-400 italic font-medium">No signature uploaded</span>
+                            <?php endif; ?>
+                        </div>
+
+                        <form method="POST" action="/profile/signature" enctype="multipart/form-data" class="flex-1 w-full space-y-2">
+                            <?= csrf_field() ?>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Upload / Replace Signature</label>
+                            <div class="flex items-center gap-3">
+                                <input type="file" name="signature_file" accept="image/*" required
+                                       class="text-xs text-slate-500 file:mr-3 file:py-2 file:px-3.5 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#7B3046] file:text-white hover:file:bg-[#632738] cursor-pointer">
+                                <button type="submit" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 transition shadow-xs flex-shrink-0">
+                                    Save Signature
+                                </button>
+                            </div>
+                            <p class="text-[11px] text-slate-400">Accepted: PNG, JPG, WEBP, or SVG (Transparent background recommended).</p>
+                        </form>
+                    </div>
+                </div>
+
             <?php else: ?>
                 <!-- ADMIN DOSSIER: System Privileges -->
                 <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">

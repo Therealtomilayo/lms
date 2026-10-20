@@ -488,7 +488,7 @@ class NotificationService
         $channel = strtolower($channel);
 
         if ($channel === 'email') {
-            $subject = "Test Gateway Notification — Claret International School";
+            $subject = "Notification — Claret International School";
             $html = $this->renderEmailTemplate('generic_bulletin', [
                 'title' => 'Gateway Diagnostic Test Transmission',
                 'bodyText' => $message,

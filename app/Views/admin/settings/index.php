@@ -117,47 +117,89 @@
                 <p class="text-xs text-slate-500 mt-0.5">Defines the executive sign-off authority and digital stamp overlays rendered on terminal report cards.</p>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Head Teacher / Principal Name *</label>
-                    <input type="text" name="head_teacher_name" required value="<?= htmlspecialchars($settings['head_teacher_name']) ?>"
-                           class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-sky-500 font-bold text-slate-800">
-                    <p class="text-[11px] text-slate-500 mt-1">E.g. Mrs. N. Okon or Rev. Sr. Administrator</p>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Official Executive Title *</label>
-                    <input type="text" name="head_teacher_title" required value="<?= htmlspecialchars($settings['head_teacher_title']) ?>"
-                           class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-sky-500 text-slate-800">
-                    <p class="text-[11px] text-slate-500 mt-1">E.g. Head of School, Principal, or Director of Studies</p>
-                </div>
-
-                <!-- Head Teacher Signature -->
-                <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
-                    <span class="block text-xs font-bold uppercase tracking-wider text-slate-700">Head Teacher Signature</span>
-                    
-                    <div class="flex items-center gap-4">
-                        <div class="h-16 w-32 border border-slate-300 bg-white rounded-lg p-2 flex items-center justify-center">
-                            <?php if (!empty($settings['head_teacher_signature_url'])): ?>
-                                <img src="<?= htmlspecialchars($settings['head_teacher_signature_url']) ?>" alt="Signature" class="max-h-full max-w-full object-contain">
-                            <?php else: ?>
-                                <span class="text-[10px] text-slate-400 italic">No signature</span>
-                            <?php endif; ?>
+            <div class="space-y-6">
+                <!-- Head Teacher (Grade School) Section -->
+                <div class="p-5 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-4">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+                        <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider">Grade School Attestation Authority (Head Teacher / Head of School)</h3>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Head Teacher Name *</label>
+                            <input type="text" name="head_teacher_name" required value="<?= htmlspecialchars($settings['head_teacher_name']) ?>"
+                                   class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-sky-500 font-bold text-slate-800 bg-white">
+                            <p class="text-[11px] text-slate-500 mt-1">E.g. Mrs. Cynthia Rowland</p>
                         </div>
-                        <div class="flex-1 space-y-1.5">
-                            <label class="inline-block text-xs font-semibold text-slate-600">Upload New Signature</label>
-                            <input type="file" name="signature_file" accept="image/*" class="text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-200 file:text-slate-700 hover:file:bg-slate-300 cursor-pointer">
-                            <input type="hidden" name="head_teacher_signature_url" value="<?= htmlspecialchars($settings['head_teacher_signature_url']) ?>">
+
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Official Title *</label>
+                            <input type="text" name="head_teacher_title" required value="<?= htmlspecialchars($settings['head_teacher_title']) ?>"
+                                   class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-sky-500 text-slate-800 bg-white">
+                            <p class="text-[11px] text-slate-500 mt-1">E.g. Head of School / Head Teacher</p>
+                        </div>
+
+                        <div class="sm:col-span-2 p-3.5 rounded-xl border border-slate-200 bg-white flex items-center gap-4">
+                            <div class="h-16 w-32 border border-slate-200 bg-slate-50 rounded-lg p-2 flex items-center justify-center flex-shrink-0">
+                                <?php if (!empty($settings['head_teacher_signature_url'])): ?>
+                                    <img src="<?= htmlspecialchars($settings['head_teacher_signature_url']) ?>" alt="Head Teacher Signature" class="max-h-full max-w-full object-contain">
+                                <?php else: ?>
+                                    <span class="text-[10px] text-slate-400 italic">No signature</span>
+                                <?php endif; ?>
+                            </div>
+                            <div class="flex-1 space-y-1">
+                                <label class="inline-block text-xs font-semibold text-slate-700">Upload Head Teacher Signature Image</label>
+                                <input type="file" name="signature_file" accept="image/*" class="text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-200 file:text-slate-700 hover:file:bg-slate-300 cursor-pointer">
+                                <input type="hidden" name="head_teacher_signature_url" value="<?= htmlspecialchars($settings['head_teacher_signature_url']) ?>">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Principal (High School) Section -->
+                <div class="p-5 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-4">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+                        <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider">High School Attestation Authority (Principal)</h3>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Principal Name *</label>
+                            <input type="text" name="principal_name" required value="<?= htmlspecialchars($settings['principal_name']) ?>"
+                                   class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 font-bold text-slate-800 bg-white">
+                            <p class="text-[11px] text-slate-500 mt-1">E.g. Rev. Fr. Principal</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Official Title *</label>
+                            <input type="text" name="principal_title" required value="<?= htmlspecialchars($settings['principal_title']) ?>"
+                                   class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-slate-800 bg-white">
+                            <p class="text-[11px] text-slate-500 mt-1">E.g. Principal (High School)</p>
+                        </div>
+
+                        <div class="sm:col-span-2 p-3.5 rounded-xl border border-slate-200 bg-white flex items-center gap-4">
+                            <div class="h-16 w-32 border border-slate-200 bg-slate-50 rounded-lg p-2 flex items-center justify-center flex-shrink-0">
+                                <?php if (!empty($settings['principal_signature_url'])): ?>
+                                    <img src="<?= htmlspecialchars($settings['principal_signature_url']) ?>" alt="Principal Signature" class="max-h-full max-w-full object-contain">
+                                <?php else: ?>
+                                    <span class="text-[10px] text-slate-400 italic">No signature</span>
+                                <?php endif; ?>
+                            </div>
+                            <div class="flex-1 space-y-1">
+                                <label class="inline-block text-xs font-semibold text-slate-700">Upload Principal Signature Image</label>
+                                <input type="file" name="principal_signature_file" accept="image/*" class="text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-200 file:text-slate-700 hover:file:bg-slate-300 cursor-pointer">
+                                <input type="hidden" name="principal_signature_url" value="<?= htmlspecialchars($settings['principal_signature_url']) ?>">
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Official Circular Seal Stamp -->
-                <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
-                    <span class="block text-xs font-bold uppercase tracking-wider text-slate-700">Official Circular Seal Stamp</span>
+                <div class="p-5 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-3">
+                    <span class="block text-xs font-bold uppercase tracking-wider text-slate-700">Official Institutional Circular Seal Stamp</span>
                     
                     <div class="flex items-center gap-4">
-                        <div class="h-16 w-16 border border-slate-300 bg-white rounded-lg p-1.5 flex items-center justify-center">
+                        <div class="h-16 w-16 border border-slate-300 bg-white rounded-lg p-1.5 flex items-center justify-center flex-shrink-0">
                             <?php if (!empty($settings['school_stamp_url'])): ?>
                                 <img src="<?= htmlspecialchars($settings['school_stamp_url']) ?>" alt="Stamp" class="max-h-full max-w-full object-contain">
                             <?php else: ?>

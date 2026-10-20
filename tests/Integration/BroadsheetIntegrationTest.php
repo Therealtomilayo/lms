@@ -338,7 +338,7 @@ final class BroadsheetIntegrationTest extends TestCase
         $this->assertStringContainsString('Arm A', $body);
         $this->assertStringContainsString('Mr. David Teacher', $body); // Form teacher name
         $this->assertStringContainsString('MTH101', $body); // Subject code in header
-        $this->assertStringContainsString('Chukwudi Okafor', $body); // Student candidate
+        $this->assertStringContainsString('CHUKWUDI OKAFOR', $body); // Student candidate
         $this->assertStringContainsString('CIS-2026-001', $body); // Admission no
         $this->assertStringContainsString('85', $body); // Total score
         $this->assertStringContainsString('Export CSV', $body);

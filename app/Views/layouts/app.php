@@ -16,7 +16,7 @@
 <head>
     <?php $this->include('layouts/components/head', ['title' => $title ?? null]); ?>
 </head>
-<body class="h-full bg-slate-50 text-slate-800 flex flex-col md:flex-row overflow-x-hidden print:block print:h-auto print:overflow-visible print:bg-white print:p-0">
+<body class="h-full md:h-screen bg-slate-50 text-slate-800 flex flex-col md:flex-row overflow-hidden print:block print:h-auto print:overflow-visible print:bg-white print:p-0">
     <!-- Skip to main content accessibility link -->
     <a href="#main-content" 
        class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-brand-600 text-white px-4 py-2 rounded-md z-50 focus:ring-2 focus:ring-offset-2 focus:ring-brand-500">
@@ -33,7 +33,7 @@
     ]); ?>
 
     <!-- Main View Panel -->
-    <div class="flex-1 flex flex-col min-h-screen overflow-hidden print:block print:min-h-0 print:overflow-visible print:w-full">
+    <div class="flex-1 flex flex-col h-full min-w-0 overflow-hidden print:block print:min-h-0 print:overflow-visible print:w-full">
         
         <!-- Unified Header -->
         <?php $this->include('layouts/components/header', [

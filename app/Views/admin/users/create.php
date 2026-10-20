@@ -381,6 +381,17 @@ $hasOtherRoles = !empty(array_diff($oldRoles, ['student']));
                             <option value="Other" <?= $currRel === 'Other' ? 'selected' : '' ?>>Other</option>
                         </select>
                     </div>
+                    <div>
+                        <label for="user_house" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">School House</label>
+                        <select name="house" id="user_house"
+                                class="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 bg-white text-slate-800 shadow-xs focus:ring-2 focus:ring-brand-500 focus:outline-hidden">
+                            <?php $currHouse = old('house', 'Blue'); ?>
+                            <option value="Blue" <?= $currHouse === 'Blue' ? 'selected' : '' ?>>Blue House</option>
+                            <option value="Green" <?= $currHouse === 'Green' ? 'selected' : '' ?>>Green House</option>
+                            <option value="Red" <?= $currHouse === 'Red' ? 'selected' : '' ?>>Red House</option>
+                            <option value="Yellow" <?= $currHouse === 'Yellow' ? 'selected' : '' ?>>Yellow House</option>
+                        </select>
+                    </div>
 
                     <div class="sm:col-span-3 pt-3 border-t border-slate-200/80">
                         <label class="flex items-start gap-3 cursor-pointer select-none">

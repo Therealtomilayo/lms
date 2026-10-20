@@ -100,4 +100,45 @@ class ProfileController extends Controller
             'roles' => $roles,
         ], $roleData), $layoutName));
     }
+
+    /**
+     * Upload or update teacher's personal signature.
+     * Route: POST /profile/signature
+     */
+    public function updateSignature(Request $request): Response
+    {
+        $user = $this->user($request);
+        if (!$user) {
+            return $this->redirect('/login');
+        }
+
+        $teacher = $this->teacherRepo->findByUserId($user->id);
+        if (!$teacher) {
+            return $this->redirectWithError('/profile', 'Only faculty members have access to signature uploads.');
+        }
+
+        $files = $request->files();
+        if (empty($files['signature_file']) || $files['signature_file']['error'] !== UPLOAD_ERR_OK) {
+            return $this->redirectWithError('/profile', 'Please choose a valid signature image file to upload.');
+        }
+
+        $file = $files['signature_file'];
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'svg'], true)) {
+            return $this->redirectWithError('/profile', 'Invalid image format. Allowed formats: PNG, JPG, JPEG, WEBP, SVG.');
+        }
+
+        $uploadDir = dirname(__DIR__, 2) . '/public/assets/uploads/signatures';
+        if (!is_dir($uploadDir)) {
+            @mkdir($uploadDir, 0755, true);
+        }
+
+        $filename = 'teacher_sig_' . $teacher->id . '_' . time() . '.' . $ext;
+        if (move_uploaded_file($file['tmp_name'], $uploadDir . '/' . $filename)) {
+            $this->teacherRepo->updateSignatureUrl($teacher->id, '/assets/uploads/signatures/' . $filename);
+            return $this->redirectWithSuccess('/profile', 'Your digital signature was successfully updated and attached to your dossier.');
+        }
+
+        return $this->redirectWithError('/profile', 'Failed to upload signature file. Please check folder permissions.');
+    }
 }

@@ -13,7 +13,7 @@ if (empty($affectiveSkills) && empty($psychomotorSkills)) {
 }
 ?>
 
-<div class="space-y-6 pb-16">
+<div class="space-y-6">
     <!-- Top Flash Messages -->
     <?php if (!empty($flashSuccess)): ?>
         <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-medium flex items-center justify-between shadow-xs">
@@ -205,23 +205,42 @@ if (empty($affectiveSkills) && empty($psychomotorSkills)) {
                 </div>
             </div>
 
+            <style>
+                .skills-matrix-table input[type="radio"].sr-only {
+                    position: absolute !important;
+                    width: 1px !important;
+                    height: 1px !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                    overflow: hidden !important;
+                    clip: rect(0, 0, 0, 0) !important;
+                    border: 0 !important;
+                    top: 50% !important;
+                    left: 50% !important;
+                    transform: translate(-50%, -50%) !important;
+                    pointer-events: none !important;
+                }
+            </style>
+
             <!-- Sticky Horizontal Evaluation Matrix Table -->
             <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
                 <div class="overflow-x-auto max-w-full">
-                    <table class="w-full text-left text-xs border-collapse">
+                    <table class="w-full text-left text-xs border-collapse skills-matrix-table">
                         <thead>
                             <!-- Category Super-Header Row -->
                             <tr class="bg-slate-100 border-b border-slate-200 text-slate-700 font-extrabold tracking-wider uppercase text-[11px]">
-                                <th colspan="3" class="py-2.5 px-4 sticky left-0 z-20 bg-slate-100 border-r border-slate-300">
+                                <th class="hidden sm:table-cell py-2.5 px-3 sticky left-0 z-20 bg-slate-100 border-r border-slate-200 w-12 text-center">#</th>
+                                <th class="hidden sm:table-cell py-2.5 px-3 sticky sm:left-12 z-20 bg-slate-100 border-r border-slate-200 w-28 text-left">Adm. No.</th>
+                                <th class="py-2.5 px-3 sm:px-4 sticky left-0 sm:left-40 z-20 bg-slate-100 border-r border-slate-300 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.08)] w-[130px] min-w-[130px] max-w-[130px] sm:w-auto sm:min-w-[190px] sm:max-w-none text-left">
                                     Student Identification
                                 </th>
                                 <?php if (!empty($affectiveSkills)): ?>
-                                    <th colspan="<?= count($affectiveSkills) ?>" class="py-2.5 px-3 text-center bg-blue-50/80 text-blue-900 border-r border-slate-300">
+                                    <th colspan="<?= count($affectiveSkills) ?>" class="py-2.5 px-3 text-center bg-blue-50/80 text-blue-900 border-r border-slate-300 whitespace-nowrap">
                                         Affective Domain (Social, Emotional &amp; Conduct)
                                     </th>
                                 <?php endif; ?>
                                 <?php if (!empty($psychomotorSkills)): ?>
-                                    <th colspan="<?= count($psychomotorSkills) ?>" class="py-2.5 px-3 text-center bg-emerald-50/80 text-emerald-900">
+                                    <th colspan="<?= count($psychomotorSkills) ?>" class="py-2.5 px-3 text-center bg-emerald-50/80 text-emerald-900 whitespace-nowrap">
                                         Psychomotor Domain (Physical, Motor Skills &amp; Dexterity)
                                     </th>
                                 <?php endif; ?>
@@ -229,9 +248,11 @@ if (empty($affectiveSkills) && empty($psychomotorSkills)) {
 
                             <!-- Individual Trait Header Row with Column Quick Actions -->
                             <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
-                                <th class="py-3 px-3 w-10 text-center sticky left-0 z-20 bg-slate-50 border-r border-slate-200">#</th>
-                                <th class="py-3 px-3 w-28 sticky left-10 z-20 bg-slate-50 border-r border-slate-200">Adm. No.</th>
-                                <th class="py-3 px-4 min-w-[190px] sticky left-38 z-20 bg-slate-50 border-r border-slate-300 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)]">Student Name</th>
+                                <th class="hidden sm:table-cell py-3 px-3 w-12 text-center sticky left-0 z-20 bg-slate-50 border-r border-slate-200">#</th>
+                                <th class="hidden sm:table-cell py-3 px-3 w-28 sticky sm:left-12 z-20 bg-slate-50 border-r border-slate-200 text-left">Adm. No.</th>
+                                <th class="py-3 px-3 sm:px-4 sticky left-0 sm:left-40 z-20 bg-slate-50 border-r border-slate-300 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)] w-[130px] min-w-[130px] max-w-[130px] sm:w-auto sm:min-w-[190px] sm:max-w-none text-left">
+                                    Student Name
+                                </th>
 
                                 <!-- Affective Skills Columns -->
                                 <?php foreach ($affectiveSkills as $sk): ?>
@@ -239,9 +260,9 @@ if (empty($affectiveSkills) && empty($psychomotorSkills)) {
                                         <div class="font-bold text-slate-900 leading-tight"><?= htmlspecialchars($sk->name) ?></div>
                                         <div class="mt-1 flex items-center justify-center gap-1">
                                             <span class="text-[9px] text-slate-400 font-normal uppercase">Col:</span>
-                                            <button type="button" onclick="bulkSetColumn(<?= (int)$sk->id ?>, 5)" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-emerald-700 border border-slate-200 hover:bg-emerald-50" title="Set entire column to 5">5</button>
-                                            <button type="button" onclick="bulkSetColumn(<?= (int)$sk->id ?>, 4)" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-sky-700 border border-slate-200 hover:bg-sky-50" title="Set entire column to 4">4</button>
-                                            <button type="button" onclick="bulkSetColumn(<?= (int)$sk->id ?>, 3)" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-100" title="Set entire column to 3">3</button>
+                                            <button type="button" onclick="bulkSetColumn(<?= (int)$sk->id ?>, 5)" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-emerald-700 border border-slate-200 hover:bg-emerald-50 cursor-pointer" title="Set entire column to 5">5</button>
+                                            <button type="button" onclick="bulkSetColumn(<?= (int)$sk->id ?>, 4)" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-sky-700 border border-slate-200 hover:bg-sky-50 cursor-pointer" title="Set entire column to 4">4</button>
+                                            <button type="button" onclick="bulkSetColumn(<?= (int)$sk->id ?>, 3)" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-100 cursor-pointer" title="Set entire column to 3">3</button>
                                         </div>
                                     </th>
                                 <?php endforeach; ?>
@@ -252,9 +273,9 @@ if (empty($affectiveSkills) && empty($psychomotorSkills)) {
                                         <div class="font-bold text-slate-900 leading-tight"><?= htmlspecialchars($sk->name) ?></div>
                                         <div class="mt-1 flex items-center justify-center gap-1">
                                             <span class="text-[9px] text-slate-400 font-normal uppercase">Col:</span>
-                                            <button type="button" onclick="bulkSetColumn(<?= (int)$sk->id ?>, 5)" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-emerald-700 border border-slate-200 hover:bg-emerald-50" title="Set entire column to 5">5</button>
-                                            <button type="button" onclick="bulkSetColumn(<?= (int)$sk->id ?>, 4)" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-sky-700 border border-slate-200 hover:bg-sky-50" title="Set entire column to 4">4</button>
-                                            <button type="button" onclick="bulkSetColumn(<?= (int)$sk->id ?>, 3)" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-100" title="Set entire column to 3">3</button>
+                                            <button type="button" onclick="bulkSetColumn(<?= (int)$sk->id ?>, 5)" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-emerald-700 border border-slate-200 hover:bg-emerald-50 cursor-pointer" title="Set entire column to 5">5</button>
+                                            <button type="button" onclick="bulkSetColumn(<?= (int)$sk->id ?>, 4)" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-sky-700 border border-slate-200 hover:bg-sky-50 cursor-pointer" title="Set entire column to 4">4</button>
+                                            <button type="button" onclick="bulkSetColumn(<?= (int)$sk->id ?>, 3)" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-100 cursor-pointer" title="Set entire column to 3">3</button>
                                         </div>
                                     </th>
                                 <?php endforeach; ?>
@@ -268,19 +289,26 @@ if (empty($affectiveSkills) && empty($psychomotorSkills)) {
                                 $studentRatings = $ratingsMatrix[$studentId] ?? [];
                             ?>
                                 <tr class="hover:bg-slate-50/80 transition group" data-student-row="<?= $studentId ?>">
-                                    <td class="py-2.5 px-3 text-center font-mono text-slate-400 sticky left-0 z-10 bg-white group-hover:bg-slate-50 border-r border-slate-200">
+                                    <td class="hidden sm:table-cell py-2.5 px-3 text-center font-mono text-slate-400 sticky left-0 z-10 bg-white group-hover:bg-slate-50 border-r border-slate-200 w-12">
                                         <?= $idx + 1 ?>
                                     </td>
-                                    <td class="py-2.5 px-3 font-mono text-[11px] text-slate-600 sticky left-10 z-10 bg-white group-hover:bg-slate-50 border-r border-slate-200 whitespace-nowrap">
+                                    <td class="hidden sm:table-cell py-2.5 px-3 font-mono text-[11px] text-slate-600 sticky sm:left-12 z-10 bg-white group-hover:bg-slate-50 border-r border-slate-200 whitespace-nowrap w-28 text-left">
                                         <?= htmlspecialchars($admNo) ?>
                                     </td>
-                                    <td class="py-2.5 px-4 font-bold text-slate-900 sticky left-38 z-10 bg-white group-hover:bg-slate-50 border-r border-slate-300 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)] whitespace-nowrap">
-                                        <div class="flex items-center justify-between gap-3">
-                                            <span class="truncate max-w-[150px] sm:max-w-none" title="<?= htmlspecialchars($studentName) ?>"><?= htmlspecialchars($studentName) ?></span>
-                                            <!-- Row quick set -->
-                                            <div class="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-[10px]">
-                                                <button type="button" onclick="bulkSetRow(<?= $studentId ?>, 5)" class="px-1 py-0.2 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold hover:bg-emerald-100" title="Set student to all 5">5</button>
-                                                <button type="button" onclick="bulkSetRow(<?= $studentId ?>, 4)" class="px-1 py-0.2 rounded bg-sky-50 text-sky-800 border border-sky-200 font-bold hover:bg-sky-100" title="Set student to all 4">4</button>
+                                    <td class="py-2.5 px-3 sm:px-4 font-bold text-slate-900 sticky left-0 sm:left-40 z-10 bg-white group-hover:bg-slate-50 border-r border-slate-300 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)] w-[130px] min-w-[130px] max-w-[130px] sm:w-auto sm:min-w-[190px] sm:max-w-none">
+                                        <div class="flex items-center justify-between gap-1.5 min-w-0">
+                                            <div class="min-w-0 truncate">
+                                                <span class="truncate block text-xs font-bold text-slate-900 leading-tight" title="<?= htmlspecialchars($studentName) ?>">
+                                                    <?= htmlspecialchars($studentName) ?>
+                                                </span>
+                                                <span class="text-[10px] text-slate-400 font-mono sm:hidden truncate block mt-0.5">
+                                                    <?= htmlspecialchars($admNo) ?>
+                                                </span>
+                                            </div>
+                                            <!-- Row quick set (desktop hover) -->
+                                            <div class="hidden sm:flex opacity-0 group-hover:opacity-100 transition-opacity items-center gap-1 text-[10px] flex-shrink-0">
+                                                <button type="button" onclick="bulkSetRow(<?= $studentId ?>, 5)" class="px-1 py-0.2 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold hover:bg-emerald-100 cursor-pointer" title="Set student to all 5">5</button>
+                                                <button type="button" onclick="bulkSetRow(<?= $studentId ?>, 4)" class="px-1 py-0.2 rounded bg-sky-50 text-sky-800 border border-sky-200 font-bold hover:bg-sky-100 cursor-pointer" title="Set student to all 4">4</button>
                                             </div>
                                         </div>
                                     </td>
@@ -301,7 +329,7 @@ if (empty($affectiveSkills) && empty($psychomotorSkills)) {
                                                         1 => 'peer-checked:bg-rose-600 peer-checked:text-white peer-checked:border-rose-600',
                                                     };
                                                 ?>
-                                                    <label for="<?= $radioId ?>" class="cursor-pointer">
+                                                    <label for="<?= $radioId ?>" class="relative inline-flex items-center justify-center cursor-pointer select-none">
                                                         <input type="radio" 
                                                                id="<?= $radioId ?>"
                                                                name="ratings[<?= $studentId ?>][<?= (int)$sk->id ?>]" 
@@ -335,7 +363,7 @@ if (empty($affectiveSkills) && empty($psychomotorSkills)) {
                                                         1 => 'peer-checked:bg-rose-600 peer-checked:text-white peer-checked:border-rose-600',
                                                     };
                                                 ?>
-                                                    <label for="<?= $radioId ?>" class="cursor-pointer">
+                                                    <label for="<?= $radioId ?>" class="relative inline-flex items-center justify-center cursor-pointer select-none">
                                                         <input type="radio" 
                                                                id="<?= $radioId ?>"
                                                                name="ratings[<?= $studentId ?>][<?= (int)$sk->id ?>]" 
@@ -360,16 +388,16 @@ if (empty($affectiveSkills) && empty($psychomotorSkills)) {
             </div>
 
             <!-- Sticky Bottom Action Footer -->
-            <div class="flex items-center justify-between flex-wrap gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm sticky bottom-4 z-30">
+            <div class="flex items-center justify-between flex-wrap gap-3 bg-white/95 backdrop-blur p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200 shadow-md sticky bottom-0 z-30">
                 <div class="text-xs text-slate-500">
                     Showing <strong class="text-slate-800"><?= count($students) ?></strong> students across <strong class="text-slate-800"><?= count($skills) ?></strong> behavioral dimensions.
                 </div>
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2.5 sm:gap-3 w-full sm:w-auto justify-end">
                     <a href="/teacher/results/overview?class_id=<?= (int)$selectedClassId ?>&term_id=<?= (int)$selectedTermId ?>" 
-                       class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition">
+                       class="px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition text-center">
                         Cancel / Back to Broadsheet
                     </a>
-                    <button type="submit" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition cursor-pointer">
+                    <button type="submit" class="inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition cursor-pointer">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                         <span>Save All Ratings Matrix</span>
                     </button>

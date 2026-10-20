@@ -15,6 +15,7 @@ final class AssessmentCategory
         public readonly int $termId,
         public readonly ?int $classSubjectId = null,
         public readonly ?int $academicLevelId = null,
+        public readonly ?string $stage = null,
         public readonly string $name = '',
         public readonly float $weightPercentage = 0.0,
         public readonly float $maxPoints = 100.0,
@@ -36,6 +37,7 @@ final class AssessmentCategory
             academicLevelId: isset($data['academic_level_id']) && $data['academic_level_id'] !== '' && $data['academic_level_id'] !== null
                 ? (int)$data['academic_level_id']
                 : null,
+            stage: isset($data['stage']) && $data['stage'] !== '' ? (string)$data['stage'] : null,
             name: (string)($data['name'] ?? ''),
             weightPercentage: (float)($data['weight_percentage'] ?? 0.0),
             maxPoints: (float)($data['max_points'] ?? 100.0),
@@ -53,6 +55,7 @@ final class AssessmentCategory
             'term_id' => $this->termId,
             'class_subject_id' => $this->classSubjectId,
             'academic_level_id' => $this->academicLevelId,
+            'stage' => $this->stage,
             'name' => $this->name,
             'weight_percentage' => $this->weightPercentage,
             'max_points' => $this->maxPoints,

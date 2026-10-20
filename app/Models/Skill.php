@@ -13,6 +13,7 @@ final class Skill
         public readonly int $id,
         public readonly string $name,
         public readonly string $category, // 'psychomotor' or 'affective'
+        public readonly ?string $stage = null, // 'eyfs', 'primary', 'junior_secondary', 'senior_secondary'
         public readonly int $displayOrder = 1,
         public readonly string $status = 'active',
         public readonly ?string $createdAt = null,
@@ -26,6 +27,7 @@ final class Skill
             id: (int)($data['id'] ?? 0),
             name: (string)($data['name'] ?? ''),
             category: (string)($data['category'] ?? 'psychomotor'),
+            stage: isset($data['stage']) && $data['stage'] !== '' ? (string)$data['stage'] : null,
             displayOrder: (int)($data['display_order'] ?? 1),
             status: (string)($data['status'] ?? 'active'),
             createdAt: isset($data['created_at']) ? (string)$data['created_at'] : null,
@@ -48,12 +50,24 @@ final class Skill
         return strtolower($this->category) === 'affective';
     }
 
+    public function getStageLabel(): string
+    {
+        return match ($this->stage) {
+            'eyfs' => 'Early Years (EYFS)',
+            'primary' => 'Primary School',
+            'junior_secondary' => 'Junior Secondary (JSS)',
+            'senior_secondary' => 'Senior Secondary (SSS)',
+            default => 'All Stages (Universal)',
+        };
+    }
+
     public function toArray(): array
     {
         return [
             'id' => $this->id,
             'name' => $this->name,
             'category' => $this->category,
+            'stage' => $this->stage,
             'display_order' => $this->displayOrder,
             'status' => $this->status,
             'created_at' => $this->createdAt,

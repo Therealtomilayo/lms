@@ -7,16 +7,15 @@ namespace App\Utils;
 /**
  * Lightweight Standalone Pure-PHP SVG QR Code Generator
  *
- * Implements ISO/IEC 18004 QR Code Version 3 & 4 Byte Mode encoding
- * with Reed-Solomon Error Correction Level M/L.
- * Produces crisp, pure inline vector SVG markup with zero external network or library dependencies.
+ * Implements ISO/IEC 18004 compliant QR Code generation for Versions 1–5 (Error Correction Level M, Mask Pattern 0).
+ * Produces crisp, standalone SVG markup with 4-module quiet zone margin and zero external dependencies.
  */
 final class QrCode
 {
     /**
      * Generate an inline SVG string for the given content.
      */
-    public static function svg(string $data, int $size = 160, int $margin = 2, string $color = '#1e293b', string $bg = '#ffffff'): string
+    public static function svg(string $data, int $size = 160, int $margin = 4, string $color = '#1e293b', string $bg = '#ffffff'): string
     {
         $matrix = self::encodeToMatrix($data);
         $count = count($matrix);
@@ -52,26 +51,53 @@ SVG;
      */
     public static function encodeToMatrix(string $text): array
     {
-        // Version 3 is 29x29, can hold up to 53 alphanumeric/bytes with Level M
-        // Version 4 is 33x33, can hold up to 78 alphanumeric/bytes with Level M
         $len = strlen($text);
-        $version = $len <= 50 ? 3 : 4;
-        $size = 17 + (4 * $version); // V3: 29, V4: 33
 
-        // Initialize empty matrix (-1 = unset)
+        // Determine smallest fitting version for Error Correction M (Byte Mode)
+        // V1: 14 bytes, V2: 26 bytes, V3: 42 bytes, V4: 62 bytes, V5: 84 bytes
+        if ($len <= 26) {
+            $version = 2;
+        } elseif ($len <= 42) {
+            $version = 3;
+        } elseif ($len <= 62) {
+            $version = 4;
+        } else {
+            $version = 5;
+        }
+
+        $size = 17 + (4 * $version);
+
+        // Initialize empty matrix
         $matrix = array_fill(0, $size, array_fill(0, $size, null));
         $reserved = array_fill(0, $size, array_fill(0, $size, false));
 
-        // 1. Finder patterns at (0,0), (0, size-7), (size-7, 0)
+        // 1. Finder patterns at top-left (0,0), top-right (0, size-7), bottom-left (size-7, 0)
         self::addFinderPattern($matrix, $reserved, 0, 0, $size);
         self::addFinderPattern($matrix, $reserved, 0, $size - 7, $size);
         self::addFinderPattern($matrix, $reserved, $size - 7, 0, $size);
 
-        // 2. Alignment pattern for V3 (row/col 22) or V4 (row/col 26)
-        $alignPos = $version === 3 ? 22 : 26;
-        self::addAlignmentPattern($matrix, $reserved, $alignPos, $alignPos);
+        // 2. Alignment patterns (Versions >= 2)
+        $alignPosList = match ($version) {
+            2 => [18],
+            3 => [22],
+            4 => [26],
+            5 => [30],
+            default => [22],
+        };
 
-        // 3. Timing patterns
+        foreach ($alignPosList as $rowPos) {
+            foreach ($alignPosList as $colPos) {
+                // Do not overlap with finder patterns
+                if (($rowPos <= 8 && $colPos <= 8) ||
+                    ($rowPos <= 8 && $colPos >= $size - 8) ||
+                    ($rowPos >= $size - 8 && $colPos <= 8)) {
+                    continue;
+                }
+                self::addAlignmentPattern($matrix, $reserved, $rowPos, $colPos);
+            }
+        }
+
+        // 3. Timing patterns (Row 6 and Col 6)
         for ($i = 8; $i < $size - 8; $i++) {
             $val = ($i % 2 === 0);
             if ($matrix[6][$i] === null) {
@@ -87,15 +113,15 @@ SVG;
         // 4. Reserve format information areas
         self::reserveFormatAreas($reserved, $size);
 
-        // 5. Dark module at (4*V + 9, 8) -> for V3: (21, 8), V4: (25, 8)
+        // 5. Dark module at (4*V + 9, 8)
         $darkRow = (4 * $version) + 9;
         $matrix[$darkRow][8] = true;
         $reserved[$darkRow][8] = true;
 
-        // 6. Encode data bits
+        // 6. Encode data & EC bits
         $dataBits = self::encodeDataBits($text, $version);
 
-        // 7. Place data bits in matrix (zig-zag from bottom-right)
+        // 7. Place data bits into matrix in 2-column zig-zag traversal from bottom-right
         $bitIdx = 0;
         $totalBits = count($dataBits);
         $right = $size - 1;
@@ -103,7 +129,7 @@ SVG;
 
         while ($right > 0) {
             if ($right === 6) {
-                $right--; // skip vertical timing column
+                $right--; // Skip vertical timing column
             }
 
             for ($vert = 0; $vert < $size; $vert++) {
@@ -113,7 +139,7 @@ SVG;
                     $col = $right - $c;
                     if (!$reserved[$r][$col]) {
                         $bit = $bitIdx < $totalBits ? $dataBits[$bitIdx++] : false;
-                        // Apply Mask Pattern 0: (r + col) % 2 == 0
+                        // Mask Pattern 0: (row + col) % 2 === 0
                         $mask = (($r + $col) % 2 === 0);
                         $matrix[$r][$col] = $bit ^ $mask;
                     }
@@ -124,10 +150,10 @@ SVG;
             $up = !$up;
         }
 
-        // 8. Add format information (Mask 0, Level M: 101010000010010 XOR 101010000010010)
+        // 8. Add format information for Level M and Mask 0
         self::addFormatInfo($matrix, $size);
 
-        // Replace any remaining unassigned cells with false
+        // Fallback: fill any unassigned cells
         for ($r = 0; $r < $size; $r++) {
             for ($c = 0; $c < $size; $c++) {
                 if ($matrix[$r][$c] === null) {
@@ -153,7 +179,7 @@ SVG;
                         $isBlack = ($r === 0 || $r === 6 || $c === 0 || $c === 6 || ($r >= 2 && $r <= 4 && $c >= 2 && $c <= 4));
                         $matrix[$currR][$currC] = $isBlack;
                     } else {
-                        $matrix[$currR][$currC] = false; // separator
+                        $matrix[$currR][$currC] = false; // Separator
                     }
                 }
             }
@@ -185,50 +211,57 @@ SVG;
         }
     }
 
+    /**
+     * Format information for Error Correction Level M (00) and Mask Pattern 0 (000)
+     * BCH (15,5) code: raw 00000 with 10 error-correction bits XORed with 101010000010010 = 21522.
+     */
     private static function addFormatInfo(array &$matrix, int $size): void
     {
-        // Format string for Error Correction M (00) and Mask 0 (000):
-        // Raw: 00 000 = 00000. With 10 BCH bits: 00000 00000 00000
-        // XORed with 101010000010010 = 101010000010010
-        $formatBits = [true, false, true, false, true, false, false, false, false, false, true, false, false, true, false];
+        $bits = 21522; // (0b101010000010010)
 
-        // Around top-left
-        $matrix[8][0] = $formatBits[0];
-        $matrix[8][1] = $formatBits[1];
-        $matrix[8][2] = $formatBits[2];
-        $matrix[8][3] = $formatBits[3];
-        $matrix[8][4] = $formatBits[4];
-        $matrix[8][5] = $formatBits[5];
-        $matrix[8][7] = $formatBits[6];
-        $matrix[8][8] = $formatBits[7];
-        $matrix[7][8] = $formatBits[8];
-        $matrix[5][8] = $formatBits[9];
-        $matrix[4][8] = $formatBits[10];
-        $matrix[3][8] = $formatBits[11];
-        $matrix[2][8] = $formatBits[12];
-        $matrix[1][8] = $formatBits[13];
-        $matrix[0][8] = $formatBits[14];
+        // Vertical placement
+        for ($i = 0; $i < 15; $i++) {
+            $mod = (($bits >> $i) & 1) === 1;
 
-        // Around top-right & bottom-left
-        for ($i = 0; $i < 7; $i++) {
-            $matrix[$size - 1 - $i][8] = $formatBits[$i];
+            if ($i < 6) {
+                $matrix[$i][8] = $mod;
+            } elseif ($i < 8) {
+                $matrix[$i + 1][8] = $mod;
+            } else {
+                $matrix[$size - 15 + $i][8] = $mod;
+            }
         }
-        for ($i = 0; $i < 8; $i++) {
-            $matrix[8][$size - 8 + $i] = $formatBits[7 + $i];
+
+        // Horizontal placement
+        for ($i = 0; $i < 15; $i++) {
+            $mod = (($bits >> $i) & 1) === 1;
+
+            if ($i < 8) {
+                $matrix[8][$size - $i - 1] = $mod;
+            } elseif ($i < 9) {
+                $matrix[8][15 - $i - 1 + 1] = $mod;
+            } else {
+                $matrix[8][15 - $i - 1] = $mod;
+            }
         }
+
+        // Fixed dark module
+        $matrix[$size - 8][8] = true;
     }
 
     /**
+     * Encodes text and returns data & EC bitstream with proper block interleaving.
+     *
      * @return array<int, bool>
      */
     private static function encodeDataBits(string $text, int $version): array
     {
         $bits = [];
 
-        // 1. Mode Indicator: 0100 (Byte mode)
+        // 1. Mode indicator: 0100 (8-bit Byte mode)
         $bits = array_merge($bits, [false, true, false, false]);
 
-        // 2. Character Count Indicator: 8 bits for Byte mode (V1-V9)
+        // 2. Character count indicator: 8 bits for Versions 1-9 in Byte mode
         $len = strlen($text);
         for ($i = 7; $i >= 0; $i--) {
             $bits[] = (bool)(($len >> $i) & 1);
@@ -242,22 +275,34 @@ SVG;
             }
         }
 
-        // Capacity: V3 Level M is 44 data codewords (352 bits), V4 Level M is 64 codewords (512 bits)
-        $totalDataCodewords = ($version === 3) ? 44 : 64;
+        // ISO 18004 Table 9 (Error Correction Characteristics for Level M):
+        // V2-M: 1 block of 28 data CW, 16 EC CW (total 44 CW)
+        // V3-M: 1 block of 44 data CW, 26 EC CW (total 70 CW)
+        // V4-M: 2 blocks of 32 data CW, 18 EC CW (total 100 CW)
+        // V5-M: 2 blocks of 43 data CW, 24 EC CW (total 134 CW)
+        [$numBlocks, $dataCwPerBlock, $ecCwPerBlock] = match ($version) {
+            2 => [1, 28, 16],
+            3 => [1, 44, 26],
+            4 => [2, 32, 18],
+            5 => [2, 43, 24],
+            default => [1, 44, 26],
+        };
+
+        $totalDataCodewords = $numBlocks * $dataCwPerBlock;
         $maxBits = $totalDataCodewords * 8;
 
-        // 4. Terminator (up to 4 zero bits)
+        // 4. Terminator (up to 4 zeroes)
         $terminatorLen = min(4, $maxBits - count($bits));
         for ($i = 0; $i < $terminatorLen; $i++) {
             $bits[] = false;
         }
 
-        // 5. Pad to multiple of 8
+        // 5. Pad to whole byte
         while (count($bits) % 8 !== 0) {
             $bits[] = false;
         }
 
-        // 6. Pad codewords (0xEC, 0x11 alternating)
+        // 6. Pad codewords alternating 0xEC and 0x11
         $padBytes = [0xEC, 0x11];
         $padIdx = 0;
         while (count($bits) < $maxBits) {
@@ -268,7 +313,7 @@ SVG;
             $padIdx++;
         }
 
-        // Convert data bits to bytes for Reed-Solomon computation
+        // Convert data bits to bytes
         $dataBytes = [];
         for ($i = 0; $i < count($bits); $i += 8) {
             $val = 0;
@@ -280,55 +325,84 @@ SVG;
             $dataBytes[] = $val;
         }
 
-        // ECC codewords: V3-M = 26 ECC bytes, V4-M = 36 ECC bytes
-        $eccCount = ($version === 3) ? 26 : 36;
-        $eccBytes = self::computeReedSolomon($dataBytes, $eccCount);
+        // Partition into blocks and calculate Reed-Solomon EC for each block
+        $dataBlocks = [];
+        $ecBlocks = [];
 
-        // Combine data bytes and ECC bytes into full stream
-        $allBytes = array_merge($dataBytes, $eccBytes);
+        for ($b = 0; $b < $numBlocks; $b++) {
+            $blockData = array_slice($dataBytes, $b * $dataCwPerBlock, $dataCwPerBlock);
+            $dataBlocks[] = $blockData;
+            $ecBlocks[] = self::computeReedSolomon($blockData, $ecCwPerBlock);
+        }
+
+        // Interleave data codewords across blocks
+        $interleavedBytes = [];
+        for ($i = 0; $i < $dataCwPerBlock; $i++) {
+            for ($b = 0; $b < $numBlocks; $b++) {
+                $interleavedBytes[] = $dataBlocks[$b][$i];
+            }
+        }
+
+        // Interleave error correction codewords across blocks
+        for ($i = 0; $i < $ecCwPerBlock; $i++) {
+            for ($b = 0; $b < $numBlocks; $b++) {
+                $interleavedBytes[] = $ecBlocks[$b][$i];
+            }
+        }
+
+        // Convert interleaved bytes back to bitstream
         $finalBits = [];
-        foreach ($allBytes as $byte) {
+        foreach ($interleavedBytes as $byte) {
             for ($b = 7; $b >= 0; $b--) {
                 $finalBits[] = (bool)(($byte >> $b) & 1);
             }
+        }
+
+        // Remainder bits for versions that have them (V1: 0, V2: 7, V3: 7, V4: 7, V5: 7)
+        $remainderBits = ($version >= 2 && $version <= 6) ? 7 : 0;
+        for ($i = 0; $i < $remainderBits; $i++) {
+            $finalBits[] = false;
         }
 
         return $finalBits;
     }
 
     /**
-     * Compute Reed-Solomon Error Correction Codewords in GF(256)
-     * Primitive polynomial: x^8 + x^4 + x^3 + x^2 + 1 (0x11D, 285)
+     * Compute Reed-Solomon error correction codewords in Galois Field GF(256)
+     * Primitive polynomial: 0x11D (285)
      *
      * @param array<int, int> $data
      * @return array<int, int>
      */
     private static function computeReedSolomon(array $data, int $eccCount): array
     {
-        // Build log/exp tables for GF(256)
-        $exp = array_fill(0, 512, 0);
-        $log = array_fill(0, 256, 0);
-        $x = 1;
-        for ($i = 0; $i < 255; $i++) {
-            $exp[$i] = $x;
-            $log[$x] = $i;
-            $x <<= 1;
-            if ($x & 0x100) {
-                $x ^= 0x11D;
+        static $exp = null;
+        static $log = null;
+
+        if ($exp === null) {
+            $exp = array_fill(0, 512, 0);
+            $log = array_fill(0, 256, 0);
+            $x = 1;
+            for ($i = 0; $i < 255; $i++) {
+                $exp[$i] = $x;
+                $log[$x] = $i;
+                $x <<= 1;
+                if ($x & 0x100) {
+                    $x ^= 0x11D;
+                }
+            }
+            for ($i = 255; $i < 512; $i++) {
+                $exp[$i] = $exp[$i - 255];
             }
         }
-        for ($i = 255; $i < 512; $i++) {
-            $exp[$i] = $exp[$i - 255];
-        }
 
-        // Generate generator polynomial: g(x) = (x - 2^0)(x - 2^1)...(x - 2^(eccCount-1))
+        // Generate generator polynomial: g(x) = (x - α^0)(x - α^1)...(x - α^(eccCount-1))
         $poly = [1];
         for ($i = 0; $i < $eccCount; $i++) {
             $next = array_fill(0, count($poly) + 1, 0);
             $factor = $exp[$i];
             for ($j = 0; $j < count($poly); $j++) {
                 $next[$j] ^= $poly[$j];
-                // Multiply poly[j] by factor in GF(256)
                 if ($poly[$j] !== 0) {
                     $prod = $exp[$log[$poly[$j]] + $log[$factor]];
                     $next[$j + 1] ^= $prod;
@@ -337,7 +411,7 @@ SVG;
             $poly = $next;
         }
 
-        // Synthetic division to find remainder
+        // Polynomial synthetic division
         $remainder = array_fill(0, $eccCount, 0);
         foreach ($data as $byte) {
             $lead = $byte ^ $remainder[0];

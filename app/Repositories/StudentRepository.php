@@ -160,7 +160,8 @@ class StudentRepository
         string $nationality = 'Nigerian',
         ?string $religion = null,
         ?string $admissionDate = null,
-        bool $useSchoolBus = false
+        bool $useSchoolBus = false,
+        ?string $house = null
     ): Student {
         $now = date('Y-m-d H:i:s');
         $available = $this->getStudentColumns();
@@ -184,6 +185,7 @@ class StudentRepository
             'religion' => $religion ?: null,
             'admission_date' => $admissionDate ?: null,
             'use_school_bus' => $useSchoolBus ? 1 : 0,
+            'house' => $house ?: 'Blue',
         ];
 
         foreach ($optionals as $colName => $colVal) {
@@ -214,7 +216,9 @@ class StudentRepository
         ?string $nationality = null,
         ?string $religion = null,
         ?string $admissionDate = null,
-        ?bool $useSchoolBus = null
+        ?bool $useSchoolBus = null,
+        ?string $house = null,
+        ?string $name = null
     ): bool {
         $now = date('Y-m-d H:i:s');
         $available = $this->getStudentColumns();
@@ -260,6 +264,10 @@ class StudentRepository
             $fields[] = '`use_school_bus` = :use_school_bus';
             $params[':use_school_bus'] = $useSchoolBus ? 1 : 0;
         }
+        if ($house !== null && (empty($available) || in_array('house', $available, true))) {
+            $fields[] = '`house` = :house';
+            $params[':house'] = $house ?: 'Blue';
+        }
         if ($currentClassId !== null) {
             $fields[] = '`current_class_id` = :current_class_id';
             $params[':current_class_id'] = $currentClassId > 0 ? $currentClassId : null;
@@ -267,7 +275,16 @@ class StudentRepository
 
         $sql = 'UPDATE `students` SET ' . implode(', ', $fields) . ' WHERE `id` = :id';
         $stmt = $this->pdo->prepare($sql);
-        return $stmt->execute($params);
+        $res = $stmt->execute($params);
+
+        if ($name !== null && trim($name) !== '') {
+            try {
+                $uStmt = $this->pdo->prepare('UPDATE users u JOIN students s ON s.user_id = u.id SET u.name = :name WHERE s.id = :sid');
+                $uStmt->execute([':name' => trim($name), ':sid' => $studentId]);
+            } catch (\Throwable) {}
+        }
+
+        return $res;
     }
 
     /**

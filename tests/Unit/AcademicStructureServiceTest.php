@@ -40,6 +40,7 @@ final class AcademicStructureServiceTest extends TestCase
                 `stage` VARCHAR(50) NOT NULL,
                 `rank_order` INTEGER NOT NULL DEFAULT 0,
                 `grading_scale_id` INTEGER NULL,
+                `report_card_template` VARCHAR(50) NULL,
                 `created_at` DATETIME NOT NULL,
                 `updated_at` DATETIME NOT NULL
             );

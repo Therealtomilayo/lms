@@ -496,22 +496,60 @@ class AcademicRepository
         return $stmt->execute([':key' => $key]);
     }
 
+    private function levelHasColumn(string $column): bool
+    {
+        try {
+            $driver = $this->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME);
+            if ($driver === 'sqlite') {
+                $stmt = $this->pdo->query('PRAGMA table_info(`academic_levels`)');
+                if ($stmt) {
+                    foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+                        if (strcasecmp((string)($row['name'] ?? ''), $column) === 0) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+            return true;
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
     public function createLevel(array $data): AcademicLevel
     {
         $now = date('Y-m-d H:i:s');
-        $stmt = $this->pdo->prepare(
-            'INSERT INTO `academic_levels` (`name`, `stage`, `rank_order`, `grading_scale_id`, `created_at`, `updated_at`)
-             VALUES (:name, :stage, :rank_order, :grading_scale_id, :created_at, :updated_at)'
-        );
+        $hasTemplate = $this->levelHasColumn('report_card_template');
 
-        $stmt->execute([
-            ':name' => trim($data['name']),
-            ':stage' => trim($data['stage']),
-            ':rank_order' => (int)($data['rank_order'] ?? 0),
-            ':grading_scale_id' => !empty($data['grading_scale_id']) ? (int)$data['grading_scale_id'] : null,
-            ':created_at' => $now,
-            ':updated_at' => $now,
-        ]);
+        if ($hasTemplate) {
+            $stmt = $this->pdo->prepare(
+                'INSERT INTO `academic_levels` (`name`, `stage`, `rank_order`, `grading_scale_id`, `report_card_template`, `created_at`, `updated_at`)
+                 VALUES (:name, :stage, :rank_order, :grading_scale_id, :report_card_template, :created_at, :updated_at)'
+            );
+            $stmt->execute([
+                ':name' => trim($data['name']),
+                ':stage' => trim($data['stage']),
+                ':rank_order' => (int)($data['rank_order'] ?? 0),
+                ':grading_scale_id' => !empty($data['grading_scale_id']) ? (int)$data['grading_scale_id'] : null,
+                ':report_card_template' => !empty($data['report_card_template']) ? $data['report_card_template'] : 'grade_school',
+                ':created_at' => $now,
+                ':updated_at' => $now,
+            ]);
+        } else {
+            $stmt = $this->pdo->prepare(
+                'INSERT INTO `academic_levels` (`name`, `stage`, `rank_order`, `grading_scale_id`, `created_at`, `updated_at`)
+                 VALUES (:name, :stage, :rank_order, :grading_scale_id, :created_at, :updated_at)'
+            );
+            $stmt->execute([
+                ':name' => trim($data['name']),
+                ':stage' => trim($data['stage']),
+                ':rank_order' => (int)($data['rank_order'] ?? 0),
+                ':grading_scale_id' => !empty($data['grading_scale_id']) ? (int)$data['grading_scale_id'] : null,
+                ':created_at' => $now,
+                ':updated_at' => $now,
+            ]);
+        }
 
         $id = (int)$this->pdo->lastInsertId();
 
@@ -521,6 +559,26 @@ class AcademicRepository
     public function updateLevel(int $id, array $data): bool
     {
         $now = date('Y-m-d H:i:s');
+        $hasTemplate = $this->levelHasColumn('report_card_template');
+
+        if ($hasTemplate) {
+            $stmt = $this->pdo->prepare(
+                'UPDATE `academic_levels`
+                 SET `name` = :name, `stage` = :stage, `rank_order` = :rank_order, `grading_scale_id` = :grading_scale_id, `report_card_template` = :report_card_template, `updated_at` = :updated_at
+                 WHERE `id` = :id'
+            );
+
+            return $stmt->execute([
+                ':id' => $id,
+                ':name' => trim($data['name']),
+                ':stage' => trim($data['stage']),
+                ':rank_order' => (int)($data['rank_order'] ?? 0),
+                ':grading_scale_id' => !empty($data['grading_scale_id']) ? (int)$data['grading_scale_id'] : null,
+                ':report_card_template' => !empty($data['report_card_template']) ? $data['report_card_template'] : 'grade_school',
+                ':updated_at' => $now,
+            ]);
+        }
+
         $stmt = $this->pdo->prepare(
             'UPDATE `academic_levels`
              SET `name` = :name, `stage` = :stage, `rank_order` = :rank_order, `grading_scale_id` = :grading_scale_id, `updated_at` = :updated_at

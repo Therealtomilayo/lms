@@ -20,6 +20,12 @@ $className = htmlspecialchars($class?->name ?? 'Primary');
 $termName = htmlspecialchars($term?->name ?? 'Term');
 $sessionName = htmlspecialchars($session?->name ?? '2025/2026');
 
+$isHighSchool = !empty($is_high_school) 
+    || ($report_card_template ?? '') === 'high_school'
+    || ($student->currentClass?->academicLevel?->reportCardTemplate ?? '') === 'high_school'
+    || in_array(strtolower((string)($student->currentClass?->academicLevel?->stage ?? '')), ['junior_secondary', 'senior_secondary'], true)
+    || (isset($class) && $class && (stripos($class->name, 'jss') !== false || stripos($class->name, 'sss') !== false || stripos($class->name, 'year') !== false));
+
 $backUrl = $backUrl ?? ($isParentPortal 
     ? "/parent/children/{$student->id}/grades" 
     : ($isAdmin || str_contains($_SERVER['REQUEST_URI'] ?? '', '/admin/') ? "/admin/results/review" : "/student/grades"));
@@ -29,7 +35,7 @@ $backUrl = $backUrl ?? ($isParentPortal
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-    <title>Report Card &mdash; <?= $studentName ?> (<?= $termName ?>, <?= $sessionName ?>)</title>
+    <title><?= $isHighSchool ? 'High School Report Card' : 'Grade School Report Card' ?> &mdash; <?= $studentName ?> (<?= $termName ?>, <?= $sessionName ?>)</title>
     
     <!-- Google Fonts & Tailwind CDN -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -143,7 +149,7 @@ $backUrl = $backUrl ?? ($isParentPortal
         }
 
         @media screen {
-            body {
+            html, body {
                 background: #0f172a; /* Sophisticated dark backdrop */
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
                 min-height: 100vh;
@@ -156,12 +162,15 @@ $backUrl = $backUrl ?? ($isParentPortal
                 flex-direction: column;
                 align-items: center;
                 box-sizing: border-box;
+                padding: 28px 16px 60px 16px;
+                overflow-x: auto;
             }
             .report-page {
                 width: 210mm;
+                min-width: 210mm;
                 height: 297mm;
                 max-height: 297mm;
-                margin: 24px auto 36px auto;
+                margin: 0 auto 36px auto;
                 background: #ffffff;
                 box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 5px 15px rgba(0, 0, 0, 0.2);
                 border-radius: 4px;
@@ -316,7 +325,7 @@ $backUrl = $backUrl ?? ($isParentPortal
             <div class="flex items-center gap-2">
                 <!-- Page Navigation Indicator -->
                 <span class="hidden md:inline-block text-[11px] font-semibold text-slate-400">
-                    Official 3-Page Dossier
+                    <?= $isHighSchool ? 'Official 2-Page High School Dossier' : 'Official 3-Page Grade School Dossier' ?>
                 </span>
 
                 <!-- Print Action Button -->
@@ -332,18 +341,22 @@ $backUrl = $backUrl ?? ($isParentPortal
         </div>
     </div>
 
-    <!-- MAIN DOSSIER CONTAINER (3 A4 Pages) -->
+    <!-- MAIN DOSSIER CONTAINER -->
     <main class="dossier-wrapper flex flex-col items-center">
-        
-        <!-- PAGE 1: Official Institutional Cover & Identity Dossier -->
-        <?php include dirname(__DIR__, 2) . '/components/report_card/cover_page.php'; ?>
+        <?php if ($isHighSchool): ?>
+            <!-- OFFICIAL HIGH SCHOOL 2-PAGE DOSSIER (A4 Portrait Uniform Preview) -->
+            <?php include dirname(__DIR__, 2) . '/components/report_card/high_school_report_card.php'; ?>
+        <?php else: ?>
+            <!-- OFFICIAL GRADE SCHOOL 3-PAGE DOSSIER (A4 Portrait Uniform Preview) -->
+            <!-- PAGE 1: Official Institutional Cover & Identity Dossier -->
+            <?php include dirname(__DIR__, 2) . '/components/report_card/cover_page.php'; ?>
 
-        <!-- PAGE 2: Comprehensive Cognitive Matrix & Behavioral Domains -->
-        <?php include dirname(__DIR__, 2) . '/components/report_card/academic_page.php'; ?>
+            <!-- PAGE 2: Comprehensive Cognitive Matrix & Behavioral Domains -->
+            <?php include dirname(__DIR__, 2) . '/components/report_card/academic_page.php'; ?>
 
-        <!-- PAGE 3: Official Attestation, Promotion Endorsement & Claret Seal -->
-        <?php include dirname(__DIR__, 2) . '/components/report_card/endorsement_page.php'; ?>
-
+            <!-- PAGE 3: Official Attestation, Promotion Endorsement & Claret Seal -->
+            <?php include dirname(__DIR__, 2) . '/components/report_card/endorsement_page.php'; ?>
+        <?php endif; ?>
     </main>
 
 </body>

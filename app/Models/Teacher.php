@@ -13,6 +13,7 @@ final class Teacher
         public readonly int $id,
         public readonly int $userId,
         public readonly string $staffId,
+        public readonly ?string $signatureUrl = null,
         public readonly ?string $createdAt = null,
         public readonly ?string $updatedAt = null,
         public readonly ?User $user = null
@@ -25,6 +26,7 @@ final class Teacher
             id: (int)$data['id'],
             userId: (int)$data['user_id'],
             staffId: (string)$data['staff_id'],
+            signatureUrl: !empty($data['signature_url']) ? (string)$data['signature_url'] : null,
             createdAt: isset($data['created_at']) ? (string)$data['created_at'] : null,
             updatedAt: isset($data['updated_at']) ? (string)$data['updated_at'] : null,
             user: $user ?? (!empty($data['user_name']) || !empty($data['name']) || !empty($data['user_email']) || !empty($data['email']) ? User::fromArray([
@@ -48,6 +50,7 @@ final class Teacher
             'id' => $this->id,
             'user_id' => $this->userId,
             'staff_id' => $this->staffId,
+            'signature_url' => $this->signatureUrl,
             'created_at' => $this->createdAt,
             'updated_at' => $this->updatedAt,
         ];
@@ -61,12 +64,13 @@ final class Teacher
             'phone' => $this->user?->phone ?? '',
             'userStatus', 'status' => $this->user?->status ?? 'active',
             'staff_id' => $this->staffId,
+            'signature_url', 'signatureUrl' => $this->signatureUrl,
             default => null,
         };
     }
 
     public function __isset(string $name): bool
     {
-        return in_array($name, ['name', 'userName', 'teacherName', 'email', 'userEmail', 'phone', 'userStatus', 'status', 'staff_id'], true);
+        return in_array($name, ['name', 'userName', 'teacherName', 'email', 'userEmail', 'phone', 'userStatus', 'status', 'staff_id', 'signature_url', 'signatureUrl'], true);
     }
 }

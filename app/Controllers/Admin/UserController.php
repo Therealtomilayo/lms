@@ -168,6 +168,7 @@ class UserController extends Controller
                 'religion' => $request->post('religion'),
                 'admission_date' => $request->post('admission_date'),
                 'use_school_bus' => !empty($request->post('use_school_bus')),
+                'house' => $request->post('house'),
             ], $userContext);
 
             $createdUser = $result->data;
@@ -277,6 +278,7 @@ class UserController extends Controller
                 'religion' => $request->post('religion'),
                 'admission_date' => $request->post('admission_date'),
                 'use_school_bus' => !empty($request->post('use_school_bus')),
+                'house' => $request->post('house'),
             ];
 
             if ($roles !== null) {

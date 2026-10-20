@@ -407,4 +407,62 @@ class GradebookController extends Controller
             'Gradebook unlocked successfully. Teachers may now update scores.'
         );
     }
+
+    /**
+     * Admin Direct Score Input & Computation
+     * Allows administrators to directly edit, save, and recalculate marks for any student and subject.
+     * Route: POST /admin/gradebook/{classSubjectId}/save
+     */
+    public function save(Request $request, array|string|int $classSubjectId): Response
+    {
+        $userContext = $this->requireAuthContext($request);
+        if (!$userContext->isAdmin()) {
+            throw new AuthorizationException('Administrator access required.');
+        }
+
+        $csId = is_array($classSubjectId) ? (int)($classSubjectId['classSubjectId'] ?? $classSubjectId['id'] ?? 0) : (int)$classSubjectId;
+        $classSubject = $this->academicRepo->findClassSubjectById($csId);
+        if (!$classSubject) {
+            return $this->notFound('Class subject not found.');
+        }
+
+        $data = $request->all();
+        $termId = (int)($data['term_id'] ?? $request->get('term_id', 0));
+        $term = $termId > 0 ? $this->academicRepo->findTermById($termId) : $this->academicRepo->findCurrentTerm();
+        if (!$term) {
+            return $this->notFound('Academic term not found.');
+        }
+
+        $scoresInput = $data['scores'] ?? [];
+        $sessionId = $term->sessionId;
+        $redirectUrl = "/admin/gradebook/class/{$classSubject->classId}?session_id={$sessionId}&term_id={$term->id}&class_subject_id={$csId}";
+
+        try {
+            $result = $this->gradebookService->saveScores(
+                $csId,
+                $sessionId,
+                $term->id,
+                is_array($scoresInput) ? $scoresInput : [],
+                $userContext->id
+            );
+
+            // Recompute subject results for all students in this class subject
+            $this->gradebookService->computeClassSubjectResults(
+                $csId,
+                $sessionId,
+                $term->id,
+                false
+            );
+
+            return $this->redirectWithSuccess(
+                $redirectUrl,
+                'Gradebook scores saved and terminal results recalculated successfully by Administration.'
+            );
+        } catch (\Throwable $e) {
+            return $this->redirectWithError(
+                $redirectUrl,
+                'Failed to save gradebook scores: ' . $e->getMessage()
+            );
+        }
+    }
 }

@@ -109,4 +109,20 @@ final class StudentTermSummary
             'updated_at' => $this->updatedAt,
         ];
     }
+
+    public function __get(string $name): mixed
+    {
+        if ($name === 'classRank' || $name === 'classPosition') {
+            return $this->rankInClass;
+        }
+        return null;
+    }
+
+    public function __isset(string $name): bool
+    {
+        if ($name === 'classRank' || $name === 'classPosition') {
+            return $this->rankInClass !== null;
+        }
+        return false;
+    }
 }

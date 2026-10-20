@@ -92,6 +92,9 @@ class ReportCardService
             'head_teacher_name' => $settings['head_teacher_name'] ?? 'Mrs. Cynthia Rowland',
             'head_teacher_title' => $settings['head_teacher_title'] ?? 'Head of School',
             'head_teacher_signature_url' => $settings['head_teacher_signature_url'] ?? '',
+            'principal_name' => $settings['principal_name'] ?? 'Mr. Anthony Echefu',
+            'principal_title' => $settings['principal_title'] ?? 'Principal',
+            'principal_signature_url' => $settings['principal_signature_url'] ?? '',
             'school_stamp_url' => $settings['school_stamp_url'] ?? '',
         ];
 
@@ -114,7 +117,17 @@ class ReportCardService
         }
 
         $levelId = $class?->academicLevelId ?? $class?->academicLevel?->id;
-        $stage = $class?->academicLevel?->stage;
+        $academicLevel = null;
+        if ($levelId) {
+            try {
+                $academicLevel = $this->academicRepo->findLevelById((int)$levelId);
+            } catch (\Throwable) {}
+        }
+        $stage = $academicLevel?->stage ?? $class?->academicLevel?->stage;
+        $isHighSchool = ($academicLevel?->reportCardTemplate === 'high_school')
+            || in_array(strtolower((string)$stage), ['junior_secondary', 'senior_secondary'], true)
+            || ($class && (stripos($class->name, 'jss') !== false || stripos($class->name, 'sss') !== false || stripos($class->name, 'year 7') !== false || stripos($class->name, 'year 8') !== false || stripos($class->name, 'year 9') !== false || stripos($class->name, 'year 10') !== false || stripos($class->name, 'year 11') !== false || stripos($class->name, 'year 12') !== false));
+
         $gradingScale = null;
         try {
             $gradingScale = $this->gradingScaleRepo->getScaleForLevel($levelId, $stage);
@@ -152,19 +165,26 @@ class ReportCardService
 
         // Form Teacher Resolution
         $formTeacher = null;
-        if ($class && !empty($class->formTeacherName)) {
-            $formTeacher = (object)[
-                'name' => $class->formTeacherName,
-                'staffId' => $class->formTeacherStaffId ?? '',
-            ];
-        } elseif ($class && !empty($class->formTeacherId)) {
+        if ($class && !empty($class->formTeacherId)) {
             $t = $this->teacherRepo->findTeacherById((int)$class->formTeacherId);
             if ($t) {
                 $formTeacher = (object)[
-                    'name' => $t->userName ?: ($t->name ?: 'Form Teacher'),
-                    'staffId' => $t->staffId ?? '',
+                    'name' => $t->userName ?: ($t->name ?: ($class->formTeacherName ?: 'Form Teacher')),
+                    'staffId' => $t->staffId ?? ($class->formTeacherStaffId ?? ''),
+                    'signatureUrl' => $t->signatureUrl ?? '',
                 ];
             }
+        } elseif ($class && !empty($class->formTeacherName)) {
+            $signatureUrl = '';
+            if (!empty($class->formTeacherStaffId)) {
+                $t = $this->teacherRepo->findTeacherByStaffId($class->formTeacherStaffId);
+                $signatureUrl = $t?->signatureUrl ?? '';
+            }
+            $formTeacher = (object)[
+                'name' => $class->formTeacherName,
+                'staffId' => $class->formTeacherStaffId ?? '',
+                'signatureUrl' => $signatureUrl,
+            ];
         } elseif (!empty($subjectResults)) {
             foreach ($subjectResults as $res) {
                 if ($res->classSubject && $res->classSubject->teacherId) {
@@ -173,6 +193,7 @@ class ReportCardService
                         $formTeacher = (object)[
                             'name' => $t->userName ?: ($t->name ?: 'Class Teacher'),
                             'staffId' => $t->staffId ?? '',
+                            'signatureUrl' => $t->signatureUrl ?? '',
                         ];
                         break;
                     }
@@ -182,7 +203,7 @@ class ReportCardService
         if ((!$formTeacher || $formTeacher->name === 'Class Teacher') && $classId) {
             try {
                 $stmt = $pdo->prepare('
-                    SELECT t.id, u.name as teacher_name, t.staff_id 
+                    SELECT t.id, u.name as teacher_name, t.staff_id, t.signature_url 
                     FROM class_subjects cs
                     JOIN teachers t ON t.id = cs.teacher_id
                     JOIN users u ON u.id = t.user_id
@@ -196,6 +217,7 @@ class ReportCardService
                     $formTeacher = (object)[
                         'name' => $csTeacher['teacher_name'],
                         'staffId' => $csTeacher['staff_id'] ?? '',
+                        'signatureUrl' => $csTeacher['signature_url'] ?? '',
                     ];
                 }
             } catch (\Throwable) {}
@@ -204,13 +226,14 @@ class ReportCardService
             $formTeacher = (object)[
                 'name' => 'Class Teacher',
                 'staffId' => '',
+                'signatureUrl' => '',
             ];
         }
 
         // Fetch Behavioral & Psychomotor Skills
         $allSkills = [];
         try {
-            $allSkills = $this->skillRepo->getAllSkills(null, 'active');
+            $allSkills = $this->skillRepo->getAllSkills(null, 'active', $stage);
             $savedRatings = $this->skillRepo->getStudentRatings($studentId, $termId);
         } catch (\Throwable) {
             $savedRatings = [];
@@ -365,7 +388,11 @@ class ReportCardService
                 foreach ($grouped as $csId => $entries) {
                     $currentRank = 1;
                     foreach ($entries as $e) {
-                        $cohortSubjectRanks[$csId][$e['student_id']] = $currentRank++;
+                        if ($e['score'] > 0.0) {
+                            $cohortSubjectRanks[$csId][$e['student_id']] = $currentRank++;
+                        } else {
+                            $cohortSubjectRanks[$csId][$e['student_id']] = null;
+                        }
                     }
                 }
             } catch (\Throwable) {
@@ -378,12 +405,12 @@ class ReportCardService
             $subName = $res->classSubject?->subject?->name ?? ('Subject ' . ($idx + 1));
             $score = round((float)$res->computedScore, 1);
 
-            $min = $cohortSubjectStats[$csId]['min'] ?? max(0, $score - rand(10, 25));
-            $max = $cohortSubjectStats[$csId]['max'] ?? min(100, $score + rand(5, 12));
+            $min = $cohortSubjectStats[$csId]['min'] ?? ($score > 0 ? max(0, $score - rand(10, 25)) : 0.0);
+            $max = $cohortSubjectStats[$csId]['max'] ?? ($score > 0 ? min(100, $score + rand(5, 12)) : 0.0);
             $total = $cohortSubjectStats[$csId]['total'] ?? round($score * ($classStats['total_students'] ?: 13), 1);
             $avg = $cohortSubjectStats[$csId]['avg'] ?? round(($min + $max) / 2, 1);
-            $rawRank = $cohortSubjectRanks[$csId][$studentId] ?? ($idx + 1);
-            $position = $this->formatOrdinal($rawRank);
+            $rawRank = $cohortSubjectRanks[$csId][$studentId] ?? null;
+            $position = ($score > 0.0 && $rawRank !== null) ? $this->formatOrdinal($rawRank) : '-';
 
             // Cumulative performance for this subject across all terms of the session
             $cumSubjectTotal = 0.0;
@@ -402,6 +429,7 @@ class ReportCardService
                 $cumSubjectTerms = 1;
             }
             $cumSubjectAvg = round($cumSubjectTotal / $cumSubjectTerms, 1);
+            $cumPosition = ($cumSubjectAvg > 0.0 && $rawRank !== null) ? $this->formatOrdinal($rawRank) : '-';
 
             // Extract CA breakdown categories from breakdown_json
             $breakdown = [];
@@ -412,13 +440,16 @@ class ReportCardService
                 }
             }
 
-            // Standardize 5-part CA breakdown (Activity 20%, Unit Test 20%, SPAT 10%, Home Fun 10%, Terminal Exam 40%)
-            $caScores = $this->extractStandardCaScores($score, $breakdown);
+            // Standardize CA breakdown (High school 6-part: EUA 20%, TEST 5%, SPAT 5%, NOTE 5%, ASSIGNMENT 5%, EXAM 60% vs Primary 5-part)
+            $caScores = $this->extractStandardCaScores($score, $breakdown, $isHighSchool);
 
             // Determine standardized grade letter & remark using stage grading scale
             $matchedBoundary = $gradingScale?->resolveGrade($score);
-            $gradeLetter = $res->gradeLetter ?: ($matchedBoundary ? $matchedBoundary->letter : $this->resolveGradeLetter($score, $gradingScale));
-            $remark = $res->remark ?: ($matchedBoundary && $matchedBoundary->remark ? $matchedBoundary->remark : $this->resolveGradeRemark($score, $gradingScale));
+            $gradeLetter = $res->gradeLetter ?: ($matchedBoundary ? $matchedBoundary->letter : $this->resolveGradeLetter($score, $gradingScale, $isHighSchool));
+            $remark = $res->remark ?: ($matchedBoundary && $matchedBoundary->remark ? $matchedBoundary->remark : $this->resolveGradeRemark($score, $gradingScale, $isHighSchool));
+
+            $matchedCumBoundary = $gradingScale?->resolveGrade($cumSubjectAvg);
+            $cumGrade = $matchedCumBoundary ? $matchedCumBoundary->letter : $this->resolveGradeLetter($cumSubjectAvg, $gradingScale, $isHighSchool);
 
             $itemData = [
                 'subject_id' => $res->classSubject?->subjectId ?? 0,
@@ -433,6 +464,8 @@ class ReportCardService
                 'cum_total' => $cumSubjectTotal,
                 'cum_terms' => $cumSubjectTerms,
                 'cum_avg' => $cumSubjectAvg,
+                'cum_grade' => $cumGrade,
+                'cum_position' => $cumPosition,
                 'grade' => $gradeLetter,
                 'position' => $position,
                 'remark' => strtoupper($remark),
@@ -487,24 +520,39 @@ class ReportCardService
         $attendanceDaysAbsent = max(0, $attendanceDaysOpened - $attendanceDaysPresent);
 
         // Next Term Resumption Date calculation
-        $nextResumptionDate = '7th SEPTEMBER, 2026';
-        if ($session) {
+        $nextResumptionDate = null;
+        if (!empty($term->nextResumptionDate)) {
+            $nextResumptionDate = $isHighSchool ? date('d/m/Y', strtotime($term->nextResumptionDate)) : strtoupper(date('jS F, Y', strtotime($term->nextResumptionDate)));
+        } elseif ($session) {
             try {
                 $stmt = $pdo->prepare("
-                    SELECT start_date 
+                    SELECT next_resumption_date, start_date 
                     FROM terms 
                     WHERE session_id = :sid AND id > :tid 
                     ORDER BY id ASC LIMIT 1
                 ");
                 $stmt->execute([':sid' => $session->id, ':tid' => $termId]);
-                $nextStart = $stmt->fetchColumn();
-                if ($nextStart) {
-                    $nextResumptionDate = strtoupper(date('jS F, Y', strtotime($nextStart)));
-                } else {
-                    $nextResumptionDate = '7th SEPTEMBER, 2026';
+                $nextRow = $stmt->fetch(PDO::FETCH_ASSOC);
+                if (!empty($nextRow['next_resumption_date'])) {
+                    $nextResumptionDate = $isHighSchool ? date('d/m/Y', strtotime($nextRow['next_resumption_date'])) : strtoupper(date('jS F, Y', strtotime($nextRow['next_resumption_date'])));
+                } elseif (!empty($nextRow['start_date'])) {
+                    $nextResumptionDate = $isHighSchool ? date('d/m/Y', strtotime($nextRow['start_date'])) : strtoupper(date('jS F, Y', strtotime($nextRow['start_date'])));
                 }
             } catch (\Throwable) {
             }
+        }
+        if (!$nextResumptionDate) {
+            $nextResumptionDate = $isHighSchool ? '07/09/2026' : '7th SEPTEMBER, 2026';
+        }
+
+        // Student Age calculation
+        $studentAge = '11 YEARS OLD';
+        if (!empty($student->dateOfBirth)) {
+            try {
+                $dob = new \DateTime($student->dateOfBirth);
+                $diff = $dob->diff(new \DateTime());
+                $studentAge = $diff->y . ' YEARS OLD';
+            } catch (\Throwable) {}
         }
 
         // Vector SVG Graphs
@@ -521,6 +569,9 @@ class ReportCardService
         $pupilAverage = $summary?->averageScore !== null
             ? (float)$summary->averageScore
             : ($countSubjects > 0 ? round($totalObtained / $countSubjects, 2) : 0.0);
+
+        $finalGrade = $this->resolveGradeRemark($pupilAverage, $gradingScale, $isHighSchool);
+        $studentHouse = !empty($student->house) ? strtoupper($student->house) : 'BLUE';
 
         // Student gender salutation ("Master" for male, "Lady" for female)
         $gender = strtolower(trim((string)($student->gender ?? '')));
@@ -577,8 +628,19 @@ class ReportCardService
             // Fail safe
         }
 
+        $classPosition = ($summary && !empty($summary->rankInClass) && (float)($summary->averageScore ?? 0) > 0.0)
+            ? $this->formatOrdinal((int)$summary->rankInClass)
+            : '-';
+
         return [
             'student' => $student,
+            'is_high_school' => $isHighSchool,
+            'report_card_template' => $isHighSchool ? 'high_school' : 'grade_school',
+            'house' => $studentHouse,
+            'class_position' => $classPosition,
+            'position' => $classPosition,
+            'student_age' => $studentAge,
+            'final_grade' => $finalGrade,
             'class' => $class,
             'term' => $term,
             'session' => $session,
@@ -623,13 +685,22 @@ class ReportCardService
     /**
      * Map numerical score to grade letter using active grading scale or default
      */
-    private function resolveGradeLetter(float $score, ?\App\Models\GradingScale $scale = null): string
+    private function resolveGradeLetter(float $score, ?\App\Models\GradingScale $scale = null, bool $isHighSchool = false): string
     {
         if ($scale) {
             $matched = $scale->resolveGrade($score);
             if ($matched) {
                 return $matched->letter;
             }
+        }
+        if ($isHighSchool) {
+            if ($score >= 90) return 'A+';
+            if ($score >= 80) return 'A';
+            if ($score >= 70) return 'B';
+            if ($score >= 60) return 'C';
+            if ($score >= 50) return 'D';
+            if ($score >= 40) return 'P';
+            return 'F';
         }
         if ($score >= 70) return 'A';
         if ($score >= 60) return 'B';
@@ -642,13 +713,22 @@ class ReportCardService
     /**
      * Map numerical score to grade remark using active grading scale or default
      */
-    private function resolveGradeRemark(float $score, ?\App\Models\GradingScale $scale = null): string
+    private function resolveGradeRemark(float $score, ?\App\Models\GradingScale $scale = null, bool $isHighSchool = false): string
     {
         if ($scale) {
             $matched = $scale->resolveGrade($score);
             if ($matched && $matched->remark) {
                 return $matched->remark;
             }
+        }
+        if ($isHighSchool) {
+            if ($score >= 90) return 'DISTINCTION';
+            if ($score >= 80) return 'EXCELLENT';
+            if ($score >= 70) return 'VERY GOOD';
+            if ($score >= 60) return 'GOOD';
+            if ($score >= 50) return 'FAIR';
+            if ($score >= 40) return 'PASS';
+            return 'FAIL';
         }
         if ($score >= 70) return 'EXCELLENT';
         if ($score >= 60) return 'VERY GOOD';
@@ -671,11 +751,55 @@ class ReportCardService
     }
 
     /**
-     * Normalize CA category breakdowns into Claret standard 5-part model
-     * (Class Activity 20%, End of Unit Test 20%, SPAT 10%, Home Fun 10%, End of Term Test 40%)
+     * Normalize CA category breakdowns into Claret standard model
      */
-    private function extractStandardCaScores(float $totalScore, array $categories): array
+    private function extractStandardCaScores(float $totalScore, array $categories, bool $isHighSchool = false): array
     {
+        if ($isHighSchool) {
+            $caScores = [
+                'eua' => 0.0,
+                'test' => 0.0,
+                'spat' => 0.0,
+                'note' => 0.0,
+                'assignment' => 0.0,
+                'exam' => 0.0,
+            ];
+
+            if (!empty($categories)) {
+                foreach ($categories as $c) {
+                    $name = strtolower($c['name'] ?? '');
+                    $weight = (float)($c['weighted_contribution'] ?? $c['raw_score'] ?? 0);
+                    if (str_contains($name, 'eua') || str_contains($name, 'unit')) {
+                        $caScores['eua'] = min(20.0, $weight);
+                    } elseif (str_contains($name, 'test') || str_contains($name, 'cat')) {
+                        $caScores['test'] = min(5.0, $weight);
+                    } elseif (str_contains($name, 'spat') || str_contains($name, 'project')) {
+                        $caScores['spat'] = min(5.0, $weight);
+                    } elseif (str_contains($name, 'note')) {
+                        $caScores['note'] = min(5.0, $weight);
+                    } elseif (str_contains($name, 'assign') || str_contains($name, 'home')) {
+                        $caScores['assignment'] = min(5.0, $weight);
+                    } elseif (str_contains($name, 'exam') || str_contains($name, 'eta') || str_contains($name, 'esa')) {
+                        $caScores['exam'] = min(60.0, $weight);
+                    }
+                }
+            }
+
+            // If categories were not pre-configured, distribute proportionally
+            $sum = array_sum($caScores);
+            if ($sum < ($totalScore * 0.7)) {
+                $ratio = $totalScore / 100.0;
+                $caScores['eua'] = round(20 * $ratio, 1);
+                $caScores['test'] = round(5 * $ratio, 1);
+                $caScores['spat'] = round(5 * $ratio, 1);
+                $caScores['note'] = round(5 * $ratio, 1);
+                $caScores['assignment'] = round(5 * $ratio, 1);
+                $caScores['exam'] = max(0.0, round($totalScore - ($caScores['eua'] + $caScores['test'] + $caScores['spat'] + $caScores['note'] + $caScores['assignment']), 1));
+            }
+
+            return $caScores;
+        }
+
         $caScores = [
             'activity' => 0.0,
             'unit_test' => 0.0,

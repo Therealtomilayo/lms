@@ -163,6 +163,7 @@ class AnnouncementRepository
                   AND (a.expires_at IS NULL OR a.expires_at >= CURRENT_TIMESTAMP)
                   AND (
                       a.scope = 'school' 
+                      OR a.scope = 'teachers'
                       OR a.author_id = :user_id3
                       OR (a.scope = 'class_subject' AND a.scope_id IN (
                           SELECT teacher_cs.id FROM class_subjects teacher_cs

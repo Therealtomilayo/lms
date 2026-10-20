@@ -49,10 +49,40 @@ class AssessmentCategoryController extends Controller
         $selectedAcademicLevelId = $request->get('academic_level_id') !== null && $request->get('academic_level_id') !== ''
             ? (int)$request->get('academic_level_id')
             : null;
+        $selectedStage = trim((string)$request->get('stage', '')) ?: null;
 
         $categories = [];
         if ($selectedSessionId > 0 && $selectedTermId > 0) {
-            $categories = $this->gradebookRepo->getAllCategories($selectedSessionId, $selectedTermId, $selectedAcademicLevelId);
+            $categories = $this->gradebookRepo->getAllCategories(
+                $selectedSessionId,
+                $selectedTermId,
+                $selectedAcademicLevelId,
+                $selectedStage
+            );
+        }
+
+        // Group categories by educational stage
+        $categoriesByStage = [
+            'eyfs' => [],
+            'primary' => [],
+            'junior_secondary' => [],
+            'senior_secondary' => [],
+            'common' => [],
+        ];
+
+        foreach ($categories as $cat) {
+            $catStage = $cat->stage ?: 'common';
+            if (isset($categoriesByStage[$catStage])) {
+                $categoriesByStage[$catStage][] = $cat;
+            } else {
+                $categoriesByStage['common'][] = $cat;
+            }
+        }
+
+        // Compute total weight per stage
+        $stageWeights = [];
+        foreach ($categoriesByStage as $stKey => $stCats) {
+            $stageWeights[$stKey] = array_sum(array_map(fn($c) => $c->weightPercentage, $stCats));
         }
 
         return $this->view('admin/assessment_categories/index', [
@@ -62,7 +92,10 @@ class AssessmentCategoryController extends Controller
             'selectedSessionId' => $selectedSessionId,
             'selectedTermId' => $selectedTermId,
             'selectedAcademicLevelId' => $selectedAcademicLevelId,
+            'selectedStage' => $selectedStage,
             'categories' => $categories,
+            'categoriesByStage' => $categoriesByStage,
+            'stageWeights' => $stageWeights,
         ]);
     }
 
@@ -75,6 +108,7 @@ class AssessmentCategoryController extends Controller
 
         $sessionId = (int)$request->input('session_id');
         $termId = (int)$request->input('term_id');
+        $stage = trim((string)$request->input('stage', '')) ?: null;
         $academicLevelId = $request->input('academic_level_id') !== null && $request->input('academic_level_id') !== ''
             ? (int)$request->input('academic_level_id')
             : null;
@@ -82,6 +116,7 @@ class AssessmentCategoryController extends Controller
         $this->gradebookRepo->createCategory([
             'session_id' => $sessionId,
             'term_id' => $termId,
+            'stage' => $stage,
             'academic_level_id' => $academicLevelId,
             'class_subject_id' => $request->input('class_subject_id'),
             'name' => trim((string)$request->input('name')),
@@ -89,7 +124,9 @@ class AssessmentCategoryController extends Controller
             'max_points' => (float)($request->input('max_points') ?: $request->input('weight_percentage')),
         ]);
 
-        $redirectUrl = "/admin/assessment-categories?session_id={$sessionId}&term_id={$termId}" . ($academicLevelId ? "&academic_level_id={$academicLevelId}" : '');
+        $redirectUrl = "/admin/assessment-categories?session_id={$sessionId}&term_id={$termId}"
+            . ($stage ? "&stage={$stage}" : '')
+            . ($academicLevelId ? "&academic_level_id={$academicLevelId}" : '');
 
         return $this->redirectWithSuccess($redirectUrl, 'Assessment category added successfully.');
     }
@@ -108,6 +145,7 @@ class AssessmentCategoryController extends Controller
         }
 
         $name = trim((string)$request->input('name'));
+        $stage = trim((string)$request->input('stage', '')) ?: null;
         $weight = (float)$request->input('weight_percentage');
         $maxPoints = (float)($request->input('max_points') ?: $weight);
         $academicLevelId = $request->input('academic_level_id') !== null && $request->input('academic_level_id') !== ''
@@ -116,12 +154,15 @@ class AssessmentCategoryController extends Controller
 
         $this->gradebookRepo->updateCategory($catId, [
             'name' => $name,
+            'stage' => $stage,
             'weight_percentage' => $weight,
             'max_points' => $maxPoints,
             'academic_level_id' => $academicLevelId,
         ]);
 
-        $redirectUrl = "/admin/assessment-categories?session_id={$cat->sessionId}&term_id={$cat->termId}" . ($academicLevelId ? "&academic_level_id={$academicLevelId}" : '');
+        $redirectUrl = "/admin/assessment-categories?session_id={$cat->sessionId}&term_id={$cat->termId}"
+            . ($stage ? "&stage={$stage}" : '')
+            . ($academicLevelId ? "&academic_level_id={$academicLevelId}" : '');
 
         return $this->redirectWithSuccess($redirectUrl, 'Assessment category updated successfully.');
     }

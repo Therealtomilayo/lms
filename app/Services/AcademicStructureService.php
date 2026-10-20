@@ -48,11 +48,17 @@ class AcademicStructureService
             throw new DomainRuleException("Referenced grading scale #{$gradingScaleId} does not exist.");
         }
 
+        $template = trim((string)($data['report_card_template'] ?? 'grade_school'));
+        if (in_array($stage, ['junior_secondary', 'senior_secondary'], true) && empty($data['report_card_template'])) {
+            $template = 'high_school';
+        }
+
         $level = $this->repository->createLevel([
             'name' => $name,
             'stage' => $stage,
             'rank_order' => $rankOrder,
             'grading_scale_id' => $gradingScaleId,
+            'report_card_template' => $template,
         ]);
 
         return ServiceResult::success($level);
@@ -71,6 +77,7 @@ class AcademicStructureService
         $gradingScaleId = array_key_exists('grading_scale_id', $data)
             ? (!empty($data['grading_scale_id']) ? (int)$data['grading_scale_id'] : null)
             : $level->gradingScaleId;
+        $template = isset($data['report_card_template']) ? trim((string)$data['report_card_template']) : $level->reportCardTemplate;
 
         $existing = $this->repository->findLevelByName($name);
         if ($existing !== null && $existing->id !== $id) {
@@ -86,6 +93,7 @@ class AcademicStructureService
             'stage' => $stage,
             'rank_order' => $rankOrder,
             'grading_scale_id' => $gradingScaleId,
+            'report_card_template' => $template,
         ]);
 
         return ServiceResult::success($this->repository->findLevelById($id));

@@ -122,6 +122,7 @@ try {
     $router->post('/profile/password', [AuthController::class, 'changePassword'], [AuthMiddleware::class, CsrfMiddleware::class]);
     $router->get('/password/change', [AuthController::class, 'showChangePassword'], [AuthMiddleware::class]);
     $router->post('/password/change', [AuthController::class, 'changePassword'], [AuthMiddleware::class, CsrfMiddleware::class]);
+    $router->post('/profile/signature', [\App\Controllers\ProfileController::class, 'updateSignature'], [AuthMiddleware::class, CsrfMiddleware::class]);
 
     $router->get('/notifications', [\App\Controllers\NotificationController::class, 'index'], [AuthMiddleware::class]);
     $router->post('/notifications/{id}/read', [\App\Controllers\NotificationController::class, 'markAsRead'], [AuthMiddleware::class, CsrfMiddleware::class]);
@@ -172,10 +173,13 @@ try {
     // Dedicated Teachers & Personnel Directory
     $router->get('/admin/teachers', [\App\Controllers\Admin\TeacherController::class, 'index'], $adminAuth);
     $router->get('/admin/teachers/{id}', [\App\Controllers\Admin\TeacherController::class, 'show'], $adminAuth);
+    $router->post('/admin/teachers/{id}/signature', [\App\Controllers\Admin\TeacherController::class, 'updateSignature'], $adminFormAuth);
 
     // Dedicated Students & Enrollment Roster Directory
     $router->get('/admin/students', [\App\Controllers\Admin\StudentController::class, 'index'], $adminAuth);
     $router->get('/admin/students/{id}', [\App\Controllers\Admin\StudentController::class, 'show'], $adminAuth);
+    $router->get('/admin/students/{id}/edit', [\App\Controllers\Admin\StudentController::class, 'edit'], $adminAuth);
+    $router->post('/admin/students/{id}', [\App\Controllers\Admin\StudentController::class, 'update'], $adminFormAuth);
 
     // Subjects
     $router->get('/admin/subjects', [\App\Controllers\Admin\SubjectController::class, 'index'], $adminAuth);
@@ -252,6 +256,7 @@ try {
     $router->get('/admin/gradebook/class/{classId}', [\App\Controllers\Admin\GradebookController::class, 'showClass'], $adminAuth);
     $router->post('/admin/gradebook/{id}/lock', [\App\Controllers\Admin\GradebookController::class, 'lock'], $adminFormAuth);
     $router->post('/admin/gradebook/{id}/unlock', [\App\Controllers\Admin\GradebookController::class, 'unlock'], $adminFormAuth);
+    $router->post('/admin/gradebook/{classSubjectId}/save', [\App\Controllers\Admin\GradebookController::class, 'save'], $adminFormAuth);
 
     // Admin Behavioral Skills & Batch Remarks Management Routes (ADMIN-32, ADMIN-33)
     $router->get('/admin/skills', [\App\Controllers\Admin\SkillController::class, 'index'], $adminAuth);
@@ -565,6 +570,8 @@ try {
     $router->get('/parent/dashboard', [\App\Controllers\Parent\DashboardController::class, 'index'], $parentAuth);
     $router->post('/parent/children/{studentId}/select', [\App\Controllers\Parent\ChildController::class, 'select'], $parentFormAuth);
     $router->get('/parent/children/{studentId}', [\App\Controllers\Parent\ChildController::class, 'show'], $parentAuth);
+    $router->post('/parent/children/{studentId}/passport', [\App\Controllers\Parent\ChildController::class, 'uploadPassport'], $parentFormAuth);
+    $router->post('/parent/passports/batch', [\App\Controllers\Parent\ChildController::class, 'batchUploadPassports'], $parentFormAuth);
     $router->get('/parent/children/{studentId}/assignments', [\App\Controllers\Parent\AssignmentController::class, 'index'], $parentAuth);
     $router->get('/parent/children/{studentId}/grades', [\App\Controllers\Parent\ReportCardController::class, 'index'], $parentAuth);
     $router->get('/parent/children/{studentId}/grades/report-card', [\App\Controllers\Parent\ReportCardController::class, 'show'], $parentAuth);

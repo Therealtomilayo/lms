@@ -95,4 +95,46 @@ class TeacherController extends Controller
             'totalStudentsTaught' => $totalStudentsTaught,
         ]);
     }
+
+    /**
+     * Upload or update a teacher's signature by Administrator.
+     * Route: POST /admin/teachers/{id}/signature
+     */
+    public function updateSignature(Request $request, string|int $id = 0): Response
+    {
+        $userContext = $request->getAttribute('user_context');
+        if (!$userContext instanceof UserContext || !AcademicPolicy::canManageAcademicStructure($userContext)) {
+            return $this->forbidden('You are not authorized to manage teacher signatures.');
+        }
+
+        $teacherId = (int)$id;
+        $teacher = $this->teacherRepository->findTeacherById($teacherId);
+        if (!$teacher) {
+            return $this->redirectWithError('/admin/teachers', 'Teacher not found.');
+        }
+
+        $files = $request->files();
+        if (empty($files['signature_file']) || $files['signature_file']['error'] !== UPLOAD_ERR_OK) {
+            return $this->redirectWithError("/admin/teachers/{$teacherId}", 'Please provide a valid signature image file.');
+        }
+
+        $file = $files['signature_file'];
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'svg'], true)) {
+            return $this->redirectWithError("/admin/teachers/{$teacherId}", 'Invalid image format. Allowed formats: PNG, JPG, JPEG, WEBP, SVG.');
+        }
+
+        $uploadDir = dirname(__DIR__, 3) . '/public/assets/uploads/signatures';
+        if (!is_dir($uploadDir)) {
+            @mkdir($uploadDir, 0755, true);
+        }
+
+        $filename = 'teacher_sig_' . $teacherId . '_' . time() . '.' . $ext;
+        if (move_uploaded_file($file['tmp_name'], $uploadDir . '/' . $filename)) {
+            $this->teacherRepository->updateSignatureUrl($teacherId, '/assets/uploads/signatures/' . $filename);
+            return $this->redirectWithSuccess("/admin/teachers/{$teacherId}", "Signature for {$teacher->name} updated successfully.");
+        }
+
+        return $this->redirectWithError("/admin/teachers/{$teacherId}", 'Failed to upload signature file. Check write permissions.');
+    }
 }

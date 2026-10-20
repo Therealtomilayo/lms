@@ -222,6 +222,7 @@ $stageMeta = [
                                     <th scope="col" class="px-6 py-3">Active Cohorts</th>
                                     <th scope="col" class="px-6 py-3">Enrolled Students</th>
                                     <th scope="col" class="px-6 py-3">Grading Scale</th>
+                                    <th scope="col" class="px-6 py-3">Report Template</th>
                                     <th scope="col" class="px-6 py-3 text-right">Actions</th>
                                 </tr>
                             </thead>
@@ -230,6 +231,7 @@ $stageMeta = [
                                     <?php 
                                     $cCount = $levelStats[$lvl->id]['classes'] ?? 0;
                                     $sCount = $levelStats[$lvl->id]['students'] ?? 0;
+                                    $tmpl = $lvl->reportCardTemplate ?? 'grade_school';
                                     ?>
                                     <tr class="hover:bg-slate-50/60 transition group">
                                         <td class="px-6 py-3.5">
@@ -268,6 +270,19 @@ $stageMeta = [
                                                 </span>
                                             <?php endif; ?>
                                         </td>
+                                        <td class="px-6 py-3.5">
+                                            <?php if ($tmpl === 'high_school'): ?>
+                                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                                                    High School
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-50 text-sky-700 border border-sky-200">
+                                                    <span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span>
+                                                    Grade School
+                                                </span>
+                                            <?php endif; ?>
+                                        </td>
                                         <td class="px-6 py-3.5 text-right">
                                             <div class="flex items-center justify-end gap-2">
                                                 <a href="/admin/classes" class="text-xs text-slate-500 hover:text-slate-800 font-medium px-2 py-1 rounded hover:bg-slate-100 transition">
@@ -278,7 +293,7 @@ $stageMeta = [
                                                     'variant' => 'secondary',
                                                     'label' => 'Edit',
                                                     'class' => 'px-2.5 py-1 min-h-0 text-xs font-semibold',
-                                                    'attributes' => 'onclick="openEditModal(' . $lvl->id . ', \'' . e(addslashes($lvl->name)) . '\', \'' . e(addslashes($lvl->stage)) . '\', ' . $lvl->rankOrder . ', \'' . ($lvl->gradingScaleId ?? '') . '\')"'
+                                                    'attributes' => 'onclick="openEditModal(' . $lvl->id . ', \'' . e(addslashes($lvl->name)) . '\', \'' . e(addslashes($lvl->stage)) . '\', ' . $lvl->rankOrder . ', \'' . ($lvl->gradingScaleId ?? '') . '\', \'' . e($tmpl) . '\')"'
                                                 ]); ?>
                                             </div>
                                         </td>
@@ -394,6 +409,15 @@ $stageMeta = [
         ]); ?>
     </div>
 
+    <div>
+        <label for="create_report_template" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Report Card &amp; Dossier Format</label>
+        <select name="report_card_template" id="create_report_template" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 bg-white font-medium text-slate-800">
+            <option value="grade_school">Grade School (Crèche, Nursery &amp; Primary School Matrix)</option>
+            <option value="high_school">High School (JSS &amp; SSS — EUA, TEST, SPAT, NOTE, Assign, Exam Matrix)</option>
+        </select>
+        <p class="text-[11px] text-slate-400 mt-1">Select whether this level uses the Grade School or High School report card format.</p>
+    </div>
+
     <div class="pt-4 border-t border-slate-200 flex justify-end gap-3">
         <?php $this->include('components/button', [
             'type' => 'button',
@@ -459,6 +483,15 @@ $stageMeta = [
         ]); ?>
     </div>
 
+    <div>
+        <label for="edit_report_template" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Report Card &amp; Dossier Format</label>
+        <select name="report_card_template" id="edit_report_template" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 bg-white font-medium text-slate-800">
+            <option value="grade_school">Grade School (Crèche, Nursery &amp; Primary School Matrix)</option>
+            <option value="high_school">High School (JSS &amp; SSS — EUA, TEST, SPAT, NOTE, Assign, Exam Matrix)</option>
+        </select>
+        <p class="text-[11px] text-slate-400 mt-1">Configures report card layout and academic performance columns.</p>
+    </div>
+
     <div class="pt-4 border-t border-slate-200 flex justify-end gap-3">
         <?php $this->include('components/button', [
             'type' => 'button',
@@ -483,12 +516,13 @@ $stageMeta = [
 ]); ?>
 
 <script>
-    function openEditModal(id, name, stage, rankOrder, scaleId) {
+    function openEditModal(id, name, stage, rankOrder, scaleId, reportTemplate) {
         document.getElementById('edit-form').action = '/admin/academic-levels/' + id;
         document.getElementById('edit_level_name').value = name;
         document.getElementById('edit_level_stage').value = stage;
         document.getElementById('edit_rank_order').value = rankOrder;
         document.getElementById('edit_scale').value = scaleId || '';
+        document.getElementById('edit_report_template').value = reportTemplate || 'grade_school';
         window.LMS.showModal('edit-modal');
     }
 </script>

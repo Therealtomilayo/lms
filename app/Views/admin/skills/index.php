@@ -50,6 +50,37 @@ $currentTab = $tab ?? 'skills';
     </div>
 
     <?php if ($currentTab === 'skills'): ?>
+        <?php
+        $getStageBadge = static function(?string $stage): array {
+            return match ($stage) {
+                'eyfs' => ['bg' => 'bg-pink-50 text-pink-700 border-pink-200', 'label' => 'EYFS / Nursery'],
+                'primary' => ['bg' => 'bg-blue-50 text-blue-700 border-blue-200', 'label' => 'Primary School'],
+                'junior_secondary' => ['bg' => 'bg-amber-50 text-amber-800 border-amber-200', 'label' => 'Junior Secondary (JSS)'],
+                'senior_secondary' => ['bg' => 'bg-purple-50 text-purple-700 border-purple-200', 'label' => 'Senior Secondary (SSS)'],
+                default => ['bg' => 'bg-slate-100 text-slate-700 border-slate-200', 'label' => 'All Stages (Universal)'],
+            };
+        };
+        ?>
+
+        <!-- Stage Filter Navigation -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-100">
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider mr-1">Filter Stage:</span>
+            <a href="/admin/skills?tab=skills" 
+               class="px-3.5 py-1.5 text-xs font-bold rounded-lg transition border <?= empty($selectedStage) ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-white text-slate-600 hover:text-slate-900 border-slate-200' ?>">
+                All Stages (<?= array_sum(array_column($skillsByStage, 'total')) ?>)
+            </a>
+            <?php foreach ($stages as $stageKey => $stageLabel): ?>
+                <?php $cnt = $skillsByStage[$stageKey]['total'] ?? 0; ?>
+                <a href="/admin/skills?tab=skills&stage=<?= urlencode($stageKey) ?>" 
+                   class="px-3.5 py-1.5 text-xs font-bold rounded-lg transition border flex items-center gap-1.5 <?= ($selectedStage ?? '') === $stageKey ? 'bg-brand-600 text-white border-brand-600 shadow-sm' : 'bg-white text-slate-600 hover:text-slate-900 border-slate-200' ?>">
+                    <span><?= e($stageLabel) ?></span>
+                    <span class="px-1.5 py-0.5 rounded-full text-[10px] <?= ($selectedStage ?? '') === $stageKey ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600' ?>">
+                        <?= $cnt ?>
+                    </span>
+                </a>
+            <?php endforeach; ?>
+        </div>
+
         <!-- SKILLS & TRAITS TAB CONTENT -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Left 2 Cols: Traits Lists by Domain -->
@@ -76,20 +107,27 @@ $currentTab = $tab ?? 'skills';
                                 <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase text-xs tracking-wider">
                                     <th class="py-3 px-4 w-12 text-center">Order</th>
                                     <th class="py-3 px-4">Skill Trait</th>
-                                    <th class="py-3 px-4 w-28 text-center">Status</th>
+                                    <th class="py-3 px-4 w-40">Educational Stage</th>
+                                    <th class="py-3 px-4 w-24 text-center">Status</th>
                                     <th class="py-3 px-4 w-28 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 font-medium text-slate-700">
                                 <?php if (empty($psychomotorSkills)): ?>
                                     <tr>
-                                        <td colspan="4" class="py-8 text-center text-slate-400">No psychomotor skills added yet.</td>
+                                        <td colspan="5" class="py-8 text-center text-slate-400">No psychomotor skills added yet.</td>
                                     </tr>
                                 <?php else: ?>
                                     <?php foreach ($psychomotorSkills as $sk): ?>
+                                        <?php $sb = $getStageBadge($sk->stage); ?>
                                         <tr class="hover:bg-slate-50/70 transition">
                                             <td class="py-3 px-4 text-center font-mono text-xs text-slate-500"><?= (int)$sk->displayOrder ?></td>
                                             <td class="py-3 px-4 font-bold text-slate-900"><?= e($sk->name) ?></td>
+                                            <td class="py-3 px-4">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border <?= $sb['bg'] ?>">
+                                                    <?= e($sb['label']) ?>
+                                                </span>
+                                            </td>
                                             <td class="py-3 px-4 text-center">
                                                 <span class="px-2 py-0.5 text-xs font-semibold rounded-full <?= $sk->isActive() ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600' ?>">
                                                     <?= ucfirst(e($sk->status)) ?>
@@ -97,7 +135,7 @@ $currentTab = $tab ?? 'skills';
                                             </td>
                                             <td class="py-3 px-4 text-right space-x-2">
                                                 <button type="button" 
-                                                        onclick="editSkill(<?= (int)$sk->id ?>, '<?= addslashes(e($sk->name)) ?>', 'psychomotor', <?= (int)$sk->displayOrder ?>, '<?= e($sk->status) ?>')"
+                                                        onclick="editSkill(<?= (int)$sk->id ?>, '<?= addslashes(e($sk->name)) ?>', 'psychomotor', '<?= e($sk->stage ?? '') ?>', <?= (int)$sk->displayOrder ?>, '<?= e($sk->status) ?>')"
                                                         class="text-xs font-semibold text-brand-600 hover:text-brand-800 transition">
                                                     Edit
                                                 </button>
@@ -137,20 +175,27 @@ $currentTab = $tab ?? 'skills';
                                 <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase text-xs tracking-wider">
                                     <th class="py-3 px-4 w-12 text-center">Order</th>
                                     <th class="py-3 px-4">Behavioral Trait</th>
-                                    <th class="py-3 px-4 w-28 text-center">Status</th>
+                                    <th class="py-3 px-4 w-40">Educational Stage</th>
+                                    <th class="py-3 px-4 w-24 text-center">Status</th>
                                     <th class="py-3 px-4 w-28 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 font-medium text-slate-700">
                                 <?php if (empty($affectiveSkills)): ?>
                                     <tr>
-                                        <td colspan="4" class="py-8 text-center text-slate-400">No affective traits added yet.</td>
+                                        <td colspan="5" class="py-8 text-center text-slate-400">No affective traits added yet.</td>
                                     </tr>
                                 <?php else: ?>
                                     <?php foreach ($affectiveSkills as $sk): ?>
+                                        <?php $sb = $getStageBadge($sk->stage); ?>
                                         <tr class="hover:bg-slate-50/70 transition">
                                             <td class="py-3 px-4 text-center font-mono text-xs text-slate-500"><?= (int)$sk->displayOrder ?></td>
                                             <td class="py-3 px-4 font-bold text-slate-900"><?= e($sk->name) ?></td>
+                                            <td class="py-3 px-4">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border <?= $sb['bg'] ?>">
+                                                    <?= e($sb['label']) ?>
+                                                </span>
+                                            </td>
                                             <td class="py-3 px-4 text-center">
                                                 <span class="px-2 py-0.5 text-xs font-semibold rounded-full <?= $sk->isActive() ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600' ?>">
                                                     <?= ucfirst(e($sk->status)) ?>
@@ -158,7 +203,7 @@ $currentTab = $tab ?? 'skills';
                                             </td>
                                             <td class="py-3 px-4 text-right space-x-2">
                                                 <button type="button" 
-                                                        onclick="editSkill(<?= (int)$sk->id ?>, '<?= addslashes(e($sk->name)) ?>', 'affective', <?= (int)$sk->displayOrder ?>, '<?= e($sk->status) ?>')"
+                                                        onclick="editSkill(<?= (int)$sk->id ?>, '<?= addslashes(e($sk->name)) ?>', 'affective', '<?= e($sk->stage ?? '') ?>', <?= (int)$sk->displayOrder ?>, '<?= e($sk->status) ?>')"
                                                         class="text-xs font-semibold text-brand-600 hover:text-brand-800 transition">
                                                     Edit
                                                 </button>
@@ -204,6 +249,19 @@ $currentTab = $tab ?? 'skills';
                                 <option value="psychomotor">Psychomotor (Practical / Physical)</option>
                                 <option value="affective">Affective (Behavioral / Character)</option>
                             </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Educational Stage</label>
+                            <select name="stage" id="skill_stage" class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition">
+                                <option value="">All Stages (Universal)</option>
+                                <?php foreach ($stages as $stageKey => $stageLabel): ?>
+                                    <option value="<?= e($stageKey) ?>" <?= ($selectedStage ?? '') === $stageKey ? 'selected' : '' ?>>
+                                        <?= e($stageLabel) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <p class="text-[11px] text-slate-400 mt-1">Skills are dynamically linked across the system to matching classes & report cards.</p>
                         </div>
 
                         <div class="grid grid-cols-2 gap-3">
@@ -421,11 +479,12 @@ $currentTab = $tab ?? 'skills';
 </div>
 
 <script>
-function editSkill(id, name, category, displayOrder, status) {
+function editSkill(id, name, category, stage, displayOrder, status) {
     document.getElementById('skill-form-title').innerText = 'Edit Dimension: ' + name;
     document.getElementById('skill-form').action = '/admin/skills/' + id + '/update';
     document.getElementById('skill_name').value = name;
     document.getElementById('skill_category').value = category;
+    document.getElementById('skill_stage').value = stage || '';
     document.getElementById('skill_display_order').value = displayOrder;
     document.getElementById('skill_status').value = status;
     document.getElementById('skill-submit-btn').innerText = 'Update Dimension';
@@ -438,6 +497,7 @@ function resetSkillForm() {
     document.getElementById('skill-form').action = '/admin/skills';
     document.getElementById('skill_name').value = '';
     document.getElementById('skill_category').value = 'psychomotor';
+    document.getElementById('skill_stage').value = '';
     document.getElementById('skill_display_order').value = '1';
     document.getElementById('skill_status').value = 'active';
     document.getElementById('skill-submit-btn').innerText = 'Save Dimension';

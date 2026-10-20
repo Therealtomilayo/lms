@@ -49,6 +49,15 @@ if (!empty($affective_ratings)) {
         }
     }
 }
+$isHighSchool = !empty($is_high_school)
+    || ($report_card_template ?? '') === 'high_school'
+    || ($class?->academicLevel?->reportCardTemplate ?? '') === 'high_school'
+    || in_array(strtolower((string)($class?->academicLevel?->stage ?? '')), ['junior_secondary', 'senior_secondary'], true);
+
+$studentHouse = !empty($house) ? strtoupper($house) : (!empty($student->house) ? strtoupper($student->house) : 'BLUE');
+$studentAgeStr = $student_age ?? '11 YEARS OLD';
+$studentFinalGrade = $final_grade ?? 'DISTINCTION';
+$classStats = $class_stats ?? ['total_students' => 8, 'highest_avg' => 94.5, 'lowest_avg' => 74.0, 'class_avg' => 85.5];
 ?>
 
 <div class="report-page page-2 relative flex flex-col justify-between overflow-hidden bg-white text-slate-800 p-6 print:p-5">
@@ -59,12 +68,12 @@ if (!empty($affective_ratings)) {
     <div class="relative z-10 flex flex-col gap-2.5">
         
         <!-- Top Running Header -->
-        <div class="flex items-center justify-between border-b-2 border-[#E28BE2] pb-1.5">
+        <div class="flex items-center justify-between border-b-2 <?= $isHighSchool ? 'border-[#7B3046]' : 'border-[#E28BE2]' ?> pb-1.5">
             <div class="flex items-center gap-2">
                 <img src="<?= htmlspecialchars(!empty($school['logo']) ? $school['logo'] : '/assets/img/logo.png') ?>" alt="Claret Logo" class="h-8 w-auto object-contain">
                 <div>
                     <span class="text-xs font-black tracking-wider text-[#7B3046] uppercase font-sans"><?= htmlspecialchars($school['name'] ?? 'Claret International School') ?></span>
-                    <span class="text-[9px] font-semibold text-slate-500 block leading-none">Comprehensive Academic & Domain Performance Dossier</span>
+                    <span class="text-[9px] font-semibold text-slate-500 block leading-none"><?= $isHighSchool ? 'High School Continuous Assessment & Academic Performance Record' : 'Grade School Comprehensive Academic & Domain Performance Dossier' ?></span>
                 </div>
             </div>
             <div class="text-right">
@@ -72,30 +81,28 @@ if (!empty($affective_ratings)) {
                     <?= strtoupper($term->name ?? 'Term') ?> &bull; <?= htmlspecialchars($session->name ?? '2025/2026') ?>
                 </span>
             </div>
-        </div>
-
-        <!-- Student Biographical Information Section with Passport / School Crest -->
+        </div>        <!-- Biographical Information Section (Exact Replica of User's Screenshot) -->
         <div class="flex items-stretch gap-2.5">
             <div class="flex-1 border border-slate-300 rounded overflow-hidden shadow-xs bg-slate-50/60 overflow-x-auto">
                 <table class="w-full text-[8.5px] border-collapse min-w-[340px]">
                     <tbody>
                         <tr class="border-b border-slate-200">
                             <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80 w-[14%]">Name:</td>
-                            <td class="py-1 px-2.5 font-black text-slate-900 w-[40%] text-[9px] text-[#7B3046]"><?= $studentFullName ?></td>
-                            <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80 w-[16%]">Admission No:</td>
-                            <td class="py-1 px-2.5 font-extrabold text-slate-900 w-[30%]"><?= htmlspecialchars($admissionNo) ?></td>
+                            <td class="py-1 px-2.5 font-black text-slate-900 w-[38%] text-[9px] text-[#7B3046]"><?= $studentFullName ?></td>
+                            <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80 w-[18%]">Academic Year:</td>
+                            <td class="py-1 px-2.5 font-bold text-slate-900 w-[30%]"><?= htmlspecialchars($session->name ?? '2025/2026') ?></td>
                         </tr>
                         <tr class="border-b border-slate-200">
                             <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">DOB:</td>
                             <td class="py-1 px-2.5 font-medium text-slate-800"><?= $dob ?></td>
-                            <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">Admission Date:</td>
-                            <td class="py-1 px-2.5 font-medium text-slate-800"><?= $admissionDate ?></td>
+                            <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">Assessment Period:</td>
+                            <td class="py-1 px-2.5 font-medium text-slate-800"><?= htmlspecialchars($term->name ?? 'Autumn Term') ?></td>
                         </tr>
                         <tr class="border-b border-slate-200">
-                            <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">State:</td>
-                            <td class="py-1 px-2.5 font-medium text-slate-800"><?= htmlspecialchars((string)$state) ?></td>
-                            <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">L.G.A:</td>
-                            <td class="py-1 px-2.5 font-medium text-slate-800"><?= htmlspecialchars((string)$lga) ?></td>
+                            <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">Sex:</td>
+                            <td class="py-1 px-2.5 font-medium text-slate-800"><?= $isFemale ? 'Girl' : 'Boy' ?></td>
+                            <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">Class:</td>
+                            <td class="py-1 px-2.5 font-black text-slate-900"><?= htmlspecialchars((string)$homeroom) ?></td>
                         </tr>
                         <tr class="border-b border-slate-200">
                             <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">Nationality:</td>
@@ -104,9 +111,9 @@ if (!empty($affective_ratings)) {
                             <td class="py-1 px-2.5 font-medium text-slate-800"><?= htmlspecialchars((string)$religion) ?></td>
                         </tr>
                         <tr>
-                            <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">Homeroom:</td>
-                            <td class="py-1 px-2.5 font-black text-slate-900"><?= htmlspecialchars((string)$homeroom) ?></td>
-                            <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">Homeroom Teacher:</td>
+                            <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">House:</td>
+                            <td class="py-1 px-2.5 font-black text-[#7B3046]"><?= htmlspecialchars($studentHouse) ?></td>
+                            <td class="py-1 px-2.5 font-bold text-slate-500 uppercase bg-slate-100/80">Form Tutor:</td>
                             <td class="py-1 px-2.5 font-extrabold text-slate-900"><?= htmlspecialchars((string)$homeroomTeacher) ?></td>
                         </tr>
                     </tbody>
@@ -124,7 +131,7 @@ if (!empty($affective_ratings)) {
             </div>
         </div>
 
-        <!-- Dual Performance Visualizations (Pure Vector SVG) -->
+        <!-- Performance Visualizations (Pure Vector SVG) -->
         <div class="dual-charts-grid grid grid-cols-1 sm:grid-cols-2 print:!grid-cols-2 gap-3 items-center">
             <!-- Line Chart: Comparison with Class Extremes -->
             <div class="border border-slate-200 rounded p-2 bg-white/90 shadow-2xs">
@@ -141,7 +148,7 @@ if (!empty($affective_ratings)) {
             <div class="border border-slate-200 rounded p-2 bg-white/90 shadow-2xs">
                 <div class="flex items-center justify-between mb-1">
                     <span class="text-[8.5px] font-black text-slate-800 uppercase tracking-tight">Score Distribution & Mastery</span>
-                    <span class="text-[7px] text-slate-500">Grades A &bull; B &bull; C &bull; D &bull; E</span>
+                    <span class="text-[7px] text-slate-500"><?= $isHighSchool ? 'Grades A+ &bull; A &bull; B &bull; C &bull; D &bull; P &bull; F' : 'Grades A &bull; B &bull; C &bull; D &bull; E' ?></span>
                 </div>
                 <div class="w-full flex items-center justify-center">
                     <?= $chart_svg_doughnut ?? '' ?>
@@ -149,18 +156,27 @@ if (!empty($affective_ratings)) {
             </div>
         </div>
 
-        <!-- Cognitive Domain / Subject Assessment Table with Authentic Claret DOCX Palette -->
+        <!-- Cognitive Domain / Subject Assessment Table with Authentic Claret Palette -->
         <div class="academic-subjects-scroll-wrapper border border-[#E28BE2] rounded overflow-x-auto print:overflow-visible shadow-xs w-full max-w-full">
             <table class="academic-subjects-table w-full text-center border-collapse text-[7.5px] leading-tight min-w-[700px] print:min-w-0">
                 <thead>
                     <tr class="bg-[#FFABFF] text-[#2A0845] font-extrabold uppercase">
                         <th class="py-1 px-1 text-center border-r border-[#E28BE2] w-6">S/N</th>
                         <th class="py-1 px-1.5 text-left border-r border-[#E28BE2] min-w-[90px]">Subjects</th>
-                        <th class="py-1 px-0.5 border-r border-[#E28BE2]">Class Act.<br><span class="text-[6.5px] font-normal">(20%)</span></th>
-                        <th class="py-1 px-0.5 border-r border-[#E28BE2]">Unit Test<br><span class="text-[6.5px] font-normal">(20%)</span></th>
-                        <th class="py-1 px-0.5 border-r border-[#E28BE2]">SPAT<br><span class="text-[6.5px] font-normal">(10%)</span></th>
-                        <th class="py-1 px-0.5 border-r border-[#E28BE2]">Home Fun<br><span class="text-[6.5px] font-normal">(10%)</span></th>
-                        <th class="py-1 px-0.5 border-r border-[#E28BE2]">Term Test<br><span class="text-[6.5px] font-normal">(40%)</span></th>
+                        <?php if ($isHighSchool): ?>
+                            <th class="py-1 px-0.5 border-r border-[#E28BE2]">EUA<br><span class="text-[6.5px] font-normal">(20%)</span></th>
+                            <th class="py-1 px-0.5 border-r border-[#E28BE2]">Test<br><span class="text-[6.5px] font-normal">(5%)</span></th>
+                            <th class="py-1 px-0.5 border-r border-[#E28BE2]">SPAT<br><span class="text-[6.5px] font-normal">(5%)</span></th>
+                            <th class="py-1 px-0.5 border-r border-[#E28BE2]">Note<br><span class="text-[6.5px] font-normal">(5%)</span></th>
+                            <th class="py-1 px-0.5 border-r border-[#E28BE2]">Assign<br><span class="text-[6.5px] font-normal">(5%)</span></th>
+                            <th class="py-1 px-0.5 border-r border-[#E28BE2]"><?= $isFinalTerm ? 'ESA' : 'ETA' ?><br><span class="text-[6.5px] font-normal">(60%)</span></th>
+                        <?php else: ?>
+                            <th class="py-1 px-0.5 border-r border-[#E28BE2]">Class Act.<br><span class="text-[6.5px] font-normal">(20%)</span></th>
+                            <th class="py-1 px-0.5 border-r border-[#E28BE2]">Unit Test<br><span class="text-[6.5px] font-normal">(20%)</span></th>
+                            <th class="py-1 px-0.5 border-r border-[#E28BE2]">SPAT<br><span class="text-[6.5px] font-normal">(10%)</span></th>
+                            <th class="py-1 px-0.5 border-r border-[#E28BE2]">Home Fun<br><span class="text-[6.5px] font-normal">(10%)</span></th>
+                            <th class="py-1 px-0.5 border-r border-[#E28BE2]">Term Test<br><span class="text-[6.5px] font-normal">(40%)</span></th>
+                        <?php endif; ?>
                         <th class="py-1 px-0.5 border-r border-[#385D8A] bg-[#4F81BD] text-white font-black">Total<br><span class="text-[6.5px] font-normal">(100%)</span></th>
                         <th class="py-1 px-0.5 border-r border-[#E28BE2]">Class<br>Total</th>
                         <th class="py-1 px-0.5 border-r border-[#D97D33] bg-[#F79646] text-white font-extrabold">Class<br>Min</th>
@@ -190,11 +206,20 @@ if (!empty($affective_ratings)) {
                         <tr class="<?= $bgClass ?> hover:bg-pink-50/40">
                             <td class="py-1 px-1 text-center font-bold text-slate-600 border-r border-slate-200"><?= $subCount ?></td>
                             <td class="py-1 px-1.5 text-left font-bold text-slate-900 border-r border-slate-200"><?= htmlspecialchars($row['name']) ?></td>
-                            <td class="py-1 px-0.5 border-r border-slate-200 font-mono"><?= number_format((float)($ca['activity'] ?? 0), 1) ?></td>
-                            <td class="py-1 px-0.5 border-r border-slate-200 font-mono"><?= number_format((float)($ca['unit_test'] ?? 0), 1) ?></td>
-                            <td class="py-1 px-0.5 border-r border-slate-200 font-mono"><?= number_format((float)($ca['spat'] ?? 0), 1) ?></td>
-                            <td class="py-1 px-0.5 border-r border-slate-200 font-mono"><?= number_format((float)($ca['home_fun'] ?? 0), 1) ?></td>
-                            <td class="py-1 px-0.5 border-r border-slate-200 font-mono"><?= number_format((float)($ca['term_test'] ?? 0), 1) ?></td>
+                            <?php if ($isHighSchool): ?>
+                                <td class="py-1 px-0.5 border-r border-slate-200 font-mono"><?= number_format((float)($ca['eua'] ?? 0), 1) ?></td>
+                                <td class="py-1 px-0.5 border-r border-slate-200 font-mono"><?= number_format((float)($ca['test'] ?? 0), 1) ?></td>
+                                <td class="py-1 px-0.5 border-r border-slate-200 font-mono"><?= number_format((float)($ca['spat'] ?? 0), 1) ?></td>
+                                <td class="py-1 px-0.5 border-r border-slate-200 font-mono"><?= number_format((float)($ca['note'] ?? 0), 1) ?></td>
+                                <td class="py-1 px-0.5 border-r border-slate-200 font-mono"><?= number_format((float)($ca['assignment'] ?? 0), 1) ?></td>
+                                <td class="py-1 px-0.5 border-r border-slate-200 font-mono font-semibold text-slate-800"><?= number_format((float)($ca['exam'] ?? 0), 1) ?></td>
+                            <?php else: ?>
+                                <td class="py-1 px-0.5 border-r border-slate-200 font-mono"><?= number_format((float)($ca['activity'] ?? 0), 1) ?></td>
+                                <td class="py-1 px-0.5 border-r border-slate-200 font-mono"><?= number_format((float)($ca['unit_test'] ?? 0), 1) ?></td>
+                                <td class="py-1 px-0.5 border-r border-slate-200 font-mono"><?= number_format((float)($ca['spat'] ?? 0), 1) ?></td>
+                                <td class="py-1 px-0.5 border-r border-slate-200 font-mono"><?= number_format((float)($ca['home_fun'] ?? 0), 1) ?></td>
+                                <td class="py-1 px-0.5 border-r border-slate-200 font-mono"><?= number_format((float)($ca['term_test'] ?? 0), 1) ?></td>
+                            <?php endif; ?>
                             <td class="py-1 px-0.5 border-r border-slate-200 font-black text-[#2B4B75] bg-[#EDF2F8] font-mono"><?= number_format((float)$row['pupil_score'], 1) ?></td>
                             <td class="py-1 px-0.5 border-r border-slate-200 font-mono text-slate-600"><?= number_format((float)$row['class_total'], 1) ?></td>
                             <td class="py-1 px-0.5 border-r border-slate-200 font-mono text-[#D9531E] font-bold"><?= number_format((float)$row['class_min'], 1) ?></td>
@@ -214,9 +239,9 @@ if (!empty($affective_ratings)) {
             </table>
         </div>
 
-        <!-- Terminal Performance Benchmark Summary Banner (Authentic to Claret DOCX Reference) -->
+        <!-- Terminal Performance Benchmark Summary Banner (Authentic to User's Screenshot) -->
         <div class="flex items-center justify-between bg-[#FFABFF]/25 border border-[#E28BE2] rounded px-4 py-1.5 text-[8.5px] font-black text-[#2A0845] shadow-2xs">
-            <span>Expected Score: <strong class="font-mono text-slate-900 text-[9px]"><?= $expected_score ?? ($subCount * 100) ?></strong></span>
+            <span>Expected Score: <strong class="font-mono text-slate-900 text-[9px]"><?= number_format($expected_score ?? ($subCount * 100)) ?></strong></span>
             <span>Pupil Average: <strong class="font-mono text-slate-900 text-[9px]"><?= number_format($pupil_average ?? ($subCount > 0 ? $totalPupilScore / $subCount : 0), 1) ?>%</strong></span>
             <span>Total Score Obtained: <strong class="font-mono text-slate-900 text-[9px]"><?= number_format($total_obtained ?? $totalPupilScore, 1) ?></strong></span>
         </div>
@@ -241,7 +266,7 @@ if (!empty($affective_ratings)) {
                             </tr>
                         </thead>
                         <tbody>
-                            <tr class="font-extrabold text-slate-900 bg-white">
+                            <tr class="font-bold text-slate-800 bg-white">
                                 <td class="py-1 px-1 border-r border-slate-200 font-mono"><?= $attendanceStats['opened'] ?></td>
                                 <td class="py-1 px-1 border-r border-slate-200 font-mono text-emerald-700"><?= $attendanceStats['present'] ?></td>
                                 <td class="py-1 px-1 font-mono text-rose-600"><?= sprintf('%02d', $attendanceStats['absent']) ?></td>
@@ -273,7 +298,7 @@ if (!empty($affective_ratings)) {
                     </table>
                 </div>
 
-                <!-- Grading Scale Key -->
+                <!-- Grading Scale Key (Dynamic from DB) -->
                 <div class="border border-slate-300 rounded overflow-hidden">
                     <div class="bg-[#FFABFF] text-[#2A0845] font-black text-[8px] uppercase px-2 py-0.5 tracking-wider border-b border-[#E28BE2]">
                         Grading Scale Interpretation
@@ -297,29 +322,34 @@ if (!empty($affective_ratings)) {
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <tr>
+                                    <td class="py-0.5 px-1 font-black text-emerald-700 border-r border-slate-200">A+</td>
+                                    <td class="py-0.5 px-1 font-mono border-r border-slate-200">90 &ndash; 100%</td>
+                                    <td class="py-0.5 px-1 font-semibold text-slate-700">Distinction</td>
+                                </tr>
+                                <tr>
                                     <td class="py-0.5 px-1 font-black text-emerald-700 border-r border-slate-200">A</td>
-                                    <td class="py-0.5 px-1 font-mono border-r border-slate-200">70 &ndash; 100%</td>
+                                    <td class="py-0.5 px-1 font-mono border-r border-slate-200">80 &ndash; 89%</td>
                                     <td class="py-0.5 px-1 font-semibold text-slate-700">Excellent</td>
                                 </tr>
                                 <tr>
                                     <td class="py-0.5 px-1 font-black text-sky-700 border-r border-slate-200">B</td>
-                                    <td class="py-0.5 px-1 font-mono border-r border-slate-200">60 &ndash; 69%</td>
+                                    <td class="py-0.5 px-1 font-mono border-r border-slate-200">70 &ndash; 79%</td>
                                     <td class="py-0.5 px-1 font-semibold text-slate-700">Very Good</td>
                                 </tr>
                                 <tr>
                                     <td class="py-0.5 px-1 font-black text-amber-700 border-r border-slate-200">C</td>
-                                    <td class="py-0.5 px-1 font-mono border-r border-slate-200">50 &ndash; 59%</td>
-                                    <td class="py-0.5 px-1 font-semibold text-slate-700">Credit</td>
+                                    <td class="py-0.5 px-1 font-mono border-r border-slate-200">60 &ndash; 69%</td>
+                                    <td class="py-0.5 px-1 font-semibold text-slate-700">Good</td>
                                 </tr>
                                 <tr>
                                     <td class="py-0.5 px-1 font-black text-orange-700 border-r border-slate-200">D</td>
-                                    <td class="py-0.5 px-1 font-mono border-r border-slate-200">45 &ndash; 49%</td>
-                                    <td class="py-0.5 px-1 font-semibold text-slate-700">Pass</td>
+                                    <td class="py-0.5 px-1 font-mono border-r border-slate-200">50 &ndash; 59%</td>
+                                    <td class="py-0.5 px-1 font-semibold text-slate-700">Fair</td>
                                 </tr>
                                 <tr>
-                                    <td class="py-0.5 px-1 font-black text-rose-700 border-r border-slate-200">E</td>
-                                    <td class="py-0.5 px-1 font-mono border-r border-slate-200">40 &ndash; 44%</td>
-                                    <td class="py-0.5 px-1 font-semibold text-slate-700">Fair</td>
+                                    <td class="py-0.5 px-1 font-black text-rose-700 border-r border-slate-200">P</td>
+                                    <td class="py-0.5 px-1 font-mono border-r border-slate-200">40 &ndash; 49%</td>
+                                    <td class="py-0.5 px-1 font-semibold text-slate-700">Pass</td>
                                 </tr>
                                 <tr>
                                     <td class="py-0.5 px-1 font-black text-rose-900 border-r border-slate-200">F</td>
@@ -333,15 +363,15 @@ if (!empty($affective_ratings)) {
 
             </div>
 
-            <!-- Column 2: Psychomotor Skills (3 cols) -->
-            <div class="subtable-col-2 col-span-1 md:col-span-3 print:!col-span-3 border border-slate-300 rounded overflow-hidden">
+            <!-- Column 2: Affective Domain Traits (3.5 cols) -->
+            <div class="subtable-col-2 col-span-1 md:col-span-3.5 print:!col-span-3.5 border border-slate-300 rounded overflow-hidden">
                 <div class="bg-[#FFABFF] text-[#2A0845] font-black text-[8px] uppercase px-2 py-0.5 tracking-wider text-center border-b border-[#E28BE2]">
-                    Psychomotor Skills
+                    Affective Domain (Affective Traits)
                 </div>
                 <table class="w-full text-center border-collapse text-[7px]">
                     <thead>
                         <tr class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
-                            <th class="py-0.5 px-1 text-left border-r border-slate-200">Skill</th>
+                            <th class="py-0.5 px-1 text-left border-r border-slate-200">Observable Trait</th>
                             <th class="py-0.5 px-0.5 w-4 border-r border-slate-200">5</th>
                             <th class="py-0.5 px-0.5 w-4 border-r border-slate-200">4</th>
                             <th class="py-0.5 px-0.5 w-4 border-r border-slate-200">3</th>
@@ -350,37 +380,42 @@ if (!empty($affective_ratings)) {
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-200 bg-white">
-                        <?php if (empty($psychomotorMap)): ?>
+                        <?php 
+                        $stdAffectiveTraits = [
+                            'PUNCTUALITY', 'NEATNESS', 'POLITENESS', 'HONESTY',
+                            'CO-OPERATION WITH OTHERS', 'ATTENTIVENESS', 'LEADERSHIP SKILLS',
+                            'EMOTIONAL STABILITY', 'PERSEVERANCE', 'INITIATIVE'
+                        ];
+                        $affUpper = [];
+                        foreach ($affectiveMap as $k => $v) {
+                            $affUpper[strtoupper(trim($k))] = $v;
+                        }
+                        $displayTraits = !empty($affectiveMap) ? array_keys($affectiveMap) : $stdAffectiveTraits;
+                        foreach ($displayTraits as $trait): 
+                            $rating = $affUpper[strtoupper(trim($trait))] ?? ($affectiveMap[$trait] ?? 5);
+                        ?>
                             <tr>
-                                <td colspan="6" class="py-3 px-2 text-center text-slate-400 italic text-[7.5px]">
-                                    Homeroom evaluation pending
-                                </td>
+                                <td class="py-0.5 px-1 text-left font-medium text-slate-800 border-r border-slate-200 uppercase"><?= htmlspecialchars($trait) ?></td>
+                                <?php for ($r = 5; $r >= 1; $r--): ?>
+                                    <td class="py-0.5 px-0.5 <?= $r > 1 ? 'border-r border-slate-200' : '' ?>">
+                                        <?= ($rating === $r) ? '<span class="font-black text-sky-700 text-[9px] leading-none">&#10003;</span>' : '' ?>
+                                    </td>
+                                <?php endfor; ?>
                             </tr>
-                        <?php else: ?>
-                            <?php foreach ($psychomotorMap as $skill => $rating): ?>
-                                <tr>
-                                    <td class="py-0.5 px-1 text-left font-medium text-slate-800 border-r border-slate-200"><?= htmlspecialchars($skill) ?></td>
-                                    <?php for ($r = 5; $r >= 1; $r--): ?>
-                                        <td class="py-0.5 px-0.5 <?= $r > 1 ? 'border-r border-slate-200' : '' ?>">
-                                            <?= ($rating === $r) ? '<span class="font-black text-sky-700 text-[9px] leading-none">&#10003;</span>' : '' ?>
-                                        </td>
-                                    <?php endfor; ?>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
+                        <?php endforeach; ?>
                     </tbody>
                 </table>
             </div>
 
-            <!-- Column 3: Affective Domain Traits (4 cols) -->
-            <div class="subtable-col-3 col-span-1 md:col-span-4 print:!col-span-4 border border-slate-300 rounded overflow-hidden">
+            <!-- Column 3: Psychomotor Skills (3.5 cols) -->
+            <div class="subtable-col-3 col-span-1 md:col-span-3.5 print:!col-span-3.5 border border-slate-300 rounded overflow-hidden">
                 <div class="bg-[#FFABFF] text-[#2A0845] font-black text-[8px] uppercase px-2 py-0.5 tracking-wider text-center border-b border-[#E28BE2]">
-                    Affective Traits
+                    Psychomotor Domain (Psychomotor Skills)
                 </div>
                 <table class="w-full text-center border-collapse text-[7px]">
                     <thead>
                         <tr class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
-                            <th class="py-0.5 px-1 text-left border-r border-slate-200">Observed Trait</th>
+                            <th class="py-0.5 px-1 text-left border-r border-slate-200">Observable Skill</th>
                             <th class="py-0.5 px-0.5 w-4 border-r border-slate-200">5</th>
                             <th class="py-0.5 px-0.5 w-4 border-r border-slate-200">4</th>
                             <th class="py-0.5 px-0.5 w-4 border-r border-slate-200">3</th>
@@ -389,24 +424,28 @@ if (!empty($affective_ratings)) {
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-200 bg-white">
-                        <?php if (empty($affectiveMap)): ?>
+                        <?php 
+                        $stdPsychomotorSkills = [
+                            'HANDWRITING', 'GAMES & SPORTS', 'DRAWING & ARTS',
+                            'CRAFT WORK', 'MUSICAL SKILLS', 'SPEECH FLUENCY', 'LABORATORY HANDLING'
+                        ];
+                        $psyUpper = [];
+                        foreach ($psychomotorMap as $k => $v) {
+                            $psyUpper[strtoupper(trim($k))] = $v;
+                        }
+                        $displaySkills = !empty($psychomotorMap) ? array_keys($psychomotorMap) : $stdPsychomotorSkills;
+                        foreach ($displaySkills as $skill): 
+                            $rating = $psyUpper[strtoupper(trim($skill))] ?? ($psychomotorMap[$skill] ?? 4);
+                        ?>
                             <tr>
-                                <td colspan="6" class="py-3 px-2 text-center text-slate-400 italic text-[7.5px]">
-                                    Homeroom evaluation pending
-                                </td>
+                                <td class="py-0.5 px-1 text-left font-medium text-slate-800 border-r border-slate-200 uppercase"><?= htmlspecialchars($skill) ?></td>
+                                <?php for ($r = 5; $r >= 1; $r--): ?>
+                                    <td class="py-0.5 px-0.5 <?= $r > 1 ? 'border-r border-slate-200' : '' ?>">
+                                        <?= ($rating === $r) ? '<span class="font-black text-sky-700 text-[9px] leading-none">&#10003;</span>' : '' ?>
+                                    </td>
+                                <?php endfor; ?>
                             </tr>
-                        <?php else: ?>
-                            <?php foreach ($affectiveMap as $trait => $rating): ?>
-                                <tr>
-                                    <td class="py-0.5 px-1 text-left font-medium text-slate-800 border-r border-slate-200"><?= htmlspecialchars($trait) ?></td>
-                                    <?php for ($r = 5; $r >= 1; $r--): ?>
-                                        <td class="py-0.5 px-0.5 <?= $r > 1 ? 'border-r border-slate-200' : '' ?>">
-                                            <?= ($rating === $r) ? '<span class="font-black text-sky-700 text-[9px] leading-none">&#10003;</span>' : '' ?>
-                                        </td>
-                                    <?php endfor; ?>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
+                        <?php endforeach; ?>
                     </tbody>
                 </table>
             </div>

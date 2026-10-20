@@ -120,7 +120,14 @@
     }
 </script>
 <style>
-    body { font-family: "Plus Jakarta Sans", Roboto, system-ui, -apple-system, sans-serif; }
+    html, body { 
+        background-color: #f8fafc;
+        font-family: "Plus Jakarta Sans", Roboto, system-ui, -apple-system, sans-serif; 
+        overscroll-behavior: none;
+    }
+    #main-content {
+        overscroll-behavior-y: contain;
+    }
 
     /* Global Print Isolation Stylesheet */
     @media print {

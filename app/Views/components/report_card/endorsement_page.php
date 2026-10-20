@@ -30,8 +30,11 @@ $resumptionDate = $next_resumption_date ?? '7th SEPTEMBER, 2026';
 // Calculate aggregate summary metrics
 $totalScore = (float)($summary?->totalScore ?? 0.0);
 $averageScore = (float)($summary?->averageScore ?? 0.0);
-$classPosition = $summary?->classPosition ?? '1st';
-$overallGrade = $summary?->gradeLetter ?? 'A';
+$classPosition = !empty($class_position) ? $class_position : (!empty($position) ? $position : (($summary && !empty($summary->rankInClass) && $averageScore > 0) ? ($summary->classPosition ?? "#{$summary->rankInClass}") : '-'));
+if ($averageScore <= 0.0) {
+    $classPosition = '-';
+}
+$overallGrade = $summary?->gradeLetter ?? ($averageScore > 0 ? 'A' : '-');
 
 // Calculate totals from subjects if summary is 0
 if ($totalScore <= 0 && !empty($subject_analytics)) {
@@ -125,7 +128,13 @@ $isPromoVisible = !empty($is_promotion_visible) && !empty($is_final_term);
                         <div class="text-[9.5px] font-extrabold text-slate-900"><?= htmlspecialchars($teacherName) ?></div>
                     </div>
                     <div class="text-center">
-                        <div class="border-b border-slate-400 w-32 pb-0.5 font-serif italic text-xs text-blue-900 font-bold"><?= htmlspecialchars($teacherName) ?></div>
+                        <?php if (!empty($resolvedTeacher?->signatureUrl)): ?>
+                            <div class="h-10 w-32 flex items-end justify-center mx-auto mb-0.5">
+                                <img src="<?= htmlspecialchars($resolvedTeacher->signatureUrl) ?>" alt="Form Teacher Signature" class="max-h-10 max-w-32 object-contain mix-blend-multiply">
+                            </div>
+                        <?php else: ?>
+                            <div class="border-b border-slate-400 w-32 pb-0.5 font-serif italic text-xs text-blue-900 font-bold"><?= htmlspecialchars($teacherName) ?></div>
+                        <?php endif; ?>
                         <div class="text-[7.5px] font-semibold text-slate-500 pt-0.5">Signature</div>
                     </div>
                     <div class="text-right">
@@ -139,7 +148,7 @@ $isPromoVisible = !empty($is_promotion_visible) && !empty($is_final_term);
         <!-- Section 2: Head Teacher's Appraisal & Official Promotion Decision -->
         <div class="border-2 border-pink-300 rounded-lg overflow-hidden bg-white/95 shadow-xs relative">
             <div class="bg-[#FFABFF] text-[#2A0845] font-black text-[9px] uppercase px-3 py-1 tracking-wider flex items-center justify-between border-b border-[#E28BE2]">
-                <span>Head Teacher's Endorsement & Institutional Seal</span>
+                <span><?= !empty($isHighSchool) ? "Principal's Endorsement & Institutional Seal" : "Head Teacher's Endorsement & Institutional Seal" ?></span>
                 <span class="text-[8px] text-[#4A154B] font-normal italic">Décision de la Direction</span>
             </div>
             
@@ -194,10 +203,12 @@ $isPromoVisible = !empty($is_promotion_visible) && !empty($is_final_term);
                 <!-- Signatures & Stamp Layer (Realistic positioning) -->
                 <div class="mt-2 pt-2 border-t border-dashed border-slate-200 relative flex flex-wrap sm:flex-nowrap gap-3 items-end justify-between">
                     <div>
-                        <div class="text-[8px] font-bold text-slate-500 uppercase">Head of School:</div>
+                        <div class="text-[8px] font-bold text-slate-500 uppercase"><?= !empty($isHighSchool) ? 'Principal:' : 'Head of School:' ?></div>
                         <div class="text-[10px] font-black text-slate-900">
-                            <?= htmlspecialchars($school['head_teacher_name'] ?? 'Head of School') ?> 
-                            <?php if (!empty($school['head_teacher_title'])): ?>
+                            <?= htmlspecialchars(!empty($isHighSchool) ? ($school['principal_name'] ?? 'Principal') : ($school['head_teacher_name'] ?? 'Head of School')) ?> 
+                            <?php if (!empty($isHighSchool) && !empty($school['principal_title'])): ?>
+                                &bull; <?= htmlspecialchars($school['principal_title']) ?>
+                            <?php elseif (empty($isHighSchool) && !empty($school['head_teacher_title'])): ?>
                                 &bull; <?= htmlspecialchars($school['head_teacher_title']) ?>
                             <?php endif; ?>
                         </div>
@@ -216,16 +227,24 @@ $isPromoVisible = !empty($is_promotion_visible) && !empty($is_final_term);
                     <?php endif; ?>
 
                     <div class="text-right">
-                        <?php if (!empty($school['head_teacher_signature_url'])): ?>
+                        <?php 
+                        $executiveSig = !empty($isHighSchool) 
+                            ? (!empty($school['principal_signature_url']) ? $school['principal_signature_url'] : ($school['head_teacher_signature_url'] ?? '')) 
+                            : ($school['head_teacher_signature_url'] ?? '');
+                        $executiveName = !empty($isHighSchool) 
+                            ? ($school['principal_name'] ?? 'Principal') 
+                            : ($school['head_teacher_name'] ?? 'Head Teacher');
+                        ?>
+                        <?php if (!empty($executiveSig)): ?>
                             <div class="h-10 w-32 flex items-end justify-center mx-auto mb-0.5">
-                                <img src="<?= htmlspecialchars($school['head_teacher_signature_url']) ?>" alt="Head Teacher Signature" class="max-h-10 max-w-32 object-contain mix-blend-multiply">
+                                <img src="<?= htmlspecialchars($executiveSig) ?>" alt="Executive Signature" class="max-h-10 max-w-32 object-contain mix-blend-multiply">
                             </div>
                         <?php else: ?>
                             <div class="border-b border-slate-500 w-32 pb-0.5 text-center font-serif italic text-xs text-blue-900 font-bold">
-                                <?= htmlspecialchars($school['head_teacher_name'] ?? 'Authorized Signatory') ?>
+                                <?= htmlspecialchars($executiveName) ?>
                             </div>
                         <?php endif; ?>
-                        <div class="border-t border-slate-300 text-[7.5px] font-semibold text-slate-500 pt-0.5 text-center">Head Teacher Signature</div>
+                        <div class="border-t border-slate-300 text-[7.5px] font-semibold text-slate-500 pt-0.5 text-center"><?= !empty($isHighSchool) ? 'Principal Signature' : 'Head Teacher Signature' ?></div>
                     </div>
                 </div>
 

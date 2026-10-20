@@ -22,10 +22,31 @@ class SkillRepository
         $this->pdo = $pdo ?? Database::getInstance();
     }
 
+    private function hasSkillColumn(string $column): bool
+    {
+        try {
+            $driver = $this->pdo->getAttribute(\PDO::ATTR_DRIVER_NAME);
+            if ($driver === 'sqlite') {
+                $stmt = $this->pdo->query('PRAGMA table_info(`skills`)');
+                if ($stmt) {
+                    foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+                        if (strcasecmp((string)($row['name'] ?? ''), $column) === 0) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+            return true;
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
     /**
      * @return array<int, Skill>
      */
-    public function getAllSkills(?string $category = null, ?string $status = null): array
+    public function getAllSkills(?string $category = null, ?string $status = null, ?string $stage = null, bool $includeUniversal = true): array
     {
         $sql = 'SELECT * FROM `skills` WHERE 1=1';
         $params = [];
@@ -40,7 +61,21 @@ class SkillRepository
             $params[':status'] = $status;
         }
 
-        $sql .= ' ORDER BY `category` ASC, `display_order` ASC, `name` ASC';
+        $hasStage = $this->hasSkillColumn('stage');
+        if ($hasStage && $stage !== null && $stage !== '') {
+            if ($includeUniversal) {
+                $sql .= ' AND (`stage` = :stage OR `stage` IS NULL)';
+            } else {
+                $sql .= ' AND `stage` = :stage';
+            }
+            $params[':stage'] = $stage;
+        }
+
+        if ($hasStage) {
+            $sql .= ' ORDER BY `stage` ASC, `category` ASC, `display_order` ASC, `name` ASC';
+        } else {
+            $sql .= ' ORDER BY `category` ASC, `display_order` ASC, `name` ASC';
+        }
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
@@ -60,23 +95,61 @@ class SkillRepository
 
     public function createSkill(array $data): int
     {
-        $stmt = $this->pdo->prepare(
-            'INSERT INTO `skills` (`name`, `category`, `display_order`, `status`)
-             VALUES (:name, :category, :display_order, :status)'
-        );
+        $hasStage = $this->hasSkillColumn('stage');
+        if ($hasStage) {
+            $stmt = $this->pdo->prepare(
+                'INSERT INTO `skills` (`name`, `category`, `stage`, `display_order`, `status`)
+                 VALUES (:name, :category, :stage, :display_order, :status)'
+            );
 
-        $stmt->execute([
-            ':name' => (string)($data['name'] ?? ''),
-            ':category' => (string)($data['category'] ?? 'psychomotor'),
-            ':display_order' => (int)($data['display_order'] ?? 1),
-            ':status' => (string)($data['status'] ?? 'active'),
-        ]);
+            $stmt->execute([
+                ':name' => (string)($data['name'] ?? ''),
+                ':category' => (string)($data['category'] ?? 'psychomotor'),
+                ':stage' => !empty($data['stage']) ? (string)$data['stage'] : null,
+                ':display_order' => (int)($data['display_order'] ?? 1),
+                ':status' => (string)($data['status'] ?? 'active'),
+            ]);
+        } else {
+            $stmt = $this->pdo->prepare(
+                'INSERT INTO `skills` (`name`, `category`, `display_order`, `status`)
+                 VALUES (:name, :category, :display_order, :status)'
+            );
+
+            $stmt->execute([
+                ':name' => (string)($data['name'] ?? ''),
+                ':category' => (string)($data['category'] ?? 'psychomotor'),
+                ':display_order' => (int)($data['display_order'] ?? 1),
+                ':status' => (string)($data['status'] ?? 'active'),
+            ]);
+        }
 
         return (int)$this->pdo->lastInsertId();
     }
 
     public function updateSkill(int $id, array $data): bool
     {
+        $hasStage = $this->hasSkillColumn('stage');
+        if ($hasStage) {
+            $stmt = $this->pdo->prepare(
+                'UPDATE `skills`
+                 SET `name` = :name,
+                     `category` = :category,
+                     `stage` = :stage,
+                     `display_order` = :display_order,
+                     `status` = :status
+                 WHERE `id` = :id'
+            );
+
+            return $stmt->execute([
+                ':id' => $id,
+                ':name' => (string)($data['name'] ?? ''),
+                ':category' => (string)($data['category'] ?? 'psychomotor'),
+                ':stage' => !empty($data['stage']) ? (string)$data['stage'] : null,
+                ':display_order' => (int)($data['display_order'] ?? 1),
+                ':status' => (string)($data['status'] ?? 'active'),
+            ]);
+        }
+
         $stmt = $this->pdo->prepare(
             'UPDATE `skills`
              SET `name` = :name,

@@ -110,17 +110,80 @@ $currentUri = $_SERVER['REQUEST_URI'] ?? '';
             </div>
 
             <div class="flex items-center gap-3">
-                <?php if ($isParent): ?>
-                    <a href="/parent/dashboard" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold shadow-xs transition-all">
-                        <i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i>
-                        <span>Parent Portal</span>
-                    </a>
-                <?php endif; ?>
-
-                <a href="/" class="text-xs font-semibold text-[#7B3046] hover:underline flex items-center gap-1">
+                <a href="/" class="hidden sm:flex text-xs font-semibold text-[#7B3046] hover:underline items-center gap-1">
                     <span>Public School Website</span>
                     <i data-lucide="arrow-up-right" class="w-3.5 h-3.5" style="width:14px;height:14px;"></i>
                 </a>
+
+                <!-- Role Badge / Portal Switcher for Applicant -->
+                <div class="relative" id="applicant-switcher-container">
+                    <button type="button" 
+                            id="applicant-switcher-btn"
+                            onclick="document.getElementById('applicant-switcher-dropdown').classList.toggle('hidden')" 
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 transition cursor-pointer shadow-xs focus:outline-none focus:ring-2 focus:ring-rose-500"
+                            title="User session & portal menu">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        <span><?= $isParent ? 'Parent &amp; Applicant' : 'Admissions Portal' ?></span>
+                        <svg class="w-3.5 h-3.5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+
+                    <!-- Dropdown Menu -->
+                    <div id="applicant-switcher-dropdown" 
+                         class="hidden absolute right-0 mt-2 w-56 rounded-2xl bg-white shadow-xl border border-slate-200 py-2 z-50 divide-y divide-slate-100">
+                        <div class="px-3.5 py-2">
+                            <p class="text-xs font-bold text-slate-900 truncate"><?= e($userContextName) ?></p>
+                            <p class="text-[10px] text-slate-500 truncate"><?= e($userContextEmail) ?></p>
+                            <div class="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                <span><?= $isParent ? 'Parent &amp; Applicant' : 'Applicant Account' ?></span>
+                            </div>
+                        </div>
+
+                        <?php if ($isParent): ?>
+                            <div class="py-1">
+                                <a href="/parent/dashboard" class="flex items-center gap-2 px-3.5 py-1.5 text-xs text-emerald-700 hover:bg-emerald-50 font-semibold transition">
+                                    <i data-lucide="layout-dashboard" class="w-4 h-4 text-emerald-600"></i>
+                                    <span>Switch to Parent Portal</span>
+                                </a>
+                            </div>
+                        <?php endif; ?>
+
+                        <div class="p-1">
+                            <form action="/logout" method="POST" class="w-full">
+                                <?= csrf_field() ?>
+                                <button type="submit" 
+                                        class="w-full flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer">
+                                    <svg class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                                    <span>Sign Out / Log Out</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Logout Button -->
+                <form action="/logout" method="POST" class="inline-flex">
+                    <?= csrf_field() ?>
+                    <button type="submit" 
+                            title="Sign Out / Log Out" 
+                            class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition flex items-center justify-center cursor-pointer min-w-[36px] min-h-[36px]">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                        </svg>
+                    </button>
+                </form>
+
+                <script>
+                document.addEventListener('click', function(e) {
+                    const c = document.getElementById('applicant-switcher-container');
+                    const d = document.getElementById('applicant-switcher-dropdown');
+                    if (c && d && !c.contains(e.target)) {
+                        d.classList.add('hidden');
+                    }
+                });
+                </script>
             </div>
         </header>
 

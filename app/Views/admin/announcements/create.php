@@ -85,6 +85,7 @@ $defaultPublishedAt = date('Y-m-d\TH:i');
                                 class="w-full px-3.5 py-2.5 bg-slate-50/50 border border-slate-300 rounded-lg text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
                             >
                                 <option value="school" selected>School-wide (All Portals)</option>
+                                <option value="teachers">Teaching Staff Only (Teachers & Faculty)</option>
                                 <option value="class">Specific Class</option>
                                 <option value="class_subject">Specific Subject Group</option>
                             </select>
@@ -256,13 +257,18 @@ $defaultPublishedAt = date('Y-m-d\TH:i');
                         <p class="text-slate-500">Delivered across the portal to Administrators, Teachers, Students, and Parents.</p>
                     </div>
 
+                    <div class="p-3 bg-brand-50/70 rounded-lg border border-brand-200/70 space-y-1">
+                        <strong class="text-brand-900 block font-semibold">2. Teaching Staff Scope:</strong>
+                        <p class="text-brand-700">Delivered exclusively to faculty members and subject teachers (hidden from parents and students).</p>
+                    </div>
+
                     <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1">
-                        <strong class="text-slate-800 block font-semibold">2. Class-Level Scope:</strong>
+                        <strong class="text-slate-800 block font-semibold">3. Class-Level Scope:</strong>
                         <p class="text-slate-500">Visible only to students enrolled in that specific class, their assigned teachers, and linked parents.</p>
                     </div>
 
                     <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1">
-                        <strong class="text-slate-800 block font-semibold">3. Subject Scope:</strong>
+                        <strong class="text-slate-800 block font-semibold">4. Subject Scope:</strong>
                         <p class="text-slate-500">Targeted exclusively to students taking that class subject and the subject teacher.</p>
                     </div>
                 </div>
@@ -291,7 +297,7 @@ function toggleScopeInputs() {
     const classSelect = document.getElementById('classScopeId');
     const subjectSelect = document.getElementById('subjectScopeId');
 
-    if (scope === 'school') {
+    if (scope === 'school' || scope === 'teachers') {
         if (classWrap) classWrap.classList.add('hidden');
         if (subjectWrap) subjectWrap.classList.add('hidden');
         if (classSelect) {

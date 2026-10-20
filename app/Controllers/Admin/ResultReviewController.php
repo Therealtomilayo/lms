@@ -199,11 +199,47 @@ class ResultReviewController extends Controller
                 ];
             }
 
-            // Sort students by rank ascending
+            // Precompute subject ranks across students for each subject
+            $subjectRanks = [];
+            foreach ($classSubjects as $cs) {
+                $subScores = [];
+                foreach ($students as $stu) {
+                    $res = $resultsMatrix[$stu->id][$cs->subjectId] ?? $resultsMatrix[$stu->id][$cs->id] ?? null;
+                    if ($res !== null) {
+                        $sc = $res['computed_score'] ?? $res['total_score'] ?? null;
+                        if ($sc !== null && $sc !== '') {
+                            $subScores[$stu->id] = (float)$sc;
+                        }
+                    }
+                }
+                arsort($subScores);
+                $i = 1;
+                $prevSc = null;
+                $prevOrd = '1ST';
+                foreach ($subScores as $stId => $sc) {
+                    if ($prevSc !== null && abs($sc - $prevSc) < 0.001) {
+                        $subjectRanks[$cs->id][$stId] = $prevOrd;
+                    } else {
+                        $ends = ['TH','ST','ND','RD','TH','TH','TH','TH','TH','TH'];
+                        $ord = (($i % 100) >= 11 && ($i % 100) <= 13) ? ($i . 'TH') : ($i . ($ends[$i % 10] ?? 'TH'));
+                        $subjectRanks[$cs->id][$stId] = $ord;
+                        $prevOrd = $ord;
+                        $prevSc = $sc;
+                    }
+                    $i++;
+                }
+            }
+
+            // Sort students by rank ascending matching review order
             usort($students, function ($a, $b) use ($summaryMap) {
-                $rankA = $summaryMap[$a->id]->classRank ?? 9999;
-                $rankB = $summaryMap[$b->id]->classRank ?? 9999;
+                $rankA = $summaryMap[$a->id]->rankInClass ?? 9999;
+                $rankB = $summaryMap[$b->id]->rankInClass ?? 9999;
                 if ($rankA === $rankB) {
+                    $avgA = (float)($summaryMap[$a->id]->averageScore ?? 0.0);
+                    $avgB = (float)($summaryMap[$b->id]->averageScore ?? 0.0);
+                    if ($avgA !== $avgB) {
+                        return $avgB <=> $avgA;
+                    }
                     return strcmp($a->name, $b->name);
                 }
                 return $rankA <=> $rankB;
@@ -222,6 +258,7 @@ class ResultReviewController extends Controller
             'resultsMatrix' => $resultsMatrix,
             'summaryMap' => $summaryMap,
             'subjectAverages' => $subjectAverages,
+            'subjectRanks' => $subjectRanks ?? [],
             'classMean' => $classMean,
             'isPublished' => $isPublished,
             'submission' => $submission,
@@ -271,12 +308,45 @@ class ResultReviewController extends Controller
         fputcsv($output, ['Generated Date:', date('Y-m-d H:i:s')]);
         fputcsv($output, []); // blank spacing row
 
+        // Precompute subject ranks across students for export
+        $exportSubjectRanks = [];
+        foreach ($classSubjects as $cs) {
+            $subScores = [];
+            foreach ($students as $stu) {
+                $res = $resultsMatrix[$stu->id][$cs->subjectId] ?? $resultsMatrix[$stu->id][$cs->id] ?? null;
+                if ($res !== null) {
+                    $sc = $res['computed_score'] ?? $res['total_score'] ?? null;
+                    if ($sc !== null && $sc !== '') {
+                        $subScores[$stu->id] = (float)$sc;
+                    }
+                }
+            }
+            arsort($subScores);
+            $i = 1;
+            $prevSc = null;
+            $prevOrd = '1ST';
+            foreach ($subScores as $stId => $sc) {
+                if ($prevSc !== null && abs($sc - $prevSc) < 0.001) {
+                    $exportSubjectRanks[$cs->id][$stId] = $prevOrd;
+                } else {
+                    $ends = ['TH','ST','ND','RD','TH','TH','TH','TH','TH','TH'];
+                    $ord = (($i % 100) >= 11 && ($i % 100) <= 13) ? ($i . 'TH') : ($i . ($ends[$i % 10] ?? 'TH'));
+                    $exportSubjectRanks[$cs->id][$stId] = $ord;
+                    $prevOrd = $ord;
+                    $prevSc = $sc;
+                }
+                $i++;
+            }
+        }
+
         // Column Headers
         $headers = ['Rank', 'Admission No', 'Student Name', 'Gender'];
         foreach ($classSubjects as $cs) {
             $code = $cs->subject?->code ?: ($cs->subject?->name ?: 'SUB_' . $cs->subjectId);
+            $headers[] = $code . ' CA';
+            $headers[] = $code . ' Exam';
             $headers[] = $code . ' Total';
-            $headers[] = $code . ' Grade';
+            $headers[] = $code . ' Position';
         }
         $headers[] = 'Overall Total';
         $headers[] = 'Term Average (%)';
@@ -310,9 +380,37 @@ class ResultReviewController extends Controller
                 if ($subRes) {
                     $scoreVal = (float)($subRes['computed_score'] ?? $subRes['total_score'] ?? 0);
                     $studentScores[] = $scoreVal;
+
+                    $caVal = 0.0;
+                    $examVal = 0.0;
+                    if (!empty($subRes['breakdown_json'])) {
+                        $bd = json_decode($subRes['breakdown_json'], true);
+                        if (!empty($bd['categories'])) {
+                            foreach ($bd['categories'] as $cat) {
+                                $cName = strtolower($cat['name'] ?? '');
+                                $w = (float)($cat['weighted_contribution'] ?? $cat['raw_score'] ?? 0);
+                                if (str_contains($cName, 'exam') || str_contains($cName, 'term test') || str_contains($cName, 'eta') || str_contains($cName, 'esa')) {
+                                    $examVal += $w;
+                                } else {
+                                    $caVal += $w;
+                                }
+                            }
+                        }
+                    }
+                    if ($caVal <= 0 && $examVal <= 0) {
+                        $caVal = round($scoreVal * 0.4, 1);
+                        $examVal = round($scoreVal - $caVal, 1);
+                    }
+
+                    $subPos = $exportSubjectRanks[$cs->id][$st->id] ?? '—';
+
+                    $row[] = number_format($caVal, 1);
+                    $row[] = number_format($examVal, 1);
                     $row[] = number_format($scoreVal, 1);
-                    $row[] = $subRes['grade_letter'] ?? $subRes['grade'] ?? '—';
+                    $row[] = $subPos;
                 } else {
+                    $row[] = '—';
+                    $row[] = '—';
                     $row[] = '—';
                     $row[] = '—';
                 }

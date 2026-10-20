@@ -403,6 +403,10 @@ class ImportService
         $religion = !empty($row['religion']) ? trim((string)$row['religion']) : null;
         $nationality = !empty($row['nationality']) ? trim((string)$row['nationality']) : 'Nigerian';
         $admissionDate = !empty($row['admission_date']) ? $this->normalizeDate((string)$row['admission_date']) : null;
+        $house = !empty($row['house']) ? trim((string)$row['house']) : (!empty($row['house_color']) ? trim((string)$row['house_color']) : (!empty($row['school_house']) ? trim((string)$row['school_house']) : null));
+        if ($house !== null) {
+            $house = ucfirst(strtolower($house));
+        }
 
         // 2. Reconcile Student Profile
         $student = $this->studentRepository->findByAdmissionNumber($admNo);
@@ -438,7 +442,8 @@ class ImportService
                 lga: $lga,
                 nationality: $nationality,
                 religion: $religion,
-                admissionDate: $admissionDate
+                admissionDate: $admissionDate,
+                house: $house
             );
 
             $updatedCount++;
@@ -479,7 +484,9 @@ class ImportService
                 lga: $lga,
                 nationality: $nationality,
                 religion: $religion,
-                admissionDate: $admissionDate
+                admissionDate: $admissionDate,
+                useSchoolBus: false,
+                house: $house ?: 'Blue'
             );
 
             if ($sessionId && $canonicalClassId) {

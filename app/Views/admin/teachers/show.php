@@ -60,6 +60,40 @@ $this->layout('layouts/admin', [
         </div>
     </div>
 
+    <!-- Official Digital Signature Attestation Card -->
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-800">Teacher Digital Signature (Report Card Signatory)</h3>
+            </div>
+            <span class="text-xs text-slate-400">Used for terminal report cards &amp; broadsheets</span>
+        </div>
+
+        <div class="flex flex-col md:flex-row items-center gap-6 p-4 bg-slate-50/80 rounded-xl border border-slate-200">
+            <div class="h-20 w-44 bg-white border border-slate-200 rounded-xl p-2 flex items-center justify-center flex-shrink-0 shadow-2xs">
+                <?php if (!empty($teacher->signatureUrl)): ?>
+                    <img src="<?= htmlspecialchars($teacher->signatureUrl) ?>" alt="Teacher Signature" class="max-h-full max-w-full object-contain">
+                <?php else: ?>
+                    <span class="text-xs text-slate-400 italic">No signature on file</span>
+                <?php endif; ?>
+            </div>
+
+            <form method="POST" action="/admin/teachers/<?= (int)$teacher->id ?>/signature" enctype="multipart/form-data" class="flex-1 w-full space-y-2">
+                <?= csrf_field() ?>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Upload / Replace Signature File</label>
+                <div class="flex items-center gap-3">
+                    <input type="file" name="signature_file" accept="image/*" required
+                           class="text-xs text-slate-500 file:mr-3 file:py-2 file:px-3.5 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#7B3046] file:text-white hover:file:bg-[#632738] cursor-pointer">
+                    <button type="submit" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 transition shadow-xs flex-shrink-0">
+                        Upload Signature
+                    </button>
+                </div>
+                <p class="text-[11px] text-slate-400">Allowed formats: PNG, JPG, JPEG, WEBP, SVG.</p>
+            </form>
+        </div>
+    </div>
+
     <!-- Form Teacher (Class Master) Section -->
     <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
         <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2">

@@ -231,8 +231,9 @@ class TranscriptService
 
         // Deterministic Verification Reference & QR Code
         $verificationReference = $this->generateVerificationReference($studentId, array_keys($allSessionIds));
-        $verificationUrl = "https://lms.test/verify/transcript/" . $verificationReference;
-        $qrCodeSvg = QrCode::svg($verificationUrl, 140, 2);
+        $baseUrl = $this->resolveBaseUrl();
+        $verificationUrl = $baseUrl . "/verify/transcript/" . $verificationReference;
+        $qrCodeSvg = QrCode::svg($verificationUrl, 140, 4);
 
         // Fetch Student User biodata
         $user = $student->user;
@@ -397,5 +398,23 @@ class TranscriptService
             'head_teacher_signature_url' => $settings['head_teacher_signature_url'] ?? '',
             'school_stamp_url' => $settings['school_stamp_url'] ?? '',
         ];
+    }
+
+    private function resolveBaseUrl(): string
+    {
+        if (!empty($_SERVER['HTTP_HOST'])) {
+            $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+                || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+                || (($_SERVER['SERVER_PORT'] ?? 80) == 443);
+            $scheme = $isHttps ? 'https://' : 'http://';
+            return rtrim($scheme . $_SERVER['HTTP_HOST'], '/');
+        }
+
+        $appUrl = \App\Core\Config::get('APP_URL');
+        if (!empty($appUrl)) {
+            return rtrim((string)$appUrl, '/');
+        }
+
+        return 'https://lms.test';
     }
 }

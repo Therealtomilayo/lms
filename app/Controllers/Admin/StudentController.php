@@ -99,4 +99,68 @@ class StudentController extends Controller
             'parents' => $parents,
         ]);
     }
+
+    public function edit(Request $request, string|int $id = 0): Response
+    {
+        $userContext = $request->getAttribute('user_context');
+        if (!$userContext instanceof UserContext || !AcademicPolicy::canManageAcademicStructure($userContext)) {
+            return $this->forbidden('You are not authorized to edit student records.');
+        }
+
+        $studentId = (int)$id;
+        $student = $this->studentRepository->getStudentWithFullDetails($studentId);
+        if (!$student) {
+            return Response::html('Student record not found.', 404);
+        }
+
+        $classes = $this->academicRepository->getAllClasses();
+
+        return $this->view('admin/students/edit', [
+            'title' => "Edit Student: {$student['user_name']} — Claret LMS",
+            'headerTitle' => 'Edit Student Dossier',
+            'student' => $student,
+            'classes' => $classes,
+        ]);
+    }
+
+    public function update(Request $request, string|int $id = 0): Response
+    {
+        $userContext = $request->getAttribute('user_context');
+        if (!$userContext instanceof UserContext || !AcademicPolicy::canManageAcademicStructure($userContext)) {
+            return $this->forbidden('You are not authorized to update student records.');
+        }
+
+        $studentId = (int)$id;
+        $student = $this->studentRepository->getStudentWithFullDetails($studentId);
+        if (!$student) {
+            return Response::html('Student record not found.', 404);
+        }
+
+        $name = trim((string)$request->post('name', ''));
+        $admissionNumber = trim((string)$request->post('admission_number', ''));
+        $gender = trim((string)$request->post('gender', ''));
+        $dateOfBirth = trim((string)$request->post('date_of_birth', '')) ?: null;
+        $house = trim((string)$request->post('house', 'Blue')) ?: 'Blue';
+        $stateOfOrigin = trim((string)$request->post('state_of_origin', '')) ?: null;
+        $lga = trim((string)$request->post('lga', '')) ?: null;
+        $nationality = trim((string)$request->post('nationality', 'Nigerian')) ?: 'Nigerian';
+        $religion = trim((string)$request->post('religion', '')) ?: null;
+        $currentClassId = (int)$request->post('current_class_id', 0) ?: null;
+
+        $this->studentRepository->update(
+            studentId: $studentId,
+            admissionNumber: $admissionNumber,
+            dateOfBirth: $dateOfBirth,
+            gender: $gender,
+            currentClassId: $currentClassId,
+            stateOfOrigin: $stateOfOrigin,
+            lga: $lga,
+            nationality: $nationality,
+            religion: $religion,
+            house: $house,
+            name: $name
+        );
+
+        return $this->redirectWithSuccess("/admin/students/{$studentId}", 'Student demographic dossier successfully updated.');
+    }
 }

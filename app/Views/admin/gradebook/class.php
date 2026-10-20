@@ -330,113 +330,154 @@ $this->layout('layouts/admin', [
                 <?php endif; ?>
             </div>
 
-            <!-- Detailed Students Score Table -->
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm text-slate-700 divide-y divide-slate-200">
-                    <thead class="bg-slate-100/75 text-xs font-bold text-slate-600 uppercase tracking-wider">
-                        <tr>
-                            <th scope="col" class="py-3 px-4 w-12 text-center">#</th>
-                            <th scope="col" class="py-3 px-4 min-w-[200px]">Candidate Student</th>
-                            <th scope="col" class="py-3 px-4 min-w-[130px]">Admission No</th>
-                            <?php foreach ($categories as $cat): ?>
-                                <th scope="col" class="py-3 px-4 text-center min-w-[100px]">
-                                    <div><?= e($cat->name) ?></div>
-                                    <div class="text-[10px] font-mono text-slate-400 font-normal"><?= (float)$cat->weightPercentage ?>%</div>
-                                </th>
-                            <?php endforeach; ?>
-                            <th scope="col" class="py-3 px-4 text-center min-w-[90px]">Total (100)</th>
-                            <th scope="col" class="py-3 px-4 text-center min-w-[70px]">Grade</th>
-                            <th scope="col" class="py-3 px-4 min-w-[130px]">Remark</th>
-                            <th scope="col" class="py-3 px-4 text-center min-w-[80px]">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-200 bg-white">
-                        <?php if (empty($subjectStudents)): ?>
-                            <tr>
-                                <td colspan="<?= 6 + count($categories) ?>" class="py-8 text-center text-slate-400">
-                                    No students are taking this subject for this academic session.
-                                </td>
-                            </tr>
-                        <?php else: ?>
-                            <?php $idx = 1; foreach ($subjectStudents as $student): ?>
-                                <?php
-                                $sId = $student->id;
-                                $termRes = $resultMap[$sId] ?? null;
-                                $computedScore = $termRes?->computedScore;
-                                $gradeLetter = $termRes?->gradeLetter;
-                                $remark = $termRes?->remark;
+            <!-- Detailed Students Score Table Wrapped in Admin Score Editing Form -->
+            <form method="POST" action="/admin/gradebook/<?= (int)$scs->id ?>/save" id="admin-gradebook-form">
+                <?= csrf_field() ?>
+                <input type="hidden" name="term_id" value="<?= (int)$selectedTermId ?>">
+                <input type="hidden" name="compute_results" value="1">
 
-                                // Grade badge styling
-                                $badgeColor = 'bg-slate-100 text-slate-700 border-slate-200';
-                                if ($gradeLetter === 'A') {
-                                    $badgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200 font-bold';
-                                } elseif ($gradeLetter === 'B') {
-                                    $badgeColor = 'bg-blue-50 text-blue-700 border-blue-200 font-bold';
-                                } elseif ($gradeLetter === 'C') {
-                                    $badgeColor = 'bg-sky-50 text-sky-700 border-sky-200';
-                                } elseif ($gradeLetter === 'D') {
-                                    $badgeColor = 'bg-amber-50 text-amber-700 border-amber-200';
-                                } elseif (in_array($gradeLetter, ['E', 'F'], true)) {
-                                    $badgeColor = 'bg-rose-50 text-rose-700 border-rose-200 font-bold';
-                                }
-                                ?>
-                                <tr class="hover:bg-slate-50/80 transition">
-                                    <td class="py-3 px-4 text-center text-xs text-slate-400 font-mono"><?= $idx++ ?></td>
-                                    <td class="py-3 px-4 font-semibold text-slate-900">
-                                        <div class="flex items-center gap-2.5">
-                                            <div class="w-8 h-8 rounded-full bg-brand-50 text-brand-700 font-bold text-xs flex items-center justify-center flex-shrink-0">
-                                                <?= strtoupper(substr($student->user?->name ?? 'S', 0, 1)) ?>
-                                            </div>
-                                            <span class="truncate"><?= e($student->user?->name ?? 'Student #' . $student->id) ?></span>
-                                        </div>
-                                    </td>
-                                    <td class="py-3 px-4 font-mono text-xs text-slate-600">
-                                        <span class="px-2 py-0.5 rounded bg-slate-100 border border-slate-200">
-                                            <?= e($student->admissionNumber ?: 'N/A') ?>
-                                        </span>
-                                    </td>
-                                    <?php foreach ($categories as $cat): ?>
-                                        <?php $rawScore = $scoreMatrix[$sId][$cat->id] ?? null; ?>
-                                        <td class="py-3 px-4 text-center font-mono text-xs font-semibold">
-                                            <?php if ($rawScore !== null): ?>
-                                                <span class="text-slate-900"><?= (float)$rawScore ?></span>
-                                            <?php else: ?>
-                                                <span class="text-slate-300">&mdash;</span>
-                                            <?php endif; ?>
-                                        </td>
-                                    <?php endforeach; ?>
-                                    <td class="py-3 px-4 text-center font-mono text-sm font-extrabold text-slate-900">
-                                        <?= $computedScore !== null ? (float)$computedScore : '<span class="text-slate-300 font-normal">&mdash;</span>' ?>
-                                    </td>
-                                    <td class="py-3 px-4 text-center">
-                                        <?php if ($gradeLetter): ?>
-                                            <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-xs border <?= $badgeColor ?>">
-                                                <?= e($gradeLetter) ?>
-                                            </span>
-                                        <?php else: ?>
-                                            <span class="text-slate-300 text-xs">&mdash;</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td class="py-3 px-4 text-xs text-slate-500 truncate max-w-[160px]">
-                                        <?= e($remark ?: '—') ?>
-                                    </td>
-                                    <td class="py-3 px-4 text-center">
-                                        <?php if ($termRes && $termRes->isLocked): ?>
-                                            <span class="inline-flex items-center text-amber-600" title="Locked">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                                            </span>
-                                        <?php else: ?>
-                                            <span class="inline-flex items-center text-slate-400" title="Open for Scoring">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>
-                                            </span>
-                                        <?php endif; ?>
+                <div class="bg-amber-50/70 border-b border-amber-200 px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <div class="flex items-center gap-2 text-amber-900 font-semibold">
+                        <svg class="w-4 h-4 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        <span>Admin Direct Entry Mode: Input or edit marks below and click <strong>Save & Recalculate</strong> to update student gradebooks.</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="submit" class="px-4 py-1.5 rounded-lg text-xs font-bold bg-brand-800 hover:bg-brand-900 text-white transition flex items-center gap-1.5 shadow-xs cursor-pointer">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            <span>Save & Recalculate Marks</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-slate-700 divide-y divide-slate-200">
+                        <thead class="bg-slate-100/75 text-xs font-bold text-slate-600 uppercase tracking-wider">
+                            <tr>
+                                <th scope="col" class="py-3 px-4 w-12 text-center">#</th>
+                                <th scope="col" class="py-3 px-4 min-w-[200px]">Candidate Student</th>
+                                <th scope="col" class="py-3 px-4 min-w-[130px]">Admission No</th>
+                                <?php foreach ($categories as $cat): ?>
+                                    <th scope="col" class="py-3 px-3 text-center min-w-[90px]">
+                                        <div><?= e($cat->name) ?></div>
+                                        <div class="text-[10px] font-mono text-slate-400 font-normal"><?= (float)$cat->weightPercentage ?>% (Max <?= (float)$cat->maxPoints ?>)</div>
+                                    </th>
+                                <?php endforeach; ?>
+                                <th scope="col" class="py-3 px-4 text-center min-w-[90px]">Total (100)</th>
+                                <th scope="col" class="py-3 px-4 text-center min-w-[70px]">Grade</th>
+                                <th scope="col" class="py-3 px-4 min-w-[130px]">Remark</th>
+                                <th scope="col" class="py-3 px-4 text-center min-w-[80px]">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200 bg-white">
+                            <?php if (empty($subjectStudents)): ?>
+                                <tr>
+                                    <td colspan="<?= 6 + count($categories) ?>" class="py-8 text-center text-slate-400">
+                                        No students are taking this subject for this academic session.
                                     </td>
                                 </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
+                            <?php else: ?>
+                                <?php $idx = 1; foreach ($subjectStudents as $student): ?>
+                                    <?php
+                                    $sId = $student->id;
+                                    $termRes = $resultMap[$sId] ?? null;
+                                    $computedScore = $termRes?->computedScore;
+                                    $gradeLetter = $termRes?->gradeLetter;
+                                    $remark = $termRes?->remark;
+
+                                    // Grade badge styling
+                                    $badgeColor = 'bg-slate-100 text-slate-700 border-slate-200';
+                                    if ($gradeLetter === 'A') {
+                                        $badgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200 font-bold';
+                                    } elseif ($gradeLetter === 'B') {
+                                        $badgeColor = 'bg-blue-50 text-blue-700 border-blue-200 font-bold';
+                                    } elseif ($gradeLetter === 'C') {
+                                        $badgeColor = 'bg-sky-50 text-sky-700 border-sky-200';
+                                    } elseif ($gradeLetter === 'D') {
+                                        $badgeColor = 'bg-amber-50 text-amber-700 border-amber-200';
+                                    } elseif (in_array($gradeLetter, ['E', 'F'], true)) {
+                                        $badgeColor = 'bg-rose-50 text-rose-700 border-rose-200 font-bold';
+                                    }
+                                    ?>
+                                    <tr class="hover:bg-slate-50/80 transition" id="row_student_<?= (int)$sId ?>">
+                                        <td class="py-3 px-4 text-center text-xs text-slate-400 font-mono"><?= $idx++ ?></td>
+                                        <td class="py-3 px-4 font-semibold text-slate-900">
+                                            <div class="flex items-center gap-2.5">
+                                                <div class="w-8 h-8 rounded-full bg-brand-50 text-brand-700 font-bold text-xs flex items-center justify-center flex-shrink-0">
+                                                    <?= strtoupper(substr($student->user?->name ?? 'S', 0, 1)) ?>
+                                                </div>
+                                                <span class="truncate"><?= e($student->user?->name ?? 'Student #' . $student->id) ?></span>
+                                            </div>
+                                        </td>
+                                        <td class="py-3 px-4 font-mono text-xs text-slate-600">
+                                            <span class="px-2 py-0.5 rounded bg-slate-100 border border-slate-200">
+                                                <?= e($student->admissionNumber ?: 'N/A') ?>
+                                            </span>
+                                        </td>
+                                        <?php foreach ($categories as $cat): ?>
+                                            <?php $rawScore = $scoreMatrix[$sId][$cat->id] ?? null; ?>
+                                            <td class="py-2 px-2 text-center">
+                                                <input type="number"
+                                                       step="0.01"
+                                                       min="0"
+                                                       max="<?= (float)$cat->maxPoints ?>"
+                                                       name="scores[<?= (int)$sId ?>][<?= (int)$cat->id ?>]"
+                                                       value="<?= $rawScore !== null ? htmlspecialchars((string)$rawScore) : '' ?>"
+                                                       placeholder="0.0"
+                                                       class="w-20 px-2 py-1.5 text-center text-xs font-bold font-mono rounded-lg border border-slate-300 bg-slate-50 focus:bg-white focus:ring-brand-500 focus:border-brand-500 transition">
+                                            </td>
+                                        <?php endforeach; ?>
+                                        <td class="py-3 px-4 text-center font-mono text-sm font-extrabold text-slate-900">
+                                            <?= $computedScore !== null ? (float)$computedScore : '<span class="text-slate-300 font-normal">&mdash;</span>' ?>
+                                        </td>
+                                        <td class="py-3 px-4 text-center">
+                                            <?php if ($gradeLetter): ?>
+                                                <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-xs border <?= $badgeColor ?>">
+                                                    <?= e($gradeLetter) ?>
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="text-slate-300 text-xs">&mdash;</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="py-3 px-4 text-xs text-slate-500 truncate max-w-[160px]">
+                                            <?= e($remark ?: '—') ?>
+                                        </td>
+                                        <td class="py-3 px-4 text-center">
+                                            <?php if ($termRes && $termRes->isLocked): ?>
+                                                <span class="inline-flex items-center text-amber-600" title="Locked">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="inline-flex items-center text-slate-400" title="Open for Scoring">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>
+                                                </span>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Footer Save Action Bar -->
+                <?php if (!empty($subjectStudents)): ?>
+                    <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-4">
+                        <div class="text-xs text-slate-500">
+                            Editing gradebook as <strong class="text-slate-800 font-semibold"><?= e($user->name ?? 'Administrator') ?></strong> &bull; Changes will immediately update student transcripts & broadsheets.
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <a href="/admin/gradebook/class/<?= (int)$class->id ?>?session_id=<?= (int)$selectedSessionId ?>&term_id=<?= (int)$selectedTermId ?>"
+                               class="px-4 py-2 rounded-xl text-xs font-bold bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 transition shadow-xs">
+                                Discard / Cancel
+                            </a>
+                            <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold bg-brand-700 hover:bg-brand-800 text-white transition flex items-center gap-2 shadow-sm cursor-pointer">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+                                <span>Save All Scores &amp; Recompute</span>
+                            </button>
+                        </div>
+                    </div>
+                <?php endif; ?>
+            </form>
         </div>
     <?php endif; ?>
 

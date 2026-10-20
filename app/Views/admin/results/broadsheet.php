@@ -205,8 +205,8 @@ if (!isset($settings)) {
             </div>
         </div>
 
-        <!-- Broadsheet Matrix Table Container -->
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <!-- Broadsheet Matrix Table Container (Visible on screen and print) -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden print:border-none print:shadow-none print:rounded-none">
             <?php if (empty($students)): ?>
                 <div class="p-12 text-center">
                     <p class="text-sm text-slate-500">No students are currently enrolled in this class arm for this academic session.</p>
@@ -216,113 +216,197 @@ if (!isset($settings)) {
                     <p class="text-sm text-slate-500">No curriculum subjects have been assigned to this class cohort yet.</p>
                 </div>
             <?php else: ?>
+                <!-- Authentic Broadsheet Institutional Banner (Screen & Print) -->
+                <div class="p-4 sm:p-5 border-b border-slate-200 bg-slate-50/50">
+                    <div class="text-center font-bold text-xs uppercase tracking-wider text-slate-700 pb-2 border-b border-slate-200">
+                        | <?= htmlspecialchars($settings['school_name'] ?? 'CLARET INTERNATIONAL SCHOOL, ABUJA') ?>
+                    </div>
+                    <div class="flex flex-wrap items-center justify-between gap-4 pt-3 text-xs">
+                        <span class="text-sm sm:text-base font-black tracking-wide text-slate-900 uppercase font-sans">
+                            BROAD SHEET
+                        </span>
+                        <div class="flex flex-wrap items-center gap-4 sm:gap-8 font-semibold text-slate-700 uppercase text-[11px]">
+                            <span><strong>SESSION:</strong> <?= htmlspecialchars($selectedTerm->academicSessionName ?? $selectedTerm->sessionName ?? '2025/2026') ?></span>
+                            <span><strong>TERM:</strong> <?= htmlspecialchars($selectedTerm->name ?? 'SUMMER') ?></span>
+                            <span><strong>CLASS:</strong> <?= htmlspecialchars($className) ?></span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="overflow-x-auto">
-                    <table class="min-w-full text-left text-xs border-collapse divide-y divide-slate-200">
-                        <thead class="bg-slate-50 font-semibold text-slate-700 uppercase tracking-wider">
-                            <tr>
-                                <th scope="col" class="sticky left-0 z-20 bg-slate-50 px-3 py-3 text-center border-r border-slate-200 w-12">Pos</th>
-                                <th scope="col" class="sticky left-12 z-20 bg-slate-50 px-3 py-3 border-r border-slate-200 w-28">Adm No</th>
-                                <th scope="col" class="sticky left-40 z-20 bg-slate-50 px-4 py-3 border-r border-slate-200 min-w-[180px]">Student Name</th>
-                                <th scope="col" class="px-2.5 py-3 text-center border-r border-slate-200 w-12">Sex</th>
+                    <table class="min-w-full text-left text-xs border-collapse">
+                        <!-- 3-Tier Authentic Header matching sample image -->
+                        <thead class="bg-slate-100/90 font-bold text-slate-800 uppercase tracking-wider select-none">
+                            <!-- Header Row 1: Subject Titles spanning 2 sub-columns -->
+                            <tr class="border-b border-slate-300">
+                                <th scope="col" rowspan="3" class="sticky left-0 z-20 bg-slate-100 px-2 py-2 text-center border-r border-slate-300 w-10 text-[11px]">POS</th>
+                                <th scope="col" rowspan="3" class="sticky left-10 z-20 bg-slate-100 px-2.5 py-2 border-r border-slate-300 w-24 text-[10px] font-mono">ADM NO</th>
+                                <th scope="col" rowspan="3" class="sticky left-34 z-20 bg-slate-100 px-3 py-2 border-r border-slate-300 min-w-[160px] text-[11px]">NAMES</th>
+                                <th scope="col" rowspan="3" class="px-2 py-2 text-center border-r border-slate-300 w-10 text-[10px]">SEX</th>
 
                                 <?php foreach ($classSubjects as $cs): ?>
-                                    <th scope="col" class="px-3 py-3 text-center border-r border-slate-200 min-w-[70px]" title="<?= e($cs->subject?->name ?? '') ?>">
-                                        <span class="block font-bold text-slate-900"><?= e($cs->subject?->code ?: 'SUB') ?></span>
-                                        <span class="text-[9px] text-slate-400 font-normal lowercase truncate block max-w-[65px] mx-auto"><?= e($cs->subject?->name ?? '') ?></span>
+                                    <th scope="col" colspan="2" class="px-2 py-1.5 text-center border-r border-slate-300 min-w-[80px] bg-slate-100 text-[11px] font-extrabold text-slate-900" title="<?= e($cs->subject?->name ?? '') ?>">
+                                        <?= e(strtoupper(($cs->subject?->code ? $cs->subject->code . ' ' : '') . ($cs->subject?->name ?: 'SUBJECT'))) ?>
                                     </th>
                                 <?php endforeach; ?>
 
-                                <th scope="col" class="px-3 py-3 text-center border-r border-slate-200 w-20 bg-slate-100/60 font-bold">Total</th>
-                                <th scope="col" class="px-3 py-3 text-center border-r border-slate-200 w-20 bg-slate-100/60 font-bold">Avg %</th>
-                                <th scope="col" class="px-3 py-3 text-center border-r border-slate-200 w-16 bg-slate-100/60 font-bold">Rank</th>
-                                <th scope="col" class="px-4 py-3 border-slate-200 min-w-[220px]">Form Teacher Comment</th>
+                                <th scope="col" rowspan="3" class="px-3 py-2 text-center border-r border-slate-300 w-16 bg-slate-200/70 font-black text-slate-900 text-[11px]">TOTAL</th>
+                                <th scope="col" rowspan="3" class="px-3 py-2 text-center border-r border-slate-300 w-16 bg-slate-200/70 font-black text-slate-900 text-[11px]">AVERAGE</th>
+                                <th scope="col" rowspan="3" class="px-3 py-2 text-center border-r border-slate-300 w-16 bg-slate-200/70 font-black text-slate-900 text-[11px]">POSITION</th>
+                                <th scope="col" rowspan="3" class="px-3 py-2 border-slate-300 min-w-[180px] bg-slate-100 text-[11px] font-semibold text-slate-700">REMARK</th>
+                            </tr>
+
+                            <!-- Header Row 2: CA | EXAM Subheaders -->
+                            <tr class="bg-slate-100 border-b border-slate-200 text-[9.5px]">
+                                <?php foreach ($classSubjects as $cs): ?>
+                                    <th scope="col" class="px-1.5 py-1 text-center border-r border-slate-300 font-extrabold text-slate-700 w-10">CA</th>
+                                    <th scope="col" class="px-1.5 py-1 text-center border-r border-slate-300 font-extrabold text-slate-700 w-10">EXAM</th>
+                                <?php endforeach; ?>
+                            </tr>
+
+                            <!-- Header Row 3: TOTAL | POSITION Subheaders -->
+                            <tr class="bg-slate-200/60 border-b-2 border-slate-400 text-[9px]">
+                                <?php foreach ($classSubjects as $cs): ?>
+                                    <th scope="col" class="px-1.5 py-1 text-center border-r border-slate-300 font-black text-slate-800 w-10">TOTAL</th>
+                                    <th scope="col" class="px-1.5 py-1 text-center border-r border-slate-300 font-black text-slate-800 w-10">POSITION</th>
+                                <?php endforeach; ?>
                             </tr>
                         </thead>
+
                         <tbody class="divide-y divide-slate-200 bg-white font-sans text-slate-700">
                             <?php foreach ($students as $idx => $st): ?>
                                 <?php
                                 $sm = $summaryMap[$st->id] ?? null;
                                 $rankNum = $sm?->classRank ?? ($idx + 1);
+
+                                // Compute student subject scores and totals
+                                $studentScores = [];
+                                $subDataList = [];
+                                foreach ($classSubjects as $cs) {
+                                    $subRes = $resultsMatrix[$st->id][$cs->subjectId] ?? $resultsMatrix[$st->id][$cs->id] ?? null;
+                                    $scoreVal = $subRes ? (float)($subRes['computed_score'] ?? $subRes['total_score'] ?? 0) : null;
+                                    $caVal = null;
+                                    $examVal = null;
+
+                                    if ($scoreVal !== null) {
+                                        $studentScores[] = $scoreVal;
+                                        if (!empty($subRes['breakdown_json'])) {
+                                            $bd = json_decode($subRes['breakdown_json'], true);
+                                            if (!empty($bd['categories'])) {
+                                                $cScore = 0.0;
+                                                $eScore = 0.0;
+                                                foreach ($bd['categories'] as $cat) {
+                                                    $cName = strtolower($cat['name'] ?? '');
+                                                    $w = (float)($cat['weighted_contribution'] ?? $cat['raw_score'] ?? 0);
+                                                    if (str_contains($cName, 'exam') || str_contains($cName, 'term test') || str_contains($cName, 'eta') || str_contains($cName, 'esa')) {
+                                                        $eScore += $w;
+                                                    } else {
+                                                        $cScore += $w;
+                                                    }
+                                                }
+                                                $caVal = $cScore;
+                                                $examVal = $eScore;
+                                            }
+                                        }
+                                        if ($caVal === null && $examVal === null) {
+                                            $caVal = round($scoreVal * 0.4, 1);
+                                            $examVal = round($scoreVal - $caVal, 1);
+                                        }
+                                    }
+
+                                    $subPos = $subjectRanks[$cs->id][$st->id] ?? null;
+
+                                    $subDataList[$cs->id] = [
+                                        'ca' => $caVal,
+                                        'exam' => $examVal,
+                                        'total' => $scoreVal,
+                                        'position' => $subPos,
+                                    ];
+                                }
+
+                                $rowTotal = !empty($studentScores) ? array_sum($studentScores) : ($sm?->totalScore !== null ? (float)$sm->totalScore : null);
+                                $rowAvg = !empty($studentScores) ? ($rowTotal / count($studentScores)) : ($sm?->averageScore !== null ? (float)$sm->averageScore : null);
                                 ?>
-                                <tr class="hover:bg-slate-50/70 transition">
-                                    <td class="sticky left-0 z-10 bg-white px-3 py-3 text-center font-bold text-slate-900 border-r border-slate-200">
+
+                                <!-- Student Row 1 (CA | EXAM on line 1) -->
+                                <?php
+                                $rankNum = $sm?->rankInClass ?? $sm?->classRank ?? ($idx + 1);
+                                $rankVal = $sm?->rankInClass ?? $sm?->classRank ?? null;
+                                ?>
+                                <tr class="hover:bg-slate-50/70 transition border-t border-slate-300">
+                                    <td rowspan="2" class="sticky left-0 z-10 bg-white px-2 py-1.5 text-center font-bold text-slate-800 border-r border-b border-slate-300 text-xs">
                                         <?php if ($rankNum === 1): ?>
-                                            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-800 text-xs font-black">1</span>
+                                             <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-800 text-[11px] font-black">1</span>
                                         <?php elseif ($rankNum === 2): ?>
-                                            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-200 text-slate-800 text-xs font-black">2</span>
+                                             <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-200 text-slate-800 text-[11px] font-black">2</span>
                                         <?php elseif ($rankNum === 3): ?>
-                                            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-100 text-orange-800 text-xs font-black">3</span>
+                                             <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-orange-100 text-orange-800 text-[11px] font-black">3</span>
                                         <?php else: ?>
-                                            <span class="text-slate-500 font-mono text-xs"><?= $rankNum ?></span>
+                                             <span class="text-slate-500 font-mono text-[11px]"><?= $rankNum ?></span>
                                         <?php endif; ?>
                                     </td>
 
-                                    <td class="sticky left-12 z-10 bg-white px-3 py-3 font-mono text-[11px] text-slate-600 border-r border-slate-200 whitespace-nowrap">
+                                    <td rowspan="2" class="sticky left-10 z-10 bg-white px-2.5 py-1.5 font-mono text-[10.5px] text-slate-600 border-r border-b border-slate-300 whitespace-nowrap">
                                         <?= e($st->admissionNumber) ?>
                                     </td>
 
-                                    <td class="sticky left-40 z-10 bg-white px-4 py-3 font-semibold text-slate-900 border-r border-slate-200 whitespace-nowrap">
-                                        <?= e($st->name) ?>
+                                    <td rowspan="2" class="sticky left-34 z-10 bg-white px-3 py-1.5 font-bold text-slate-900 border-r border-b border-slate-300 whitespace-nowrap text-xs">
+                                        <?= e(strtoupper($st->name)) ?>
                                     </td>
 
-                                    <td class="px-2.5 py-3 text-center text-[11px] text-slate-500 border-r border-slate-200 uppercase">
+                                    <td rowspan="2" class="px-2 py-1.5 text-center text-[10.5px] text-slate-500 border-r border-b border-slate-300 uppercase font-bold">
                                         <?= $st->gender ? substr($st->gender, 0, 1) : '—' ?>
                                     </td>
 
-                                    <?php 
-                                    $studentScores = [];
-                                    foreach ($classSubjects as $cs): 
-                                        $subRes = $resultsMatrix[$st->id][$cs->subjectId] ?? $resultsMatrix[$st->id][$cs->id] ?? null;
-                                        $score = $subRes ? (float)($subRes['computed_score'] ?? $subRes['total_score'] ?? 0) : null;
-                                        $grade = $subRes['grade_letter'] ?? $subRes['grade'] ?? null;
-                                        if ($score !== null) {
-                                            $studentScores[] = $score;
-                                        }
+                                    <?php foreach ($classSubjects as $cs):
+                                        $d = $subDataList[$cs->id];
                                     ?>
-                                        <td class="px-2 py-3 text-center border-r border-slate-200 whitespace-nowrap font-mono text-xs">
-                                            <?php if ($score !== null): ?>
-                                                <div class="flex items-center justify-center gap-1">
-                                                    <span class="font-bold <?= $score < 40 ? 'text-rose-600' : 'text-slate-800' ?>">
-                                                        <?= number_format($score, 0) ?>
-                                                    </span>
-                                                    <?php if ($grade): ?>
-                                                        <span class="text-[9px] font-sans font-bold px-1 rounded <?= in_array($grade, ['A', 'A+']) ? 'bg-emerald-100 text-emerald-800' : (in_array($grade, ['B', 'C']) ? 'bg-sky-100 text-sky-800' : ($grade === 'D' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800')) ?>">
-                                                            <?= e($grade) ?>
-                                                        </span>
-                                                    <?php endif; ?>
-                                                </div>
-                                            <?php else: ?>
-                                                <span class="text-slate-300 italic">—</span>
-                                            <?php endif; ?>
+                                        <td class="px-1.5 py-1 text-center border-r border-slate-200 font-mono text-[11px] text-slate-800 bg-white">
+                                            <?= $d['ca'] !== null ? number_format($d['ca'], 0) : '—' ?>
+                                        </td>
+                                        <td class="px-1.5 py-1 text-center border-r border-slate-300 font-mono text-[11px] text-slate-800 bg-white">
+                                            <?= $d['exam'] !== null ? number_format($d['exam'], 0) : '—' ?>
                                         </td>
                                     <?php endforeach; ?>
 
-                                    <?php
-                                    $rowTotal = !empty($studentScores) ? array_sum($studentScores) : ($sm?->totalScore !== null ? (float)$sm->totalScore : null);
-                                    $rowAvg = !empty($studentScores) ? ($rowTotal / count($studentScores)) : ($sm?->averageScore !== null ? (float)$sm->averageScore : null);
-                                    ?>
-                                    <td class="px-3 py-3 text-center font-mono font-extrabold text-slate-900 bg-slate-50/50 border-r border-slate-200">
-                                        <?= $rowTotal !== null ? number_format($rowTotal, 1) : '—' ?>
+                                    <td rowspan="2" class="px-2 py-1.5 text-center font-mono font-extrabold text-slate-900 bg-slate-100/70 border-r border-b border-slate-300 text-xs">
+                                        <?= $rowTotal !== null ? number_format($rowTotal, 0) : '—' ?>
                                     </td>
 
-                                    <td class="px-3 py-3 text-center font-mono font-black text-brand-700 bg-slate-50/50 border-r border-slate-200 text-xs">
-                                        <?= $rowAvg !== null ? number_format($rowAvg, 1) . '%' : '—' ?>
+                                    <td rowspan="2" class="px-2 py-1.5 text-center font-mono font-black text-brand-700 bg-slate-100/70 border-r border-b border-slate-300 text-xs">
+                                        <?= $rowAvg !== null ? number_format($rowAvg, 1) : '—' ?>
                                     </td>
 
-                                    <td class="px-3 py-3 text-center font-bold text-slate-800 bg-slate-50/50 border-r border-slate-200">
-                                        <?= $sm?->classRank ?? '—' ?>
+                                    <td rowspan="2" class="px-2 py-1.5 text-center font-black text-slate-900 bg-slate-100/70 border-r border-b border-slate-300 text-xs font-mono">
+                                        <?= $rankVal ? (is_numeric($rankVal) ? ((function($n){ $e=['TH','ST','ND','RD','TH','TH','TH','TH','TH','TH']; return (($n%100)>=11&&($n%100)<=13)?($n.'TH'):($n.($e[$n%10]??'TH')); })((int)$rankVal)) : $rankVal) : '—' ?>
                                     </td>
 
-                                    <td class="px-4 py-3 text-slate-600 text-xs italic truncate max-w-xs">
+                                    <td rowspan="2" class="px-3 py-1.5 text-slate-600 text-xs italic truncate max-w-xs border-b border-slate-300">
                                         <?= !empty($sm?->classTeacherRemark) ? e($sm->classTeacherRemark) : '<span class="text-slate-300 not-italic">—</span>' ?>
                                     </td>
                                 </tr>
+
+                                <!-- Student Row 2 (TOTAL | POSITION on line 2) -->
+                                <tr class="hover:bg-slate-50/70 transition border-b border-slate-300 bg-slate-50/40">
+                                    <?php foreach ($classSubjects as $cs):
+                                        $d = $subDataList[$cs->id];
+                                    ?>
+                                        <td class="px-1.5 py-1 text-center border-r border-slate-200 font-mono font-bold text-[11px] <?= ($d['total'] !== null && $d['total'] < 40) ? 'text-rose-600' : 'text-slate-900' ?>">
+                                            <?= $d['total'] !== null ? number_format($d['total'], 0) : '—' ?>
+                                        </td>
+                                        <td class="px-1.5 py-1 text-center border-r border-slate-300 font-bold text-[10px] text-slate-800 font-mono">
+                                            <?= $d['position'] !== null ? $d['position'] : '—' ?>
+                                        </td>
+                                    <?php endforeach; ?>
+                                </tr>
+
                             <?php endforeach; ?>
                         </tbody>
-                        <tfoot class="bg-slate-100/90 font-semibold text-slate-800 text-xs border-t-2 border-slate-300">
+
+                        <tfoot class="bg-slate-100 font-bold text-slate-800 text-xs border-t-2 border-slate-400">
                             <!-- Subject Averages Row -->
                             <tr>
-                                <td colspan="4" class="sticky left-0 z-10 bg-slate-100 px-4 py-3 font-bold text-slate-900 uppercase tracking-wider text-right border-r border-slate-200">
+                                <td colspan="4" class="sticky left-0 z-10 bg-slate-100 px-3 py-2 font-bold text-slate-900 uppercase tracking-wider text-right border-r border-slate-300 text-[11px]">
                                     Subject Class Mean:
                                 </td>
                                 <?php foreach ($classSubjects as $cs): ?>
@@ -330,12 +414,12 @@ if (!isset($settings)) {
                                     $stats = $subjectAverages[$cs->subjectId] ?? null;
                                     $avg = $stats['avg'] ?? null;
                                     ?>
-                                    <td class="px-2 py-3 text-center font-mono font-bold text-slate-800 border-r border-slate-200">
+                                    <td colspan="2" class="px-2 py-2 text-center font-mono font-black text-slate-900 border-r border-slate-300 text-[11px]">
                                         <?= $avg !== null ? number_format((float)$avg, 1) : '—' ?>
                                     </td>
                                 <?php endforeach; ?>
-                                <td colspan="4" class="px-4 py-3 text-slate-500 text-xs">
-                                    <?= $classMean !== null ? "Overall Class Mean: <strong>{$classMean}%</strong>" : '' ?>
+                                <td colspan="4" class="px-3 py-2 text-slate-700 text-xs font-semibold">
+                                    <?= $classMean !== null ? "Overall Class Mean: <strong class=\"text-brand-700\">{$classMean}%</strong>" : '' ?>
                                 </td>
                             </tr>
                         </tfoot>
@@ -380,27 +464,50 @@ if (!isset($settings)) {
 @media print {
     @page {
         size: A4 landscape;
-        margin: 10mm;
+        margin: 6mm;
     }
-    body {
+    html, body {
         background: white !important;
-        color: black !important;
-        font-size: 9pt !important;
+        color: #0f172a !important;
+        font-size: 7.5pt !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
     }
-    .screen-only, aside, header, nav {
+    .screen-only, aside, header, nav, #sidebar-navigation, [role="navigation"] {
         display: none !important;
     }
     .print-only {
         display: block !important;
     }
+    main {
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: visible !important;
+        width: 100% !important;
+    }
+    .overflow-x-auto {
+        overflow: visible !important;
+    }
     table {
         width: 100% !important;
-        font-size: 8pt !important;
+        font-size: 6.5pt !important;
         border-collapse: collapse !important;
+        table-layout: auto !important;
+    }
+    thead {
+        display: table-header-group !important;
+    }
+    tbody tr {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
     }
     th, td {
-        padding: 3px 4px !important;
-        border: 1px solid #cbd5e1 !important;
+        padding: 2px 2.5px !important;
+        border: 1px solid #94a3b8 !important;
+        word-break: normal !important;
+        white-space: nowrap !important;
     }
     .sticky {
         position: static !important;

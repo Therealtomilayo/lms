@@ -42,7 +42,7 @@ $fullClassName = $childClass . $arm;
     <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div class="flex items-center gap-4">
-                <div class="relative flex-shrink-0">
+                <div class="relative flex-shrink-0 group">
                     <?php if (!empty($student->avatarUrl)): ?>
                         <img src="<?= e($student->avatarUrl) ?>" alt="<?= e($student->name) ?>" class="w-14 h-14 rounded-full object-cover border-2 border-white shadow-xs">
                     <?php else: ?>
@@ -50,6 +50,13 @@ $fullClassName = $childClass . $arm;
                             <?= strtoupper(substr($student->name, 0, 1)) ?>
                         </div>
                     <?php endif; ?>
+                    <button type="button" onclick="openPassportModal()" title="Upload Passport Photograph" 
+                            class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white text-slate-700 hover:text-brand-600 border border-slate-200 shadow-sm flex items-center justify-center transition hover:scale-110">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </button>
                 </div>
                 <div>
                     <!-- Breadcrumbs -->
@@ -86,6 +93,14 @@ $fullClassName = $childClass . $arm;
 
             <!-- Quick Action Toolbar -->
             <div class="flex flex-wrap items-center gap-2">
+                <button type="button" onclick="openPassportModal()" 
+                   class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 shadow-xs transition">
+                    <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>Upload Passport</span>
+                </button>
                 <a href="/parent/children/<?= (int)$student->id ?>/grades" 
                    class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-700 text-white shadow-xs transition">
                     <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
@@ -432,6 +447,262 @@ $fullClassName = $childClass . $arm;
                     </div>
                 <?php endif; ?>
             </div>
+    </div>
+</div>
+
+<!-- Passport Upload Modal (Single & Batch) -->
+<div id="passportModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="passportModalTitle" role="dialog" aria-modal="true">
+    <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity" onclick="closePassportModal()"></div>
+
+    <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+        <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-2xl border border-slate-200">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-slate-50/50">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-[#7B3046]/10 text-[#7B3046] flex items-center justify-center font-bold">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900" id="passportModalTitle">Student Passport Photograph</h3>
+                        <p class="text-xs text-slate-500">Official student identity photo for reports, ID dockets, and profiles</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closePassportModal()" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <?php $allChildren = $children ?? [$student]; ?>
+            <?php if (count($allChildren) > 1): ?>
+                <!-- Modal Tabs -->
+                <div class="flex border-b border-slate-200 px-6 bg-slate-50">
+                    <button type="button" id="tabBtnSingle" onclick="switchPassportTab('single')" 
+                            class="py-3 px-4 text-xs font-bold border-b-2 border-brand-600 text-brand-600 transition">
+                        <?= htmlspecialchars($student->name) ?> (Active)
+                    </button>
+                    <button type="button" id="tabBtnBatch" onclick="switchPassportTab('batch')" 
+                            class="py-3 px-4 text-xs font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition flex items-center gap-1.5">
+                        <span>Multi-Ward Batch Upload</span>
+                        <span class="px-1.5 py-0.2 rounded-full bg-slate-200 text-slate-700 text-[10px]"><?= count($allChildren) ?></span>
+                    </button>
+                </div>
+            <?php endif; ?>
+
+            <div class="p-6">
+                <!-- Single Child Form -->
+                <div id="singlePassportView">
+                    <form action="/parent/children/<?= (int)$student->id ?>/passport" method="POST" enctype="multipart/form-data" class="space-y-5">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="redirect_to" value="/parent/children/<?= (int)$student->id ?>">
+
+                        <div class="flex flex-col sm:flex-row items-center gap-6 p-4 rounded-xl bg-slate-50 border border-slate-100">
+                            <!-- Live Preview Box -->
+                            <div class="relative flex-shrink-0">
+                                <div id="singlePreviewContainer" class="w-28 h-28 rounded-2xl overflow-hidden border-2 border-dashed border-slate-300 bg-white shadow-xs flex items-center justify-center">
+                                    <?php if (!empty($student->avatarUrl)): ?>
+                                        <img id="singleAvatarPreview" src="<?= e($student->avatarUrl) ?>" alt="<?= e($student->name) ?>" class="w-full h-full object-cover">
+                                    <?php else: ?>
+                                        <div id="singleAvatarPlaceholder" class="w-full h-full bg-[#7B3046]/10 text-[#7B3046] font-extrabold text-3xl flex items-center justify-center">
+                                            <?= strtoupper(substr($student->name, 0, 1)) ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                                <span class="absolute -bottom-2 inset-x-0 mx-auto w-max px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-white shadow-xs">
+                                    Preview
+                                </span>
+                            </div>
+
+                            <div class="flex-1 text-center sm:text-left space-y-2">
+                                <h4 class="text-sm font-bold text-slate-900"><?= htmlspecialchars($student->name) ?></h4>
+                                <p class="text-xs text-slate-500">
+                                    Adm: <strong class="text-slate-700"><?= htmlspecialchars($student->admissionNumber) ?></strong> &bull; 
+                                    Class: <strong class="text-slate-700"><?= htmlspecialchars($fullClassName) ?></strong>
+                                </p>
+                                <label for="singleFileInput" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-700 text-white cursor-pointer shadow-xs transition">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                                    </svg>
+                                    <span>Choose New Photograph</span>
+                                </label>
+                                <input type="file" id="singleFileInput" name="passport" accept="image/png,image/jpeg,image/webp" class="hidden" onchange="previewSingleFile(this)">
+                                <p id="singleFileName" class="text-[11px] text-slate-500 italic">No file chosen yet</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 flex items-start gap-2.5">
+                            <svg class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <div>
+                                <strong class="font-bold">Passport Guidelines:</strong> Accepted formats are JPG, PNG, and WebP (Max 5MB). Photo must show full front-facing head and shoulders against a light, neutral background.
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                            <button type="button" onclick="closePassportModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition">
+                                Cancel
+                            </button>
+                            <button type="submit" id="singleSubmitBtn" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-700 text-white shadow-xs transition disabled:opacity-50" disabled>
+                                <span>Upload & Save Passport</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <?php if (count($allChildren) > 1): ?>
+                    <!-- Batch Upload Form -->
+                    <div id="batchPassportView" class="hidden space-y-5">
+                        <form action="/parent/passports/batch" method="POST" enctype="multipart/form-data" class="space-y-5" id="batchPassportForm">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="redirect_to" value="/parent/children/<?= (int)$student->id ?>">
+
+                            <div class="bg-sky-50 border border-sky-200 rounded-xl p-3 text-xs text-sky-800">
+                                <p class="font-semibold">Upload photos for each of your enrolled wards below, or use the multi-file picker to choose photos simultaneously.</p>
+                            </div>
+
+                            <!-- Ward List with per-child inputs -->
+                            <div class="space-y-3 max-h-72 overflow-y-auto pr-1">
+                                <?php foreach ($allChildren as $ward): 
+                                    $wClass = $ward->currentClass?->name ?? ($ward->className ?: 'Assigned Class');
+                                ?>
+                                    <div class="flex items-center justify-between gap-4 p-3 rounded-xl bg-slate-50 border border-slate-200">
+                                        <div class="flex items-center gap-3 min-w-0">
+                                            <div class="w-10 h-10 rounded-full overflow-hidden bg-slate-200 flex-shrink-0 flex items-center justify-center font-bold text-slate-700" id="batchWardThumbContainer_<?= (int)$ward->id ?>">
+                                                <?php if (!empty($ward->avatarUrl)): ?>
+                                                    <img src="<?= e($ward->avatarUrl) ?>" alt="<?= e($ward->name) ?>" class="w-full h-full object-cover" id="batchWardThumb_<?= (int)$ward->id ?>">
+                                                <?php else: ?>
+                                                    <span id="batchWardInitial_<?= (int)$ward->id ?>"><?= strtoupper(substr($ward->name, 0, 1)) ?></span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div class="min-w-0">
+                                                <h5 class="text-xs font-bold text-slate-900 truncate"><?= htmlspecialchars($ward->name) ?></h5>
+                                                <p class="text-[11px] text-slate-500 font-mono">Adm: <?= htmlspecialchars($ward->admissionNumber) ?> &bull; <?= htmlspecialchars($wClass) ?></p>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex items-center gap-2">
+                                            <label for="batchFile_<?= (int)$ward->id ?>" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 cursor-pointer shadow-2xs transition">
+                                                Select Photo
+                                            </label>
+                                            <input type="file" id="batchFile_<?= (int)$ward->id ?>" name="passports[<?= (int)$ward->id ?>]" accept="image/png,image/jpeg,image/webp" class="hidden" onchange="previewBatchWardFile(this, <?= (int)$ward->id ?>)">
+                                            <span id="batchFileName_<?= (int)$ward->id ?>" class="text-[11px] text-slate-400 italic max-w-[100px] truncate">None</span>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+
+                            <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                                <button type="button" onclick="closePassportModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition">
+                                    Cancel
+                                </button>
+                                <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-[#7B3046] hover:bg-[#68273a] text-white shadow-xs transition">
+                                    <span>Upload Selected Passports</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
 </div>
+
+<script>
+function openPassportModal() {
+    var modal = document.getElementById('passportModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+    }
+}
+
+function closePassportModal() {
+    var modal = document.getElementById('passportModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+    }
+}
+
+function switchPassportTab(tab) {
+    var singleView = document.getElementById('singlePassportView');
+    var batchView = document.getElementById('batchPassportView');
+    var tabBtnSingle = document.getElementById('tabBtnSingle');
+    var tabBtnBatch = document.getElementById('tabBtnBatch');
+
+    if (tab === 'single') {
+        if (singleView) singleView.classList.remove('hidden');
+        if (batchView) batchView.classList.add('hidden');
+        if (tabBtnSingle) {
+            tabBtnSingle.classList.add('border-brand-600', 'text-brand-600');
+            tabBtnSingle.classList.remove('border-transparent', 'text-slate-500');
+        }
+        if (tabBtnBatch) {
+            tabBtnBatch.classList.remove('border-brand-600', 'text-brand-600');
+            tabBtnBatch.classList.add('border-transparent', 'text-slate-500');
+        }
+    } else {
+        if (singleView) singleView.classList.add('hidden');
+        if (batchView) batchView.classList.remove('hidden');
+        if (tabBtnBatch) {
+            tabBtnBatch.classList.add('border-brand-600', 'text-brand-600');
+            tabBtnBatch.classList.remove('border-transparent', 'text-slate-500');
+        }
+        if (tabBtnSingle) {
+            tabBtnSingle.classList.remove('border-brand-600', 'text-brand-600');
+            tabBtnSingle.classList.add('border-transparent', 'text-slate-500');
+        }
+    }
+}
+
+function previewSingleFile(input) {
+    if (input.files && input.files[0]) {
+        var file = input.files[0];
+        var nameSpan = document.getElementById('singleFileName');
+        var submitBtn = document.getElementById('singleSubmitBtn');
+        if (nameSpan) nameSpan.textContent = file.name;
+        if (submitBtn) submitBtn.disabled = false;
+
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var container = document.getElementById('singlePreviewContainer');
+            if (container) {
+                container.innerHTML = '<img src="' + e.target.result + '" class="w-full h-full object-cover">';
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function previewBatchWardFile(input, wardId) {
+    if (input.files && input.files[0]) {
+        var file = input.files[0];
+        var nameSpan = document.getElementById('batchFileName_' + wardId);
+        if (nameSpan) {
+            nameSpan.textContent = file.name;
+            nameSpan.classList.remove('text-slate-400');
+            nameSpan.classList.add('text-emerald-600', 'font-semibold');
+        }
+
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var container = document.getElementById('batchWardThumbContainer_' + wardId);
+            if (container) {
+                container.innerHTML = '<img src="' + e.target.result + '" class="w-full h-full object-cover">';
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closePassportModal();
+    }
+});
+</script>

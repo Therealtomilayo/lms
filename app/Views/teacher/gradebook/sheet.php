@@ -76,17 +76,31 @@
     <?php endif; ?>
 
     <!-- Gradebook Sheet Container -->
-    <?php if (empty($categories)): ?>
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-12 text-center">
-            <div class="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 mx-auto flex items-center justify-center mb-4">
-                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
+    <?php if (empty($categories)): 
+        $levelName = $classSubject->schoolClass?->academicLevel?->name ?? ($classSubject->schoolClass?->name ?? 'this class');
+    ?>
+        <div class="bg-white rounded-2xl border-2 border-dashed border-amber-200 bg-amber-50/20 shadow-xs p-12 text-center">
+            <div class="w-16 h-16 rounded-2xl bg-amber-100 text-amber-700 mx-auto flex items-center justify-center mb-4 shadow-2xs">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                 </svg>
             </div>
-            <h3 class="text-base font-bold text-slate-900">No Assessment Categories Configured</h3>
-            <p class="text-xs text-slate-500 mt-1.5 max-w-md mx-auto">
-                Assessment categories (such as Continuous Assessment CA 1, CA 2, and Final Exam) must be configured by an administrator for this academic term before scores can be submitted.
+            <h3 class="text-lg font-bold text-slate-900">Assessment Categories Not Configured for <?= htmlspecialchars($levelName) ?></h3>
+            <p class="text-sm text-slate-600 mt-2 max-w-lg mx-auto leading-relaxed">
+                No grading categories (e.g. Continuous Assessment &amp; Examination) have been assigned to the <strong><?= htmlspecialchars($levelName) ?></strong> level for <strong><?= htmlspecialchars($term->name) ?></strong>.
             </p>
+            <p class="text-xs text-amber-800 font-medium mt-2 max-w-md mx-auto">
+                Scores cannot be entered or computed until an administrator configures categories for this educational stage/level.
+            </p>
+            <?php if (!empty($user) && ($user->isAdmin() || $user->isSuperAdmin())): ?>
+                <div class="mt-6">
+                    <a href="/admin/assessment-categories" 
+                       class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-amber-700 hover:bg-amber-800 transition shadow-sm">
+                        <span>Configure Categories in Admin Portal</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                    </a>
+                </div>
+            <?php endif; ?>
         </div>
     <?php else: ?>
         <form method="POST" action="/teacher/gradebook/<?= (int)$classSubject->id ?>/save" class="space-y-6" id="gradebook-form">

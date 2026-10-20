@@ -213,4 +213,191 @@ class ChildController extends Controller
             return Response::html('<h1>404 Not Found</h1><p>' . htmlspecialchars($e->getMessage()) . '</p>', 404);
         }
     }
+
+    /**
+     * Upload single passport photograph for a linked ward.
+     * Route: POST /parent/children/{studentId}/passport
+     */
+    public function uploadPassport(Request $request, array|string|int $params = []): Response
+    {
+        $userContext = $this->getUserContext($request);
+        if (!$userContext) {
+            return Response::redirect('/login');
+        }
+
+        $studentId = is_array($params) ? (int)($params['studentId'] ?? 0) : (int)$params;
+        if ($studentId <= 0) {
+            $studentId = (int)($request->getAttribute('studentId') ?? $request->input('student_id', 0));
+        }
+
+        try {
+            $student = $this->parentService->validateChildAccess($userContext, $studentId);
+            $file = $_FILES['passport'] ?? null;
+
+            if (!$file || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+                $this->setFlash($request, 'error', 'Please select a valid image file to upload.');
+                return Response::redirect("/parent/children/{$studentId}");
+            }
+
+            $url = $this->processPassportUpload($file, (int)$student->id);
+            if (!$url) {
+                $this->setFlash($request, 'error', 'Invalid file type or size. Only JPG, PNG, and WebP images up to 5MB are allowed.');
+                return Response::redirect("/parent/children/{$studentId}");
+            }
+
+            if (!empty($student->userId)) {
+                $pdo = \App\Core\Database::getInstance();
+                $stmt = $pdo->prepare('UPDATE users SET avatar_url = :url, updated_at = NOW() WHERE id = :uid');
+                $stmt->execute([':url' => $url, ':uid' => $student->userId]);
+            }
+
+            $this->setFlash($request, 'success', "Passport photograph updated successfully for {$student->name}.");
+            $redirectUrl = $request->input('redirect_to') ?: "/parent/children/{$studentId}";
+            return Response::redirect($redirectUrl);
+        } catch (\Throwable $e) {
+            $this->setFlash($request, 'error', 'Error uploading passport: ' . $e->getMessage());
+            $redirectUrl = $request->input('redirect_to') ?: "/parent/children/{$studentId}";
+            return Response::redirect($redirectUrl);
+        }
+    }
+
+    /**
+     * Batch upload passport photographs for multiple wards.
+     * Route: POST /parent/passports/batch
+     */
+    public function batchUploadPassports(Request $request): Response
+    {
+        $userContext = $this->getUserContext($request);
+        if (!$userContext) {
+            return Response::redirect('/login');
+        }
+
+        $linkedChildren = $this->parentService->getLinkedChildren($userContext);
+        $childrenById = [];
+        foreach ($linkedChildren as $child) {
+            $childrenById[(int)$child->id] = $child;
+        }
+
+        $pdo = \App\Core\Database::getInstance();
+        $successCount = 0;
+
+        // Mode 1: Individual file inputs keyed by student_id: name="passports[student_id]"
+        if (isset($_FILES['passports']['name']) && is_array($_FILES['passports']['name'])) {
+            foreach ($_FILES['passports']['name'] as $sId => $name) {
+                $studentId = (int)$sId;
+                if (!isset($childrenById[$studentId])) {
+                    continue;
+                }
+
+                $child = $childrenById[$studentId];
+                $fileError = $_FILES['passports']['error'][$sId] ?? UPLOAD_ERR_NO_FILE;
+                if ($fileError !== UPLOAD_ERR_OK) {
+                    continue;
+                }
+
+                $singleFile = [
+                    'name' => $_FILES['passports']['name'][$sId],
+                    'type' => $_FILES['passports']['type'][$sId],
+                    'tmp_name' => $_FILES['passports']['tmp_name'][$sId],
+                    'error' => $_FILES['passports']['error'][$sId],
+                    'size' => $_FILES['passports']['size'][$sId],
+                ];
+
+                $url = $this->processPassportUpload($singleFile, $studentId);
+                if ($url && !empty($child->userId)) {
+                    $stmt = $pdo->prepare('UPDATE users SET avatar_url = :url, updated_at = NOW() WHERE id = :uid');
+                    $stmt->execute([':url' => $url, ':uid' => $child->userId]);
+                    $successCount++;
+                }
+            }
+        }
+
+        // Mode 2: Multi-upload input supporting multiple files: name="multiple_passports[]" multiple
+        if (isset($_FILES['multiple_passports']['name']) && is_array($_FILES['multiple_passports']['name'])) {
+            $targetStudentIds = (array)($request->input('target_student_ids') ?? []);
+            foreach ($_FILES['multiple_passports']['name'] as $idx => $name) {
+                $studentId = isset($targetStudentIds[$idx]) ? (int)$targetStudentIds[$idx] : 0;
+                if ($studentId <= 0 || !isset($childrenById[$studentId])) {
+                    continue;
+                }
+
+                $child = $childrenById[$studentId];
+                $fileError = $_FILES['multiple_passports']['error'][$idx] ?? UPLOAD_ERR_NO_FILE;
+                if ($fileError !== UPLOAD_ERR_OK) {
+                    continue;
+                }
+
+                $singleFile = [
+                    'name' => $_FILES['multiple_passports']['name'][$idx],
+                    'type' => $_FILES['multiple_passports']['type'][$idx],
+                    'tmp_name' => $_FILES['multiple_passports']['tmp_name'][$idx],
+                    'error' => $_FILES['multiple_passports']['error'][$idx],
+                    'size' => $_FILES['multiple_passports']['size'][$idx],
+                ];
+
+                $url = $this->processPassportUpload($singleFile, $studentId);
+                if ($url && !empty($child->userId)) {
+                    $stmt = $pdo->prepare('UPDATE users SET avatar_url = :url, updated_at = NOW() WHERE id = :uid');
+                    $stmt->execute([':url' => $url, ':uid' => $child->userId]);
+                    $successCount++;
+                }
+            }
+        }
+
+        if ($successCount > 0) {
+            $this->setFlash($request, 'success', "Successfully uploaded passport photograph(s) for {$successCount} ward(s).");
+        } else {
+            $this->setFlash($request, 'error', 'No valid passport photographs were processed. Please select PNG, JPG, or WebP files under 5MB.');
+        }
+
+        $selectedChildId = Session::get('_selected_child_id');
+        $redirectUrl = $request->input('redirect_to') ?: ($selectedChildId ? "/parent/children/{$selectedChildId}" : '/parent/dashboard');
+        return Response::redirect($redirectUrl);
+    }
+
+    /**
+     * Helper to validate and save uploaded passport image.
+     */
+    private function processPassportUpload(array $file, int $studentId): ?string
+    {
+        $allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+        $allowedExts = ['jpg', 'jpeg', 'png', 'webp'];
+        $maxBytes = 5 * 1024 * 1024; // 5MB
+
+        if (($file['size'] ?? 0) <= 0 || ($file['size'] ?? 0) > $maxBytes) {
+            return null;
+        }
+
+        $tmpPath = $file['tmp_name'] ?? '';
+        if (!is_uploaded_file($tmpPath)) {
+            return null;
+        }
+
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime = finfo_file($finfo, $tmpPath);
+        finfo_close($finfo);
+
+        if (!in_array($mime, $allowedMimes, true)) {
+            return null;
+        }
+
+        $ext = strtolower(pathinfo($file['name'] ?? '', PATHINFO_EXTENSION));
+        if (!in_array($ext, $allowedExts, true)) {
+            $ext = ($mime === 'image/png') ? 'png' : (($mime === 'image/webp') ? 'webp' : 'jpg');
+        }
+
+        $targetDir = dirname(__DIR__, 3) . '/public/assets/uploads/passports';
+        if (!is_dir($targetDir)) {
+            mkdir($targetDir, 0755, true);
+        }
+
+        $filename = "passport_student_{$studentId}_" . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+        $destPath = $targetDir . '/' . $filename;
+
+        if (!move_uploaded_file($tmpPath, $destPath)) {
+            return null;
+        }
+
+        return "/assets/uploads/passports/{$filename}";
+    }
 }

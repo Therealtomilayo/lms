@@ -248,6 +248,20 @@ class TeacherRepository
         ]);
     }
 
+    public function updateSignatureUrl(int $id, string $signatureUrl): bool
+    {
+        $now = date('Y-m-d H:i:s');
+        $stmt = $this->pdo->prepare(
+            'UPDATE `teachers` SET `signature_url` = :signature_url, `updated_at` = :updated_at WHERE `id` = :id'
+        );
+
+        return $stmt->execute([
+            ':id' => $id,
+            ':signature_url' => trim($signatureUrl),
+            ':updated_at' => $now,
+        ]);
+    }
+
     /**
      * Generate a unique teacher staff ID that does not clash with existing records.
      */

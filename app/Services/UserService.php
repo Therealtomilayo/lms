@@ -146,7 +146,8 @@ class UserService
                 nationality: $data['nationality'] ?? 'Nigerian',
                 religion: $data['religion'] ?? null,
                 admissionDate: $data['admission_date'] ?? null,
-                useSchoolBus: !empty($data['use_school_bus'])
+                useSchoolBus: !empty($data['use_school_bus']),
+                house: !empty($data['house']) ? trim((string)$data['house']) : 'Blue'
             );
 
             if ($classId !== null && $classId > 0) {
@@ -286,7 +287,8 @@ class UserService
                     nationality: $data['nationality'] ?? 'Nigerian',
                     religion: $data['religion'] ?? null,
                     admissionDate: $data['admission_date'] ?? null,
-                    useSchoolBus: !empty($data['use_school_bus'])
+                    useSchoolBus: !empty($data['use_school_bus']),
+                    house: !empty($data['house']) ? trim((string)$data['house']) : 'Blue'
                 );
 
                 if ($classId !== null && $classId > 0) {
@@ -311,7 +313,8 @@ class UserService
                     nationality: array_key_exists('nationality', $data) ? $data['nationality'] : $existingStudent->nationality,
                     religion: array_key_exists('religion', $data) ? $data['religion'] : $existingStudent->religion,
                     admissionDate: array_key_exists('admission_date', $data) ? $data['admission_date'] : $existingStudent->admissionDate,
-                    useSchoolBus: array_key_exists('use_school_bus', $data) ? !empty($data['use_school_bus']) : (bool)$existingStudent->useSchoolBus
+                    useSchoolBus: array_key_exists('use_school_bus', $data) ? !empty($data['use_school_bus']) : (bool)$existingStudent->useSchoolBus,
+                    house: array_key_exists('house', $data) ? $data['house'] : $existingStudent->house
                 );
 
                 if ($classId !== null && $classId > 0 && $classId !== (int)$existingStudent->currentClassId) {

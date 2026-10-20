@@ -91,6 +91,14 @@ foreach ($summaries as $cSummary) {
                     </svg>
                     <span>Enroll New Student</span>
                 </a>
+                <button type="button" onclick="openDashboardPassportModal()" 
+                   class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 shadow-xs transition">
+                    <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>Ward Passports</span>
+                </button>
                 <a href="/parent/announcements" 
                    class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition">
                     <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
@@ -245,7 +253,7 @@ foreach ($summaries as $cSummary) {
                             <!-- Card Header -->
                             <div class="flex items-start justify-between gap-4 pb-4 border-b border-slate-100">
                                 <div class="flex items-center gap-3 min-w-0">
-                                    <div class="relative flex-shrink-0">
+                                    <div class="relative flex-shrink-0 group">
                                         <?php if (!empty($child->avatarUrl)): ?>
                                             <img src="<?= e($child->avatarUrl) ?>" alt="<?= e($child->name) ?>" class="w-12 h-12 rounded-full object-cover border border-slate-200 shadow-xs">
                                         <?php else: ?>
@@ -253,6 +261,13 @@ foreach ($summaries as $cSummary) {
                                                 <?= strtoupper(substr($child->name, 0, 1)) ?>
                                             </div>
                                         <?php endif; ?>
+                                        <button type="button" onclick="openDashboardPassportModal(<?= (int)$child->id ?>)" title="Update Passport Photograph" 
+                                                class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white text-slate-700 hover:text-brand-600 border border-slate-200 shadow-xs flex items-center justify-center transition hover:scale-110">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            </svg>
+                                        </button>
                                     </div>
                                     <div class="min-w-0">
                                         <h3 class="text-base font-extrabold text-slate-900 leading-snug truncate">
@@ -476,3 +491,250 @@ foreach ($summaries as $cSummary) {
         </div>
     <?php endif; ?>
 </div>
+
+<!-- Parent Dashboard Ward Passports Modal -->
+<div id="dashboardPassportModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="dashPassportModalTitle" role="dialog" aria-modal="true">
+    <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity" onclick="closeDashboardPassportModal()"></div>
+
+    <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+        <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-2xl border border-slate-200">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-slate-50/50">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-[#7B3046]/10 text-[#7B3046] flex items-center justify-center font-bold">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900" id="dashPassportModalTitle">Ward Passport Photographs</h3>
+                        <p class="text-xs text-slate-500">Upload official identification photographs for your enrolled children</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeDashboardPassportModal()" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-6">
+                <!-- Multi-File Fast Upload Banner -->
+                <div class="p-4 rounded-xl bg-gradient-to-r from-pink-50/60 to-purple-50/60 border border-pink-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div class="space-y-0.5">
+                        <h4 class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                            <svg class="w-4 h-4 text-[#7B3046]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            <span>Multi-File Bulk Select</span>
+                        </h4>
+                        <p class="text-[11px] text-slate-500">Select multiple image files at once to assign to your wards</p>
+                    </div>
+                    <label for="bulkMultiInput" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#7B3046] hover:bg-[#68273a] text-white cursor-pointer shadow-xs transition shrink-0">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        <span>Select Multiple Files</span>
+                    </label>
+                </div>
+
+                <form action="/parent/passports/batch" method="POST" enctype="multipart/form-data" class="space-y-5" id="dashboardBatchPassportForm">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="redirect_to" value="/parent/dashboard">
+
+                    <!-- Hidden Multi-file input -->
+                    <input type="file" id="bulkMultiInput" name="multiple_passports[]" multiple accept="image/png,image/jpeg,image/webp" class="hidden" onchange="handleBulkFilesSelected(this)">
+
+                    <!-- Multi-files dynamic mapping container -->
+                    <div id="bulkFilesMappingContainer" class="hidden space-y-3 p-3.5 rounded-xl bg-purple-50/50 border border-purple-200">
+                        <div class="flex items-center justify-between">
+                            <h5 class="text-xs font-bold text-purple-900 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-purple-600"></span>
+                                <span>Assign Selected Files to Wards</span>
+                            </h5>
+                            <button type="button" onclick="clearBulkFiles()" class="text-[11px] text-purple-700 hover:text-purple-900 underline font-semibold">
+                                Clear Multi-selection
+                            </button>
+                        </div>
+                        <div id="bulkFilesList" class="space-y-2"></div>
+                    </div>
+
+                    <!-- Per-Ward Slot Grid -->
+                    <div class="space-y-1">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Linked Wards (<?= count($linkedChildren) ?>)</h4>
+                        <p class="text-xs text-slate-500">Choose or replace photos for individual students:</p>
+                    </div>
+
+                    <div class="space-y-3 max-h-72 overflow-y-auto pr-1">
+                        <?php foreach ($linkedChildren as $child): 
+                            $cClass = $child->currentClass?->name ?? ($child->className ?: 'Assigned Class');
+                        ?>
+                            <div id="dashWardRow_<?= (int)$child->id ?>" class="flex items-center justify-between gap-4 p-3 rounded-xl bg-slate-50 border border-slate-200 transition">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="w-11 h-11 rounded-full overflow-hidden bg-slate-200 flex-shrink-0 flex items-center justify-center font-bold text-slate-700 shadow-2xs" id="dashWardThumbContainer_<?= (int)$child->id ?>">
+                                        <?php if (!empty($child->avatarUrl)): ?>
+                                            <img src="<?= e($child->avatarUrl) ?>" alt="<?= e($child->name) ?>" class="w-full h-full object-cover" id="dashWardThumb_<?= (int)$child->id ?>">
+                                        <?php else: ?>
+                                            <span id="dashWardInitial_<?= (int)$child->id ?>"><?= strtoupper(substr($child->name, 0, 1)) ?></span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <h5 class="text-xs font-bold text-slate-900 truncate"><?= htmlspecialchars($child->name) ?></h5>
+                                        <p class="text-[11px] text-slate-500 font-mono">Adm: <?= htmlspecialchars($child->admissionNumber) ?> &bull; <?= htmlspecialchars($cClass) ?></p>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center gap-2">
+                                    <label for="dashFile_<?= (int)$child->id ?>" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 cursor-pointer shadow-2xs transition">
+                                        Select Photo
+                                    </label>
+                                    <input type="file" id="dashFile_<?= (int)$child->id ?>" name="passports[<?= (int)$child->id ?>]" accept="image/png,image/jpeg,image/webp" class="hidden" onchange="previewDashWardFile(this, <?= (int)$child->id ?>)">
+                                    <span id="dashFileName_<?= (int)$child->id ?>" class="text-[11px] text-slate-400 italic max-w-[100px] truncate">None</span>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 flex items-start gap-2.5">
+                        <svg class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <div>
+                            <strong class="font-bold">Guidelines:</strong> JPG, PNG, or WebP format up to 5MB per photo. Ensure good lighting and a clear front view of the face.
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                        <button type="button" onclick="closeDashboardPassportModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition">
+                            Cancel
+                        </button>
+                        <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-[#7B3046] hover:bg-[#68273a] text-white shadow-xs transition">
+                            <span>Upload Passports</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+var linkedWardsData = <?= json_encode(array_map(function($c) {
+    return ['id' => (int)$c->id, 'name' => $c->name];
+}, $linkedChildren)) ?>;
+
+function openDashboardPassportModal(focusWardId) {
+    var modal = document.getElementById('dashboardPassportModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+
+        if (focusWardId) {
+            var targetRow = document.getElementById('dashWardRow_' + focusWardId);
+            if (targetRow) {
+                targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                targetRow.classList.add('ring-2', 'ring-brand-500', 'bg-brand-50/40');
+                setTimeout(function() {
+                    targetRow.classList.remove('ring-2', 'ring-brand-500', 'bg-brand-50/40');
+                }, 2000);
+            }
+        }
+    }
+}
+
+function closeDashboardPassportModal() {
+    var modal = document.getElementById('dashboardPassportModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+    }
+}
+
+function previewDashWardFile(input, wardId) {
+    if (input.files && input.files[0]) {
+        var file = input.files[0];
+        var nameSpan = document.getElementById('dashFileName_' + wardId);
+        if (nameSpan) {
+            nameSpan.textContent = file.name;
+            nameSpan.classList.remove('text-slate-400');
+            nameSpan.classList.add('text-emerald-600', 'font-semibold');
+        }
+
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var container = document.getElementById('dashWardThumbContainer_' + wardId);
+            if (container) {
+                container.innerHTML = '<img src="' + e.target.result + '" class="w-full h-full object-cover">';
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function handleBulkFilesSelected(input) {
+    var files = input.files;
+    var container = document.getElementById('bulkFilesMappingContainer');
+    var list = document.getElementById('bulkFilesList');
+    if (!container || !list) return;
+
+    if (!files || files.length === 0) {
+        container.classList.add('hidden');
+        list.innerHTML = '';
+        return;
+    }
+
+    container.classList.remove('hidden');
+    list.innerHTML = '';
+
+    for (var i = 0; i < files.length; i++) {
+        var file = files[i];
+        var row = document.createElement('div');
+        row.className = 'flex items-center justify-between gap-3 p-2 rounded-lg bg-white border border-purple-100 text-xs';
+
+        var left = document.createElement('div');
+        left.className = 'flex items-center gap-2 min-w-0';
+        left.innerHTML = '<svg class="w-4 h-4 text-purple-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>' +
+                         '<span class="font-medium text-slate-800 truncate" title="' + file.name + '">' + file.name + '</span>';
+
+        var select = document.createElement('select');
+        select.name = 'target_student_ids[]';
+        select.className = 'text-xs rounded-md border-slate-300 py-1 px-2 font-medium text-slate-700 focus:ring-purple-500 focus:border-purple-500';
+
+        var defaultOption = document.createElement('option');
+        defaultOption.value = '0';
+        defaultOption.textContent = '-- Select Ward --';
+        select.appendChild(defaultOption);
+
+        for (var w = 0; w < linkedWardsData.length; w++) {
+            var ward = linkedWardsData[w];
+            var opt = document.createElement('option');
+            opt.value = ward.id;
+            opt.textContent = ward.name;
+            if (i === w) {
+                opt.selected = true; // Auto-match in sequence
+            }
+            select.appendChild(opt);
+        }
+
+        row.appendChild(left);
+        row.appendChild(select);
+        list.appendChild(row);
+    }
+}
+
+function clearBulkFiles() {
+    var input = document.getElementById('bulkMultiInput');
+    if (input) input.value = '';
+    var container = document.getElementById('bulkFilesMappingContainer');
+    if (container) container.classList.add('hidden');
+    var list = document.getElementById('bulkFilesList');
+    if (list) list.innerHTML = '';
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeDashboardPassportModal();
+    }
+});
+</script>

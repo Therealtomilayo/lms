@@ -51,6 +51,9 @@ class SettingsController extends Controller
             'head_teacher_name' => $rawSettings['head_teacher_name'] ?? 'Mrs. N. Okon',
             'head_teacher_title' => $rawSettings['head_teacher_title'] ?? 'Head of School',
             'head_teacher_signature_url' => $rawSettings['head_teacher_signature_url'] ?? '/assets/img/teacher-signature.png',
+            'principal_name' => $rawSettings['principal_name'] ?? 'Rev. Fr. Principal',
+            'principal_title' => $rawSettings['principal_title'] ?? 'Principal (High School)',
+            'principal_signature_url' => $rawSettings['principal_signature_url'] ?? '/assets/img/principal-signature.png',
             'school_stamp_url' => $rawSettings['school_stamp_url'] ?? '/assets/img/claret-stamp.png',
             'school_logo_url' => $rawSettings['school_logo_url'] ?? '/assets/img/logo.png',
         ];
@@ -86,6 +89,9 @@ class SettingsController extends Controller
             'head_teacher_name',
             'head_teacher_title',
             'head_teacher_signature_url',
+            'principal_name',
+            'principal_title',
+            'principal_signature_url',
             'school_stamp_url',
             'school_logo_url',
         ];
@@ -127,6 +133,22 @@ class SettingsController extends Controller
                 if (move_uploaded_file($f['tmp_name'], $uploadDir . '/' . $destName)) {
                     $upsertStmt->execute([
                         ':key' => 'head_teacher_signature_url',
+                        ':value' => '/assets/uploads/' . $destName,
+                        ':admin_id' => $userContext->id,
+                        ':updated_at' => $now,
+                    ]);
+                }
+            }
+        }
+
+        if (!empty($files['principal_signature_file']) && $files['principal_signature_file']['error'] === UPLOAD_ERR_OK) {
+            $f = $files['principal_signature_file'];
+            $ext = strtolower(pathinfo($f['name'], PATHINFO_EXTENSION));
+            if (in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'svg'], true)) {
+                $destName = 'principal_signature_' . time() . '.' . $ext;
+                if (move_uploaded_file($f['tmp_name'], $uploadDir . '/' . $destName)) {
+                    $upsertStmt->execute([
+                        ':key' => 'principal_signature_url',
                         ':value' => '/assets/uploads/' . $destName,
                         ':admin_id' => $userContext->id,
                         ':updated_at' => $now,

@@ -38,11 +38,55 @@ class SkillController extends Controller
         }
 
         $tab = $request->get('tab', 'skills');
-        $skills = $this->skillRepo->getAllSkills();
+        $selectedStage = trim((string)$request->get('stage', ''));
+        $stages = [
+            'eyfs' => 'Early Years (EYFS)',
+            'primary' => 'Primary School',
+            'junior_secondary' => 'Junior Secondary (JSS)',
+            'senior_secondary' => 'Senior Secondary (SSS)',
+        ];
+
+        // Fetch skills (filtered if specific stage requested, or all)
+        $skills = $this->skillRepo->getAllSkills(null, null, $selectedStage !== '' ? $selectedStage : null, false);
         $presets = $this->skillRepo->getRemarkPresets(null, false);
 
         $psychomotorSkills = array_filter($skills, static fn($s) => $s->isPsychomotor());
         $affectiveSkills = array_filter($skills, static fn($s) => $s->isAffective());
+
+        // Group skills by educational stage
+        $skillsByStage = [];
+        foreach ($stages as $stageKey => $stageLabel) {
+            $skillsByStage[$stageKey] = [
+                'label' => $stageLabel,
+                'psychomotor' => [],
+                'affective' => [],
+                'total' => 0,
+            ];
+        }
+        $skillsByStage['universal'] = [
+            'label' => 'Universal (All Stages)',
+            'psychomotor' => [],
+            'affective' => [],
+            'total' => 0,
+        ];
+
+        foreach ($skills as $skill) {
+            $stKey = $skill->stage ?? 'universal';
+            if (!isset($skillsByStage[$stKey])) {
+                $skillsByStage[$stKey] = [
+                    'label' => ucfirst(str_replace('_', ' ', $stKey)),
+                    'psychomotor' => [],
+                    'affective' => [],
+                    'total' => 0,
+                ];
+            }
+            if ($skill->isPsychomotor()) {
+                $skillsByStage[$stKey]['psychomotor'][] = $skill;
+            } else {
+                $skillsByStage[$stKey]['affective'][] = $skill;
+            }
+            $skillsByStage[$stKey]['total']++;
+        }
 
         $teacherPresets = array_filter($presets, static fn($p) => $p->type === 'teacher');
         $principalPresets = array_filter($presets, static fn($p) => $p->type === 'principal');
@@ -50,7 +94,10 @@ class SkillController extends Controller
         return Response::html($this->render('admin/skills/index', [
             'user' => $userContext,
             'tab' => $tab,
+            'selectedStage' => $selectedStage,
+            'stages' => $stages,
             'skills' => $skills,
+            'skillsByStage' => $skillsByStage,
             'psychomotorSkills' => $psychomotorSkills,
             'affectiveSkills' => $affectiveSkills,
             'teacherPresets' => $teacherPresets,
@@ -73,6 +120,7 @@ class SkillController extends Controller
 
         $name = trim((string)$request->post('name', ''));
         $category = trim((string)$request->post('category', 'psychomotor'));
+        $stage = trim((string)$request->post('stage', ''));
         $displayOrder = (int)$request->post('display_order', 1);
         $status = trim((string)$request->post('status', 'active'));
 
@@ -84,14 +132,19 @@ class SkillController extends Controller
             $category = 'psychomotor';
         }
 
+        $allowedStages = ['eyfs', 'primary', 'junior_secondary', 'senior_secondary'];
+        $stageVal = in_array($stage, $allowedStages, true) ? $stage : null;
+
         $this->skillRepo->createSkill([
             'name' => $name,
             'category' => $category,
+            'stage' => $stageVal,
             'display_order' => $displayOrder,
             'status' => $status === 'inactive' ? 'inactive' : 'active',
         ]);
 
-        return $this->redirectWithSuccess('/admin/skills?tab=skills', 'Skill trait added successfully.');
+        $stageParam = $stageVal ? '&stage=' . urlencode($stageVal) : '';
+        return $this->redirectWithSuccess('/admin/skills?tab=skills' . $stageParam, 'Skill trait added successfully.');
     }
 
     /**
@@ -113,6 +166,7 @@ class SkillController extends Controller
 
         $name = trim((string)$request->post('name', ''));
         $category = trim((string)$request->post('category', $skill->category));
+        $stage = trim((string)$request->post('stage', $skill->stage ?? ''));
         $displayOrder = (int)$request->post('display_order', $skill->displayOrder);
         $status = trim((string)$request->post('status', $skill->status));
 
@@ -120,14 +174,19 @@ class SkillController extends Controller
             return $this->redirectWithError('/admin/skills?tab=skills', 'Skill trait name is required.');
         }
 
+        $allowedStages = ['eyfs', 'primary', 'junior_secondary', 'senior_secondary'];
+        $stageVal = in_array($stage, $allowedStages, true) ? $stage : null;
+
         $this->skillRepo->updateSkill($id, [
             'name' => $name,
             'category' => in_array($category, ['psychomotor', 'affective'], true) ? $category : 'psychomotor',
+            'stage' => $stageVal,
             'display_order' => $displayOrder,
             'status' => $status === 'inactive' ? 'inactive' : 'active',
         ]);
 
-        return $this->redirectWithSuccess('/admin/skills?tab=skills', 'Skill trait updated successfully.');
+        $stageParam = $stageVal ? '&stage=' . urlencode($stageVal) : '';
+        return $this->redirectWithSuccess('/admin/skills?tab=skills' . $stageParam, 'Skill trait updated successfully.');
     }
 
     /**

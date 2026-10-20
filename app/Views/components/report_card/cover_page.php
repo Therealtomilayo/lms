@@ -13,6 +13,11 @@ $studentName = htmlspecialchars($studentSalutedName);
 $passportPhoto = $passport_url ?? $student->user?->avatarUrl ?? (!empty($student->avatarUrl) ? $student->avatarUrl : null);
 $termTitle = strtoupper($term->name ?? 'Summer Term');
 $sessionTitle = strtoupper($session->name ?? '2025/2026') . ' ACADEMIC SESSION';
+
+$isHighSchool = ($report_card_template ?? '') === 'high_school'
+    || ($class?->academicLevel?->reportCardTemplate ?? '') === 'high_school'
+    || in_array(strtolower((string)($class?->academicLevel?->stage ?? '')), ['junior_secondary', 'senior_secondary'], true)
+    || (isset($class_full_name) && (stripos($class_full_name, 'jss') !== false || stripos($class_full_name, 'sss') !== false || stripos($class_full_name, 'year 7') !== false || stripos($class_full_name, 'year 8') !== false || stripos($class_full_name, 'year 9') !== false));
 ?>
 
 <div class="report-page page-1 relative flex flex-col justify-between overflow-hidden bg-white text-slate-800">
@@ -58,21 +63,22 @@ $sessionTitle = strtoupper($session->name ?? '2025/2026') . ' ACADEMIC SESSION';
                         <?= htmlspecialchars($subBrand) ?>
                     </p>
                 <?php endif; ?>
-                <div class="flex items-center justify-center sm:justify-start gap-3 text-sm sm:text-lg font-serif italic text-slate-700 mt-1">
+                <div class="flex items-center justify-center sm:justify-start gap-2 sm:gap-3 text-sm sm:text-lg font-serif italic text-slate-700 mt-1 flex-wrap">
                     <span class="text-amber-800">Crèche</span>
                     <span class="font-sans not-italic font-extrabold uppercase text-amber-600 tracking-wider text-xs sm:text-sm">NURSERY</span>
                     <span class="font-serif font-bold text-slate-900">Primary</span>
+                    <span class="font-sans not-italic font-black uppercase text-[#0C9DD5] tracking-wider text-xs sm:text-sm">HIGH SCHOOL</span>
                 </div>
             </div>
         </div>
 
-        <!-- Grade School Assessment Record Pill Card -->
+        <!-- Dynamic Assessment Record Pill Card -->
         <div class="mx-auto max-w-xl mt-4 sm:mt-8 rounded-2xl border-2 border-amber-300/80 bg-gradient-to-r from-amber-50/90 via-rose-50/80 to-amber-50/90 py-2.5 sm:py-3.5 px-4 sm:px-6 shadow-sm">
             <h2 class="text-lg sm:text-2xl font-black text-amber-800 tracking-tight font-serif">
-                Grade School Assessment Record
+                <?= $isHighSchool ? 'High School Assessment Record' : 'Grade School Assessment Record' ?>
             </h2>
             <p class="text-xs sm:text-base font-semibold text-slate-800 italic mt-0.5 font-serif">
-                Dossier d'évaluation de l'école Primaire
+                <?= $isHighSchool ? "Dossier d'évaluation de l'école Secondaire" : "Dossier d'évaluation de l'école Primaire" ?>
             </p>
         </div>
 
@@ -134,5 +140,9 @@ $sessionTitle = strtoupper($session->name ?? '2025/2026') . ' ACADEMIC SESSION';
                 &bull; Website: <?= htmlspecialchars($school['website']) ?>
             <?php endif; ?>
         </p>
+        <div class="flex items-center justify-between mt-2 pt-1 border-t border-slate-200 text-[8px] text-slate-400 font-mono">
+            <span>Official Identity Record</span>
+            <span>Page 1 of 3</span>
+        </div>
     </div>
 </div>

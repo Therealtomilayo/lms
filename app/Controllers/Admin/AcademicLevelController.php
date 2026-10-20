@@ -93,6 +93,7 @@ class AcademicLevelController extends Controller
                 'stage' => $request->post('stage'),
                 'rank_order' => $request->post('rank_order', 0),
                 'grading_scale_id' => $request->post('grading_scale_id') ?: null,
+                'report_card_template' => $request->post('report_card_template', 'grade_school'),
             ]);
 
             return $this->redirectWithSuccess('/admin/academic-levels', 'Academic level created successfully.');
@@ -116,6 +117,7 @@ class AcademicLevelController extends Controller
                 'stage' => $request->post('stage'),
                 'rank_order' => $request->post('rank_order', 0),
                 'grading_scale_id' => $request->post('grading_scale_id') ?: null,
+                'report_card_template' => $request->post('report_card_template', 'grade_school'),
             ]);
 
             return $this->redirectWithSuccess('/admin/academic-levels', 'Academic level updated successfully.');

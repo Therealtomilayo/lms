@@ -232,6 +232,12 @@ final class GradebookService
         );
 
         $existingScores = $this->gradebookRepo->getScoresByClassSubject($classSubjectId);
+        if (empty($existingScores)) {
+            // No raw assessment scores recorded for this subject in the gradebook.
+            // Avoid zeroing out pre-existing term results or un-entered gradebooks.
+            return ServiceResult::success(['computed_count' => 0], 'No raw assessment scores recorded for subject.');
+        }
+
         $scoresByStudent = [];
         foreach ($existingScores as $score) {
             $scoresByStudent[$score->studentId][$score->assessmentCategoryId] = $score;
@@ -240,6 +246,14 @@ final class GradebookService
         $computedCount = 0;
         foreach ($enrolledStudents as $student) {
             $studentCatScores = $scoresByStudent[$student->id] ?? [];
+            if (empty($studentCatScores)) {
+                $existingTr = $this->gradebookRepo->getTermResult($student->id, $classSubjectId, $termId);
+                if ($existingTr && (float)$existingTr->computedScore > 0.0) {
+                    $computedCount++;
+                    continue;
+                }
+            }
+
             $calc = $this->calculateSubjectScore($categories, $studentCatScores, $gradingScale);
 
             $this->gradebookRepo->upsertTermResult(
@@ -315,10 +329,15 @@ final class GradebookService
         });
 
         // Compute rank with standard competition ranking (1, 2, 2, 4...)
+        // Students with 0 scores or no subjects must NOT be ranked (rank_in_class = null).
         $currentRank = 1;
         $itemsCount = count($studentSummaries);
         for ($i = 0; $i < $itemsCount; $i++) {
-            if ($i > 0 && $studentSummaries[$i]['average_score'] < $studentSummaries[$i - 1]['average_score']) {
+            if ($studentSummaries[$i]['average_score'] <= 0.0 || $studentSummaries[$i]['total_score'] <= 0.0 || $studentSummaries[$i]['subject_count'] === 0) {
+                $studentSummaries[$i]['rank_in_class'] = null;
+                continue;
+            }
+            if ($i > 0 && isset($studentSummaries[$i - 1]['rank_in_class']) && $studentSummaries[$i]['average_score'] < $studentSummaries[$i - 1]['average_score']) {
                 $currentRank = $i + 1;
             }
             $studentSummaries[$i]['rank_in_class'] = $currentRank;
