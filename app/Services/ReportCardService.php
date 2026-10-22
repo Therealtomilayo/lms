@@ -510,13 +510,54 @@ class ReportCardService
             $demographics['total'] = 13;
         }
 
-        // Attendance calculations
-        $attendanceDaysOpened = (int)($summary?->attendanceTotalCount ?? ($summary?->totalAttendanceDays ?? 120));
-        $attendanceDaysPresent = (int)($summary?->attendancePresentCount ?? ($summary?->daysPresent ?? 116));
-        if ($attendanceDaysOpened <= 0) {
-            $attendanceDaysOpened = 120;
-            $attendanceDaysPresent = 116;
+        // Attendance calculations: Dynamic Mon-Fri weekdays count (SRS §36, §58)
+        $attendanceDaysOpened = 0;
+        if (!empty($term->startDate) && !empty($term->endDate)) {
+            try {
+                $start = new \DateTime($term->startDate);
+                $end = new \DateTime($term->endDate);
+                if ($start <= $end) {
+                    $period = new \DatePeriod($start, new \DateInterval('P1D'), (clone $end)->modify('+1 day'));
+                    foreach ($period as $dt) {
+                        $n = (int)$dt->format('N'); // 1 = Mon, 5 = Fri
+                        if ($n >= 1 && $n <= 5) {
+                            $attendanceDaysOpened++;
+                        }
+                    }
+                }
+            } catch (\Throwable) {
+                $attendanceDaysOpened = 0;
+            }
         }
+
+        if ($attendanceDaysOpened <= 0) {
+            $attendanceDaysOpened = (int)($summary?->attendanceTotalCount ?? ($summary?->totalAttendanceDays ?? 0));
+        }
+
+        $attendanceDaysPresent = (int)($summary?->attendancePresentCount ?? ($summary?->daysPresent ?? 0));
+        if ($attendanceDaysPresent <= 0 && $attendanceDaysOpened > 0) {
+            try {
+                $attRepo = new \App\Repositories\AttendanceRepository($pdo);
+                $attSummary = $attRepo->getStudentAttendanceSummary($studentId, $termId, null);
+                if (!empty($attSummary['total_days'])) {
+                    $attendanceDaysPresent = (int)($attSummary['present_days'] + $attSummary['late_days']);
+                    if ($attendanceDaysOpened <= 0) {
+                        $attendanceDaysOpened = (int)$attSummary['total_days'];
+                    }
+                } else {
+                    $attendanceDaysPresent = $attendanceDaysOpened;
+                }
+            } catch (\Throwable) {
+                $attendanceDaysPresent = $attendanceDaysOpened;
+            }
+        }
+
+        if ($attendanceDaysOpened <= 0) {
+            $attendanceDaysOpened = 60; // 12 weeks default
+            $attendanceDaysPresent = 60;
+        }
+
+        $attendanceDaysPresent = min($attendanceDaysOpened, $attendanceDaysPresent);
         $attendanceDaysAbsent = max(0, $attendanceDaysOpened - $attendanceDaysPresent);
 
         // Next Term Resumption Date calculation

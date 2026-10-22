@@ -5,7 +5,7 @@
             <div>
                 <!-- Breadcrumbs -->
                 <nav class="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                    <span class="text-slate-400">Faculty Portal</span>
+                    <span class="text-slate-400">Teacher Portal</span>
                     <span class="text-slate-300">/</span>
                     <span class="text-slate-700">Dashboard</span>
                 </nav>
@@ -13,7 +13,7 @@
                     Welcome back, <?= htmlspecialchars($userContext->name) ?>
                 </h1>
                 <p class="text-xs text-slate-500 mt-1">
-                    Claret International School — Faculty & Instructional Command Center.
+                    Claret International School — Teacher &amp; Instructional Workspace.
                 </p>
             </div>
 

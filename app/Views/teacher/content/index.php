@@ -5,20 +5,35 @@
             <div>
                 <!-- Breadcrumbs -->
                 <nav class="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                    <a href="/teacher/dashboard" class="text-slate-400 hover:text-emerald-600 transition">Faculty Portal</a>
+                    <a href="/teacher/dashboard" class="text-slate-400 hover:text-emerald-600 transition">Teacher Portal</a>
                     <span class="text-slate-300">/</span>
                     <span class="text-slate-700">Learning Materials</span>
                 </nav>
-                <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight leading-tight">
-                    Course Content & Study Materials
-                </h1>
+                <div class="flex flex-wrap items-center gap-3">
+                    <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight leading-tight">
+                        Course Content &amp; Study Materials
+                    </h1>
+                    <?php if ($selectedClassSubject): ?>
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                            <?= htmlspecialchars($selectedClassSubject->subject?->name ?? 'Subject') ?> (<?= htmlspecialchars($selectedClassSubject->schoolClass?->name ?? 'Class') ?>)
+                        </span>
+                    <?php endif; ?>
+                </div>
                 <p class="text-xs text-slate-500 mt-1">
                     Publish lesson notes, documents, lecture slides, video tutorials, and curriculum resources for your assigned classes.
                 </p>
             </div>
 
-            <!-- Upload CTA Button -->
-            <div class="flex-shrink-0">
+            <!-- Header Action Buttons -->
+            <div class="flex items-center gap-2.5 flex-wrap flex-shrink-0">
+                <?php if ($selectedClassSubject): ?>
+                    <a href="/teacher/content" 
+                       class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition">
+                        <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                        <span>All Teaching Subjects</span>
+                    </a>
+                <?php endif; ?>
+
                 <?php $this->include('components/button', [
                     'label' => 'Upload Learning Material',
                     'variant' => 'primary',
@@ -29,6 +44,7 @@
         </div>
     </div>
 
+    <?php if (!empty($selectedClassSubject)): ?>
     <!-- Class-Subject Selector Toolbar -->
     <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
         <form method="GET" action="/teacher/content" class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
@@ -37,7 +53,7 @@
                     <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                     </svg>
-                    Class & Subject:
+                    Switch Class/Subject:
                 </label>
                 <select name="class_subject_id" id="class_subject_id" onchange="this.form.submit()"
                         class="flex-1 max-w-lg rounded-xl border border-slate-300 text-xs focus:border-emerald-500 focus:ring-emerald-500 bg-slate-50 py-2 px-3 font-semibold text-slate-900 transition">
@@ -71,14 +87,69 @@
             </div>
         </form>
     </div>
+    <?php endif; ?>
 
     <!-- Content Items Display -->
     <?php if (empty($selectedClassSubject)): ?>
-        <div class="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-xs">
-            <?php $this->include('components/empty_state', [
-                'title' => 'No Teaching Allocation Selected',
-                'message' => 'Please select an assigned class-subject above to manage instructional materials.'
-            ]); ?>
+        <!-- Allocated Subjects Cards Grid -->
+        <div class="space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-base font-bold text-slate-900">Your Assigned Teaching Allocations</h2>
+                    <p class="text-xs text-slate-500">Select a subject card to upload and manage lecture notes, documents, and resources.</p>
+                </div>
+                <span class="text-xs font-bold font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-xl">
+                    <?= count($classSubjects) ?> Assigned Classes
+                </span>
+            </div>
+
+            <?php if (empty($classSubjects)): ?>
+                <div class="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-xs">
+                    <?php $this->include('components/empty_state', [
+                        'title' => 'No Teaching Allocation Found',
+                        'message' => 'You currently have no teaching allocations assigned for the active academic session.'
+                    ]); ?>
+                </div>
+            <?php else: ?>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <?php foreach ($classSubjects as $cs): 
+                        $sName = $cs->subject?->name ?? ($cs->subjectName ?? 'Subject');
+                        $sCode = $cs->subject?->code ?? ($cs->subjectCode ?? 'SUBJ');
+                        $cName = $cs->schoolClass?->name ?? ($cs->className ?? 'Class');
+                        $sArm = $cs->schoolClass?->sectionArm ?? ($cs->sectionArm ?? '');
+                        $matCount = (int)($subjectMaterialCounts[$cs->id] ?? 0);
+                    ?>
+                        <a href="/teacher/content?class_subject_id=<?= (int)$cs->id ?>" 
+                           class="group bg-white rounded-2xl border border-slate-200 hover:border-emerald-500 hover:shadow-md p-6 flex flex-col justify-between transition duration-200 space-y-5">
+                            <div>
+                                <div class="flex items-start justify-between gap-3 mb-3">
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                        <?= htmlspecialchars($sCode) ?>
+                                    </span>
+                                    <span class="inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
+                                        <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                                        <?= $matCount ?> <?= $matCount === 1 ? 'Material' : 'Materials' ?>
+                                    </span>
+                                </div>
+                                <h3 class="text-base font-extrabold text-slate-900 group-hover:text-emerald-700 transition leading-snug">
+                                    <?= htmlspecialchars($sName) ?>
+                                </h3>
+                                <p class="text-xs text-slate-600 mt-1 flex items-center gap-1.5 font-medium">
+                                    <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                                    <span><?= htmlspecialchars($cName) ?><?= !empty($sArm) ? ' (' . htmlspecialchars($sArm) . ')' : '' ?></span>
+                                </p>
+                            </div>
+
+                            <div class="pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+                                <span class="font-bold text-slate-500 text-[11px]">Assigned Class Cohort</span>
+                                <span class="font-bold text-emerald-600 group-hover:translate-x-0.5 transition inline-flex items-center gap-1">
+                                    Manage Materials &rarr;
+                                </span>
+                            </div>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
         </div>
     <?php elseif (empty($items)): ?>
         <div class="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-xs">

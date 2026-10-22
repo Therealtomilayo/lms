@@ -58,75 +58,80 @@
         </div>
     </div>
 
-    <!-- Sticky DOCX Toolbar -->
-    <div id="docx-toolbar-container" class="sticky top-2 z-30 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200 shadow-sm px-4 py-2.5 transition">
-        <div class="flex flex-wrap items-center justify-between gap-3 text-xs font-semibold text-slate-700">
+    <!-- Sticky DOCX Toolbar (Responsive: Single Row on Mobile, Full on Desktop) -->
+    <div id="docx-toolbar-container" class="sticky top-2 z-30 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200 shadow-sm p-2 sm:px-4 sm:py-2.5 transition">
+        <div class="flex items-center justify-between gap-1.5 sm:gap-3 text-xs font-semibold text-slate-700">
             <!-- Navigation / Location indicator -->
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1 sm:gap-2">
                 <button type="button" id="btn-scroll-top" class="p-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 transition" title="Scroll to Top">
-                    <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
                     </svg>
                 </button>
 
-                <div class="flex items-center gap-1.5 text-xs text-slate-600 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg">
-                    <span class="text-slate-400 font-bold uppercase text-[10px]">Section</span>
+                <div class="flex items-center gap-1 sm:gap-1.5 text-xs text-slate-600 bg-slate-50 border border-slate-200 px-2 sm:px-2.5 py-1 rounded-lg">
+                    <span class="text-slate-400 font-bold uppercase text-[9px] sm:text-[10px]">Sec</span>
                     <span id="current-block-label" class="font-extrabold text-slate-900">1</span>
                     <span class="text-slate-400">/</span>
                     <span id="total-blocks-label" class="font-semibold text-slate-700">-</span>
                 </div>
 
                 <button type="button" id="btn-prev-block" class="p-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition" title="Previous Section">
-                    <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
                     </svg>
                 </button>
                 <button type="button" id="btn-next-block" class="p-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition" title="Next Section">
-                    <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
                     </svg>
                 </button>
             </div>
 
             <!-- Zoom Controls -->
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1 sm:gap-2">
                 <button type="button" id="zoom-out" class="p-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 disabled:opacity-40 transition" title="Zoom Out (-)">
-                    <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4"/>
                     </svg>
                 </button>
 
-                <button type="button" id="zoom-reset" class="px-2 py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[11px] font-bold text-slate-800 transition" title="Reset Zoom">
+                <button type="button" id="zoom-reset" class="px-1.5 sm:px-2 py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[10px] sm:text-[11px] font-bold text-slate-800 transition" title="Reset Zoom">
                     <span id="zoom-level">100%</span>
                 </button>
 
                 <button type="button" id="zoom-in" class="p-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 disabled:opacity-40 transition" title="Zoom In (+)">
-                    <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
                     </svg>
                 </button>
             </div>
 
             <!-- Progress & Fullscreen -->
-            <div class="flex items-center gap-2">
-                <!-- Reading Progress Bar -->
-                <div class="flex items-center gap-2.5 px-2.5 py-1 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="flex items-center gap-1 sm:gap-2">
+                <!-- Desktop Reading Progress Bar -->
+                <div class="hidden md:flex items-center gap-2.5 px-2.5 py-1 rounded-xl bg-slate-50 border border-slate-200">
                     <div class="flex flex-col gap-0.5">
                         <div class="flex items-center justify-between gap-3 text-[10px] uppercase font-bold text-slate-500">
-                            <span>Reading Progress</span>
+                            <span>Progress</span>
                             <span id="progress-percent-label"><?= $progress ? (int)$progress->progressPercent : 0 ?>%</span>
                         </div>
-                        <div class="w-24 sm:w-28 bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                        <div class="w-20 lg:w-28 bg-slate-200 rounded-full h-1.5 overflow-hidden">
                             <div id="progress-bar-fill" class="h-1.5 rounded-full transition-all duration-300 <?= ($progress && $progress->isCompleted()) ? 'bg-emerald-500' : 'bg-sky-500' ?>" style="width: <?= $progress ? min(100, (int)$progress->progressPercent) : 0 ?>%"></div>
                         </div>
                     </div>
                     <span id="progress-status-badge" class="<?= ($progress && $progress->isCompleted()) ? '' : 'hidden' ?> inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                        <span>Completed</span>
+                        <span>Done</span>
                         <svg class="w-3 h-3 text-emerald-600 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                     </span>
                 </div>
 
-                <button type="button" id="toggle-fullscreen" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 transition" title="Fullscreen">
+                <!-- Mobile Progress Pill -->
+                <span class="md:hidden text-[11px] font-bold font-mono text-sky-600 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-md">
+                    <span id="mobile-progress-label"><?= $progress ? (int)$progress->progressPercent : 0 ?>%</span>
+                </span>
+
+                <button type="button" id="toggle-fullscreen" class="inline-flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 transition" title="Fullscreen">
                     <svg id="fullscreen-enter-icon" class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
                     </svg>
@@ -136,6 +141,11 @@
                     <span id="fullscreen-text" class="hidden sm:inline">Fullscreen</span>
                 </button>
             </div>
+        </div>
+
+        <!-- Thin Mobile Progress Strip (Zero vertical footprint) -->
+        <div class="md:hidden w-full bg-slate-100 rounded-full h-1 mt-1.5 overflow-hidden">
+            <div id="mobile-progress-bar-fill" class="h-1 rounded-full transition-all duration-300 <?= ($progress && $progress->isCompleted()) ? 'bg-emerald-500' : 'bg-sky-500' ?>" style="width: <?= $progress ? min(100, (int)$progress->progressPercent) : 0 ?>%"></div>
         </div>
     </div>
 
@@ -247,6 +257,8 @@
     const totalBlocksLabel = document.getElementById('total-blocks-label');
     const progressPercentLabel = document.getElementById('progress-percent-label');
     const progressBarFill = document.getElementById('progress-bar-fill');
+    const mobileProgressLabel = document.getElementById('mobile-progress-label');
+    const mobileProgressBarFill = document.getElementById('mobile-progress-bar-fill');
     const progressStatusBadge = document.getElementById('progress-status-badge');
 
     const btnPrevBlock = document.getElementById('btn-prev-block');
@@ -415,9 +427,20 @@
         progressPercentLabel.textContent = Math.round(progressPercent) + '%';
         progressBarFill.style.width = Math.min(100, Math.round(progressPercent)) + '%';
 
+        if (mobileProgressLabel) {
+            mobileProgressLabel.textContent = Math.round(progressPercent) + '%';
+        }
+        if (mobileProgressBarFill) {
+            mobileProgressBarFill.style.width = Math.min(100, Math.round(progressPercent)) + '%';
+        }
+
         if (isCompleted) {
             progressBarFill.classList.remove('bg-sky-500');
             progressBarFill.classList.add('bg-emerald-500');
+            if (mobileProgressBarFill) {
+                mobileProgressBarFill.classList.remove('bg-sky-500');
+                mobileProgressBarFill.classList.add('bg-emerald-500');
+            }
             progressStatusBadge.classList.remove('hidden');
         }
     }

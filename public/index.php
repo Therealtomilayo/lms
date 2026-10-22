@@ -93,8 +93,10 @@ try {
     $router->get('/password/forgot', [AuthController::class, 'showForgotPassword']);
     $router->post('/password/forgot', [AuthController::class, 'forgotPassword'], [$passwordResetThrottle, CsrfMiddleware::class]);
 
+    $router->get('/reset-password', [AuthController::class, 'showResetPassword']);
     $router->get('/reset-password/{token}', [AuthController::class, 'showResetPassword']);
     $router->post('/reset-password', [AuthController::class, 'resetPassword'], [$passwordResetThrottle, CsrfMiddleware::class]);
+    $router->get('/password/reset', [AuthController::class, 'showResetPassword']);
     $router->get('/password/reset/{token}', [AuthController::class, 'showResetPassword']);
     $router->post('/password/reset', [AuthController::class, 'resetPassword'], [$passwordResetThrottle, CsrfMiddleware::class]);
 

@@ -27,16 +27,24 @@
             </div>
 
             <div class="flex items-center gap-2.5 flex-wrap">
-                <?php $this->include('components/button', [
-                    'label' => 'Back to Subjects',
-                    'variant' => 'secondary',
-                    'href' => '/student/subjects',
-                    'icon' => '<svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>'
-                ]); ?>
+                <?php if ($selectedClassSubject): ?>
+                    <a href="/student/content" 
+                       class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition">
+                        <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                        <span>All Subjects</span>
+                    </a>
+                <?php else: ?>
+                    <a href="/student/subjects" 
+                       class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition">
+                        <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                        <span>Subject Overview</span>
+                    </a>
+                <?php endif; ?>
             </div>
         </div>
     </div>
 
+    <?php if (!empty($selectedClassSubject)): ?>
     <!-- 4-Card KPI Summary Metrics Strip -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- Total Available Materials -->
@@ -96,7 +104,7 @@
         <form method="GET" action="/student/content" class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
             <div class="flex items-center gap-3 flex-1">
                 <label for="class_subject_id" class="text-xs font-bold uppercase tracking-wider text-slate-500 flex-shrink-0">
-                    Filter by Subject:
+                    Switch Subject:
                 </label>
                 <select name="class_subject_id" id="class_subject_id" onchange="this.form.submit()"
                         class="w-full sm:max-w-md rounded-xl border border-slate-300 bg-slate-50 text-xs font-bold text-slate-900 focus:bg-white focus:border-sky-500 focus:ring-sky-500 py-2.5 px-3 transition">
@@ -123,17 +131,69 @@
             </div>
         </form>
     </div>
+    <?php endif; ?>
 
-    <!-- Content Items Grid -->
     <?php if (empty($selectedClassSubject)): ?>
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-12 text-center">
-            <div class="w-16 h-16 rounded-2xl bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-4">
-                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-                </svg>
+        <!-- Subjects Cards Overview Grid -->
+        <div class="space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-base font-bold text-slate-900">Your Enrolled Subjects</h2>
+                    <p class="text-xs text-slate-500">Click any subject card to access notes, documents, and video lessons.</p>
+                </div>
+                <span class="text-xs font-bold font-mono text-slate-600 bg-slate-100 border border-slate-200 px-3 py-1 rounded-xl">
+                    <?= count($subjectEnrollments) ?> Subjects
+                </span>
             </div>
-            <h3 class="text-base font-bold text-slate-800">No Enrolled Subject Selected</h3>
-            <p class="text-xs text-slate-500 mt-1">Please select an enrolled subject from the dropdown above.</p>
+
+            <?php if (empty($subjectEnrollments)): ?>
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-12 text-center">
+                    <p class="text-sm font-semibold text-slate-600">No enrolled subjects found for the current academic session.</p>
+                </div>
+            <?php else: ?>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <?php foreach ($subjectEnrollments as $se): 
+                        $cs = $se->classSubject;
+                        if (!$cs) continue;
+                        $matCount = (int)($subjectMaterialCounts[$cs->id] ?? 0);
+                        $teacherName = $cs->teacher?->user?->name ?? ($cs->teacher?->name ?? 'Subject Teacher');
+                    ?>
+                        <a href="/student/content?class_subject_id=<?= (int)$cs->id ?>" 
+                           class="group bg-white rounded-2xl border border-slate-200 hover:border-sky-500 hover:shadow-md p-6 flex flex-col justify-between transition duration-200 space-y-5">
+                            <div>
+                                <div class="flex items-start justify-between gap-3 mb-3">
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-sky-50 text-sky-700 border border-sky-200">
+                                        <?= htmlspecialchars($cs->subject?->code ?? 'SUBJ') ?>
+                                    </span>
+                                    <span class="inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
+                                        <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                                        <?= $matCount ?> <?= $matCount === 1 ? 'Material' : 'Materials' ?>
+                                    </span>
+                                </div>
+                                <h3 class="text-base font-extrabold text-slate-900 group-hover:text-sky-600 transition leading-snug">
+                                    <?= htmlspecialchars($cs->subject?->name ?? 'Subject') ?>
+                                </h3>
+                                <p class="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                                    <span><?= htmlspecialchars($cs->schoolClass?->name ?? 'Class') ?></span>
+                                </p>
+                            </div>
+
+                            <div class="pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+                                <div class="flex items-center gap-2 text-slate-600">
+                                    <div class="w-6 h-6 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-[10px]">
+                                        <?= strtoupper(substr($teacherName, 0, 1)) ?>
+                                    </div>
+                                    <span class="truncate max-w-[140px] font-medium text-[11px]"><?= htmlspecialchars($teacherName) ?></span>
+                                </div>
+                                <span class="font-bold text-sky-600 group-hover:translate-x-0.5 transition inline-flex items-center gap-1">
+                                    View Materials &rarr;
+                                </span>
+                            </div>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
         </div>
     <?php elseif (empty($items)): ?>
         <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-12 text-center">

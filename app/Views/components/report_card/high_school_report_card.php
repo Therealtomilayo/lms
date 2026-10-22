@@ -48,9 +48,9 @@ $studentGrade = !empty($final_grade) ? strtoupper($final_grade) : 'DISTINCTION';
 $studentHouse = !empty($house) ? strtoupper($house) : 'BLUE';
 $studentAgeStr = !empty($student_age) ? strtoupper($student_age) : '11 YEARS OLD';
 
-$openedDays = $attendance_stats['opened'] ?? 110;
-$presentDays = $attendance_stats['present'] ?? 98;
-$absentDays = $attendance_stats['absent'] ?? 12;
+$openedDays = $attendance_stats['opened'] ?? 60;
+$presentDays = $attendance_stats['present'] ?? 60;
+$absentDays = $attendance_stats['absent'] ?? 0;
 $resumptionDateStr = $next_resumption_date ?? '20/04/2026';
 
 // Cohort Benchmarks
@@ -170,12 +170,28 @@ if (!empty($psychomotor_ratings)) {
                     </p>
                 </div>
             </div>
-            <div class="text-right">
-                <span class="inline-block px-3.5 py-1 bg-[#7B3046] text-white font-black text-xs uppercase tracking-widest rounded shadow-xs">
-                    REPORT SHEET
-                </span>
-                <div class="text-[8.5px] font-bold text-slate-500 uppercase mt-1">
-                    <?= $termName ?> TERM &bull; <?= $sessionName ?>
+            <div class="flex items-center gap-3">
+                <div class="text-right">
+                    <span class="inline-block px-3 py-1 bg-[#7B3046] text-white font-black text-xs uppercase tracking-widest rounded shadow-xs">
+                        REPORT SHEET
+                    </span>
+                    <div class="text-[8.5px] font-bold text-slate-500 uppercase mt-1">
+                        <?= $termName ?> TERM &bull; <?= $sessionName ?>
+                    </div>
+                </div>
+                <!-- Student Passport Photo Card -->
+                <div class="w-16 h-20 bg-slate-100 border border-slate-300 rounded overflow-hidden shadow-2xs flex items-center justify-center flex-shrink-0">
+                    <?php 
+                        $passportPhoto = $passport_url ?? $student?->user?->avatarUrl ?? (!empty($student?->avatarUrl) ? $student->avatarUrl : null);
+                    ?>
+                    <?php if (!empty($passportPhoto)): ?>
+                        <img src="<?= htmlspecialchars($passportPhoto) ?>" alt="<?= htmlspecialchars($studentSalutedName) ?>" class="w-full h-full object-cover">
+                    <?php else: ?>
+                        <div class="flex flex-col items-center justify-center text-slate-400 p-1 text-center">
+                            <span class="text-xl">🎓</span>
+                            <span class="text-[7px] font-bold uppercase tracking-wider mt-0.5 leading-none">Passport</span>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

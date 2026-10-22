@@ -63,8 +63,23 @@ class ContentController extends Controller
             : $this->academicRepository->getAllClassSubjects($activeSession?->id);
 
         $selectedClassSubjectId = (int)($request->query('class_subject_id', 0) ?: $request->get('class_subject_id', 0));
-        if ($selectedClassSubjectId <= 0 && !empty($classSubjects)) {
-            $selectedClassSubjectId = $classSubjects[0]->id;
+
+        // Compute materials count per class_subject
+        $subjectMaterialCounts = [];
+        if (!empty($classSubjects)) {
+            $pdo = \App\Core\Database::getInstance();
+            $csIds = array_filter(array_map(fn($cs) => (int)$cs->id, $classSubjects));
+            if (!empty($csIds)) {
+                $placeholders = implode(',', array_fill(0, count($csIds), '?'));
+                $stmt = $pdo->prepare("
+                    SELECT class_subject_id, COUNT(*) as cnt 
+                    FROM content_items 
+                    WHERE class_subject_id IN ($placeholders) 
+                    GROUP BY class_subject_id
+                ");
+                $stmt->execute(array_values($csIds));
+                $subjectMaterialCounts = $stmt->fetchAll(\PDO::FETCH_KEY_PAIR) ?: [];
+            }
         }
 
         $items = [];
@@ -83,11 +98,12 @@ class ContentController extends Controller
         }
 
         return Response::html($this->render('teacher/content/index', [
-            'title' => 'Learning Materials — Claret Faculty Portal',
+            'title' => 'Learning Materials — Claret Teacher Portal',
             'headerTitle' => 'Course Content & Study Materials',
             'classSubjects' => $classSubjects,
             'selectedClassSubjectId' => $selectedClassSubjectId,
             'selectedClassSubject' => $selectedClassSubject,
+            'subjectMaterialCounts' => $subjectMaterialCounts,
             'items' => $items,
             'topics' => $topics,
             'activeSession' => $activeSession,

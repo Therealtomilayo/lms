@@ -5,13 +5,13 @@
             <div>
                 <!-- Breadcrumbs -->
                 <nav class="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                    <a href="/teacher/dashboard" class="text-slate-400 hover:text-emerald-600 transition">Faculty Portal</a>
+                    <a href="/teacher/dashboard" class="text-slate-400 hover:text-emerald-600 transition">Teacher Portal</a>
                     <span class="text-slate-300">/</span>
                     <span class="text-slate-700">Teaching Timetable</span>
                 </nav>
                 <div class="flex flex-wrap items-center gap-3">
                     <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight leading-tight">
-                        Faculty Weekly Teaching Schedule
+                        Teacher Weekly Teaching Schedule
                     </h1>
                 </div>
                 <p class="text-xs text-slate-500 mt-1">
@@ -94,7 +94,7 @@
 
         <!-- Status -->
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-            <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Faculty Schedule</p>
+            <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Teaching Schedule</p>
             <div class="flex items-baseline gap-2 mt-1">
                 <h3 class="text-lg font-extrabold text-slate-900">Synchronized</h3>
             </div>

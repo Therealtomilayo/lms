@@ -25,7 +25,7 @@ $resumptionDate = $next_resumption_date ?? '7th SEPTEMBER, 2026';
 $isFinalTerm = !empty($is_final_term);
 
 $demographics = $demographics ?? ['boys' => 7, 'girls' => 6, 'total' => 13];
-$attendanceStats = $attendance_stats ?? ['opened' => 120, 'present' => 116, 'absent' => 4];
+$attendanceStats = $attendance_stats ?? ['opened' => 60, 'present' => 60, 'absent' => 0];
 
 // Psychomotor & Affective domain traits strictly dynamic from teacher evaluations
 $psychomotorMap = [];

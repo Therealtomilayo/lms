@@ -13,6 +13,7 @@ if (!isset($settings)) {
         'school_phone' => $raw['school_phone'] ?? '',
         'school_email' => $raw['school_email'] ?? ($raw['contact_email'] ?? ''),
         'school_website' => $raw['school_website'] ?? '',
+        'school_logo_url' => $raw['school_logo_url'] ?? '',
     ];
 }
 $schoolName = htmlspecialchars($settings['school_name'] ?: 'School Portal');
@@ -20,6 +21,17 @@ $schoolMotto = htmlspecialchars($settings['school_motto'] ?? '');
 $schoolAddress = htmlspecialchars($settings['school_address'] ?? '');
 $schoolPhone = htmlspecialchars($settings['school_phone'] ?? '');
 $schoolEmail = htmlspecialchars($settings['school_email'] ?? '');
+
+$rawLogo = $settings['school_logo_url'] ?? '';
+$schoolLogoUrl = '';
+if (!empty($rawLogo)) {
+    if (str_starts_with($rawLogo, 'http://') || str_starts_with($rawLogo, 'https://')) {
+        $schoolLogoUrl = $rawLogo;
+    } else {
+        $appUrl = rtrim((string)($raw['app_url'] ?? getenv('APP_URL') ?: 'https://lms.test'), '/');
+        $schoolLogoUrl = $appUrl . '/' . ltrim($rawLogo, '/');
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -55,7 +67,13 @@ $schoolEmail = htmlspecialchars($settings['school_email'] ?? '');
                     <div class="main-card">
                         <!-- Brand Header -->
                         <div class="header">
-                            <div class="crest-badge">🎓</div>
+                            <?php if (!empty($schoolLogoUrl)): ?>
+                                <div style="margin-bottom: 10px;">
+                                    <img src="<?= htmlspecialchars($schoolLogoUrl) ?>" alt="<?= $schoolName ?>" style="max-height: 54px; max-width: 140px; width: auto; height: auto; object-fit: contain; vertical-align: middle; display: inline-block; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));">
+                                </div>
+                            <?php else: ?>
+                                <div class="crest-badge">🎓</div>
+                            <?php endif; ?>
                             <h1><?= $schoolName ?></h1>
                             <?php if ($schoolMotto): ?>
                                 <p><?= $schoolMotto ?></p>

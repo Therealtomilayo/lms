@@ -4,7 +4,7 @@
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <nav class="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                    <a href="/teacher/dashboard" class="text-slate-400 hover:text-emerald-600 transition">Faculty Portal</a>
+                    <a href="/teacher/dashboard" class="text-slate-400 hover:text-emerald-600 transition">Teacher Portal</a>
                     <span class="text-slate-300">/</span>
                     <a href="/teacher/content" class="text-slate-400 hover:text-emerald-600 transition">Learning Materials</a>
                     <span class="text-slate-300">/</span>

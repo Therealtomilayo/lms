@@ -5,7 +5,7 @@
             <div>
                 <!-- Breadcrumbs -->
                 <nav class="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                    <a href="/teacher/dashboard" class="text-slate-400 hover:text-emerald-600 transition">Faculty Portal</a>
+                    <a href="/teacher/dashboard" class="text-slate-400 hover:text-emerald-600 transition">Teacher Portal</a>
                     <span class="text-slate-300">/</span>
                     <a href="/teacher/content" class="text-slate-400 hover:text-emerald-600 transition">Learning Materials</a>
                     <span class="text-slate-300">/</span>
@@ -111,14 +111,55 @@
                 </div>
             </div>
 
-            <!-- Description / Body Text -->
+            <!-- Description / Body Text (Rich Note Editor) -->
             <div>
-                <label for="description" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                    Lesson Description / Notes
-                </label>
-                <textarea name="description" id="description" rows="5"
-                          placeholder="Provide detailed lecture notes, study instructions, or context for students..."
-                          class="w-full rounded-xl border border-slate-300 text-xs focus:border-emerald-500 focus:ring-emerald-500 bg-slate-50 py-2.5 px-3 font-medium text-slate-900 leading-relaxed transition"><?= htmlspecialchars((string)old('description', '')) ?></textarea>
+                <div class="flex items-center justify-between mb-1.5">
+                    <label for="description" class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                        Lesson Description / Notes
+                    </label>
+                    <span class="text-[11px] text-slate-400 font-medium">Use toolbar below for standard note formatting</span>
+                </div>
+
+                <!-- Formatting Toolbar -->
+                <div class="flex flex-wrap items-center gap-1 p-1.5 bg-slate-100 rounded-t-xl border border-b-0 border-slate-300">
+                    <button type="button" onclick="formatNote('bold')" class="px-2.5 py-1 text-xs font-black text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 rounded shadow-2xs transition" title="Bold (Ctrl+B)">
+                        <strong>B</strong>
+                    </button>
+                    <button type="button" onclick="formatNote('italic')" class="px-2.5 py-1 text-xs font-serif italic text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 rounded shadow-2xs transition" title="Italic (Ctrl+I)">
+                        <em>I</em>
+                    </button>
+                    <button type="button" onclick="formatNote('underline')" class="px-2.5 py-1 text-xs underline text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 rounded shadow-2xs transition" title="Underline (Ctrl+U)">
+                        <u>U</u>
+                    </button>
+
+                    <span class="w-px h-5 bg-slate-300 mx-1"></span>
+
+                    <button type="button" onclick="formatNote('h2')" class="px-2 py-1 text-xs font-extrabold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 rounded shadow-2xs transition" title="Heading 2">
+                        H2
+                    </button>
+                    <button type="button" onclick="formatNote('h3')" class="px-2 py-1 text-xs font-bold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 rounded shadow-2xs transition" title="Heading 3">
+                        H3
+                    </button>
+
+                    <span class="w-px h-5 bg-slate-300 mx-1"></span>
+
+                    <button type="button" onclick="formatNote('bullet')" class="px-2 py-1 text-xs text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 rounded shadow-2xs transition" title="Bullet List">
+                        • List
+                    </button>
+                    <button type="button" onclick="formatNote('numbered')" class="px-2 py-1 text-xs text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 rounded shadow-2xs transition" title="Numbered List">
+                        1. List
+                    </button>
+                    <button type="button" onclick="formatNote('quote')" class="px-2 py-1 text-xs text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 rounded shadow-2xs transition" title="Quote / Emphasis">
+                        “ Quote
+                    </button>
+                    <button type="button" onclick="formatNote('table')" class="px-2 py-1 text-xs text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 rounded shadow-2xs transition" title="Insert Table">
+                        ⊞ Table
+                    </button>
+                </div>
+
+                <textarea name="description" id="description" rows="8"
+                          placeholder="Provide detailed lecture notes, study instructions, or context for students. You can format using the toolbar above..."
+                          class="w-full rounded-b-xl border border-slate-300 text-xs focus:border-emerald-500 focus:ring-emerald-500 bg-white py-2.5 px-3 font-medium text-slate-900 leading-relaxed transition"><?= htmlspecialchars((string)old('description', '')) ?></textarea>
             </div>
 
             <!-- External URL (for link / video) -->
@@ -191,7 +232,64 @@ function updateTypeFields(type) {
     if (urlContainer) {
         if (type === 'video' || type === 'link') {
             urlContainer.style.display = 'block';
+        } else {
+            urlContainer.style.display = 'none';
         }
     }
+}
+
+function formatNote(command) {
+    var textarea = document.getElementById('description');
+    if (!textarea) return;
+
+    var start = textarea.selectionStart;
+    var end = textarea.selectionEnd;
+    var text = textarea.value;
+    var selected = text.substring(start, end);
+    var replacement = '';
+
+    switch (command) {
+        case 'bold':
+            replacement = '**' + (selected || 'bold text') + '**';
+            break;
+        case 'italic':
+            replacement = '*' + (selected || 'italic text') + '*';
+            break;
+        case 'underline':
+            replacement = '<u>' + (selected || 'underlined text') + '</u>';
+            break;
+        case 'h2':
+            replacement = '\n## ' + (selected || 'Section Heading') + '\n';
+            break;
+        case 'h3':
+            replacement = '\n### ' + (selected || 'Sub-heading') + '\n';
+            break;
+        case 'bullet':
+            if (selected) {
+                replacement = selected.split('\n').map(function(line) { return '- ' + line; }).join('\n');
+            } else {
+                replacement = '\n- Item 1\n- Item 2\n- Item 3\n';
+            }
+            break;
+        case 'numbered':
+            if (selected) {
+                replacement = selected.split('\n').map(function(line, idx) { return (idx + 1) + '. ' + line; }).join('\n');
+            } else {
+                replacement = '\n1. First step\n2. Second step\n3. Third step\n';
+            }
+            break;
+        case 'quote':
+            replacement = '\n> ' + (selected || 'Important study note or definition') + '\n';
+            break;
+        case 'table':
+            replacement = '\n| Concept | Definition | Example |\n| --- | --- | --- |\n| Term 1 | Explanation here | Example here |\n| Term 2 | Explanation here | Example here |\n';
+            break;
+        default:
+            return;
+    }
+
+    textarea.value = text.substring(0, start) + replacement + text.substring(end);
+    textarea.focus();
+    textarea.setSelectionRange(start + replacement.length, start + replacement.length);
 }
 </script>

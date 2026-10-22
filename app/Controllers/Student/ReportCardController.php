@@ -77,6 +77,56 @@ class ReportCardController extends Controller
         $summary = null;
 
         if ($isPublished && ResultPolicy::canViewStudentResults($userContext, $studentId, $isPublished)) {
+            $targetTerm = $this->academicRepo->findTermById($termId);
+            $targetSessionId = $targetTerm ? $targetTerm->sessionId : ($activeSession?->id ?? 0);
+
+            // 1. Bursary Clearance Gate
+            if (!$userContext->isAdmin() && !$this->feeRepo->isStudentClearedForResult($studentId, $targetSessionId, $termId)) {
+                $unpaidItems = $this->feeRepo->getUnpaidRequiredFeeItems($studentId, $targetSessionId, $termId);
+                $invoice = $this->feeRepo->findInvoiceForStudentTerm($studentId, $targetSessionId, $termId);
+                if (!$invoice && !empty($unpaidItems) && !empty($unpaidItems[0]['invoice_id'])) {
+                    $invoice = $this->feeRepo->findInvoiceById((int)$unpaidItems[0]['invoice_id']);
+                }
+                return Response::html($this->render('student/grades/fee_locked', [
+                    'student' => $student,
+                    'term' => $targetTerm,
+                    'session' => $this->academicRepo->findSessionById($targetSessionId),
+                    'unpaidItems' => $unpaidItems,
+                    'invoice' => $invoice,
+                    'backUrl' => '/student/dashboard',
+                ], 'layouts/student'));
+            }
+
+            // 2. PIN Gate
+            if (!$userContext->isAdmin()) {
+                \App\Core\Session::start();
+                $sessionKey = "_unlocked_pin_student_{$studentId}_{$termId}";
+                $unlockedPinId = \App\Core\Session::get($sessionKey);
+                $activePin = null;
+
+                if ($unlockedPinId) {
+                    $candidate = $this->pinService->getPinById((int)$unlockedPinId);
+                    if ($candidate && $candidate->isUsable() && ($candidate->studentId === null || $candidate->studentId === $studentId)) {
+                        $activePin = $candidate;
+                    } else {
+                        \App\Core\Session::remove($sessionKey);
+                    }
+                }
+
+                if (!$activePin) {
+                    return Response::html($this->render('payments/pin_gate', [
+                        'student' => $student,
+                        'currentSession' => $activeSession,
+                        'currentTerm' => $activeTerm,
+                        'unlockUrl' => "/student/grades/unlock",
+                        'backUrl' => "/student/dashboard",
+                        'error' => \App\Core\Session::getFlash('error'),
+                        'success' => \App\Core\Session::getFlash('success'),
+                        'isParent' => false,
+                    ]));
+                }
+            }
+
             $subjectResults = $this->gradebookRepo->getTermResultsByStudent($studentId, $termId);
             $summary = $this->gradebookRepo->findStudentTermSummary($studentId, $termId);
         }

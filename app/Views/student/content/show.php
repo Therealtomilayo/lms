@@ -100,8 +100,24 @@
     <!-- Main Lesson Body Text Card -->
     <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 sm:p-8 space-y-6">
         <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400">Lesson Material & Notes</h2>
-        <div class="prose prose-slate max-w-none text-slate-800 leading-relaxed whitespace-pre-line text-sm sm:text-base font-normal">
-            <?= htmlspecialchars($item->description ?? 'No textual notes provided for this lesson.') ?>
+        <div class="prose prose-slate max-w-none text-slate-800 leading-relaxed text-sm sm:text-base font-normal">
+            <?php
+                $noteRaw = $item->description ?? '';
+                if (empty($noteRaw)) {
+                    echo '<p class="text-slate-400 italic">No textual notes provided for this lesson.</p>';
+                } else {
+                    $safe = htmlspecialchars($noteRaw, ENT_QUOTES, 'UTF-8');
+                    $safe = preg_replace('/&lt;u&gt;(.*?)&lt;\/u&gt;/i', '<u class="underline decoration-emerald-500">$1</u>', $safe);
+                    $safe = preg_replace('/\*\*(.*?)\*\*/s', '<strong class="font-bold text-slate-900">$1</strong>', $safe);
+                    $safe = preg_replace('/(?<!\*)\*(?!\*)(.*?)\*/s', '<em class="italic">$1</em>', $safe);
+                    $safe = preg_replace('/^### (.*?)$/m', '<h4 class="text-base font-bold text-slate-800 mt-4 mb-2">$1</h4>', $safe);
+                    $safe = preg_replace('/^## (.*?)$/m', '<h3 class="text-lg font-extrabold text-slate-900 mt-6 mb-2 border-b border-slate-100 pb-1">$1</h3>', $safe);
+                    $safe = preg_replace('/^> (.*?)$/m', '<blockquote class="border-l-4 border-emerald-500 pl-4 py-1.5 my-3 bg-emerald-50/50 rounded-r text-slate-700 italic">$1</blockquote>', $safe);
+                    $safe = preg_replace('/^[-•] (.*?)$/m', '<li class="ml-4 list-disc text-slate-700">$1</li>', $safe);
+                    $safe = preg_replace('/^\d+\. (.*?)$/m', '<li class="ml-4 list-decimal text-slate-700">$1</li>', $safe);
+                    echo nl2br($safe);
+                }
+            ?>
         </div>
 
         <!-- Attached File Card -->

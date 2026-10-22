@@ -1,6 +1,6 @@
 <?php
 $this->layout('layouts/teacher', [
-    'title' => 'Affective & Psychomotor Evaluation Matrix — Claret Faculty Portal',
+    'title' => 'Affective & Psychomotor Evaluation Matrix — Claret Teacher Portal',
     'headerTitle' => 'Affective & Psychomotor Evaluation Matrix',
     'headerSubtitle' => 'Streamlined rating grid for homeroom teachers to assess students on affective and psychomotor domain traits.'
 ]);

@@ -71,6 +71,24 @@ class ContentController extends Controller
         $topics = [];
         $selectedClassSubject = null;
 
+        // Compute materials count per enrolled subject for the card grid
+        $subjectMaterialCounts = [];
+        if (!empty($subjectEnrollments)) {
+            $pdo = \App\Core\Database::getInstance();
+            $csIds = array_filter(array_map(fn($se) => (int)$se->classSubjectId, $subjectEnrollments));
+            if (!empty($csIds)) {
+                $placeholders = implode(',', array_fill(0, count($csIds), '?'));
+                $stmt = $pdo->prepare("
+                    SELECT class_subject_id, COUNT(*) as cnt 
+                    FROM content_items 
+                    WHERE class_subject_id IN ($placeholders) AND published_at IS NOT NULL 
+                    GROUP BY class_subject_id
+                ");
+                $stmt->execute(array_values($csIds));
+                $subjectMaterialCounts = $stmt->fetchAll(\PDO::FETCH_KEY_PAIR) ?: [];
+            }
+        }
+
         if ($selectedClassSubjectId > 0) {
             try {
                 $result = $this->contentService->getContentForStudent($selectedClassSubjectId, $userContext);
@@ -79,17 +97,6 @@ class ContentController extends Controller
                 $selectedClassSubject = $result->data['class_subject'] ?? null;
             } catch (\Throwable $e) {
                 // Ignore error if student isn't enrolled
-            }
-        } elseif (!empty($subjectEnrollments)) {
-            $firstSubject = (int)$subjectEnrollments[0]->classSubjectId;
-            $selectedClassSubjectId = $firstSubject;
-            try {
-                $result = $this->contentService->getContentForStudent($firstSubject, $userContext);
-                $items = $result->data['items'] ?? [];
-                $topics = $result->data['topics'] ?? [];
-                $selectedClassSubject = $result->data['class_subject'] ?? null;
-            } catch (\Throwable $e) {
-                // Fallback
             }
         }
 
@@ -108,6 +115,7 @@ class ContentController extends Controller
             'subjectEnrollments' => $subjectEnrollments,
             'selectedClassSubjectId' => $selectedClassSubjectId,
             'selectedClassSubject' => $selectedClassSubject,
+            'subjectMaterialCounts' => $subjectMaterialCounts,
             'items' => $items,
             'topics' => $topics,
             'progressMap' => $progressMap,

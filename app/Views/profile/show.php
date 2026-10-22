@@ -286,10 +286,12 @@ $displayRole = $roleLabels[$primaryRole] ?? ucfirst($primaryRole);
                         <span class="font-semibold text-slate-800 text-sm"><?= $createdAt ?></span>
                     </div>
 
+                    <?php if (!empty($isAdmin)): ?>
                     <div class="sm:col-span-2 bg-slate-50 p-3.5 rounded-xl border border-slate-100">
                         <span class="text-slate-400 font-bold uppercase tracking-wider text-[10px] block mb-1">System UUID Identifier</span>
                         <span class="font-mono text-xs text-slate-600 break-all select-all"><?= htmlspecialchars($userUuid) ?></span>
                     </div>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -423,7 +425,7 @@ $displayRole = $roleLabels[$primaryRole] ?? ucfirst($primaryRole);
                                 </svg>
                             </div>
                             <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wide">
-                                Faculty Profile &amp; Teaching Allocations
+                                Teacher Profile &amp; Subject Assignments
                             </h3>
                         </div>
                         <span class="text-xs font-mono font-bold text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded border border-slate-200">

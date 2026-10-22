@@ -234,9 +234,18 @@ class AuthController extends Controller
         return $this->redirectWithSuccess('/forgot-password', $result->data['message']);
     }
 
-    public function showResetPassword(Request $request, string $token): Response
+    public function showResetPassword(Request $request, string|array|null $token = null): Response
     {
-        $validation = $this->authService->validatePasswordResetToken($token);
+        $rawToken = is_string($token) && !empty($token) ? $token : (string)($request->get('token') ?: ($request->query('token') ?: ''));
+        if (is_array($token)) {
+            $rawToken = (string)($token['token'] ?? $rawToken);
+        }
+
+        if (empty($rawToken)) {
+            return $this->redirectWithErrors('/forgot-password', ['token' => 'Password reset token is missing.']);
+        }
+
+        $validation = $this->authService->validatePasswordResetToken($rawToken);
 
         if ($validation->isFailure()) {
             return $this->redirectWithErrors('/forgot-password', $validation->errors);
@@ -244,8 +253,8 @@ class AuthController extends Controller
 
         return $this->view('auth/reset_password', [
             'title' => 'Set New Password - Claret LMS',
-            'token' => $token,
-            'email' => $validation->data['email'],
+            'token' => $rawToken,
+            'email' => $validation->data['email'] ?? (string)($request->get('email') ?: ''),
             'errors' => Session::getFlash('errors', []),
         ]);
     }
