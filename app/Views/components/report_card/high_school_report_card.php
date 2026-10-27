@@ -142,6 +142,20 @@ if (!empty($psychomotor_ratings)) {
 }
 ?>
 
+<style>
+.watermark-bg {
+    position: absolute;
+    inset: 0;
+    background-image: url('<?= htmlspecialchars(!empty($schoolLogo) ? $schoolLogo : '/assets/img/logo.png') ?>');
+    background-position: center 48%;
+    background-repeat: no-repeat;
+    background-size: 380px;
+    opacity: 0.045;
+    pointer-events: none;
+    z-index: 1;
+}
+</style>
+
 <!-- ========================================================================= -->
 <!-- HIGH SCHOOL DOSSIER — PAGE 1: ACADEMIC PERFORMANCE (A4 PORTRAIT)           -->
 <!-- ========================================================================= -->
@@ -187,9 +201,9 @@ if (!empty($psychomotor_ratings)) {
                     <?php if (!empty($passportPhoto)): ?>
                         <img src="<?= htmlspecialchars($passportPhoto) ?>" alt="<?= htmlspecialchars($studentSalutedName) ?>" class="w-full h-full object-cover">
                     <?php else: ?>
-                        <div class="flex flex-col items-center justify-center text-slate-400 p-1 text-center">
-                            <span class="text-xl">🎓</span>
-                            <span class="text-[7px] font-bold uppercase tracking-wider mt-0.5 leading-none">Passport</span>
+                        <div class="relative w-full h-full flex flex-col items-center justify-center bg-slate-50 p-1 text-center overflow-hidden">
+                            <img src="<?= htmlspecialchars($schoolLogo) ?>" alt="School Crest" class="w-10 h-10 object-contain opacity-25 filter grayscale">
+                            <span class="text-[7px] font-bold uppercase tracking-wider text-slate-500 mt-1 leading-none">Affix Photo</span>
                         </div>
                     <?php endif; ?>
                 </div>

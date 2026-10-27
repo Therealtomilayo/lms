@@ -126,6 +126,9 @@ class TimetableController extends Controller
             'terms' => $terms,
             'scheduleData' => $scheduleData,
             'classSubjects' => $classSubjects,
+            'standardPeriods' => \App\Utils\PeriodSchedule::getAllPeriods(),
+            'instructionalPeriods' => \App\Utils\PeriodSchedule::getInstructionalPeriods(),
+            'standardDays' => \App\Utils\PeriodSchedule::getDays(),
             'csrf_token' => $request->getSession()->get('_csrf_token', ''),
         ], 'layouts/admin'));
     }
@@ -250,5 +253,166 @@ class TimetableController extends Controller
                 $e->getMessage()
             );
         }
+    }
+
+    /**
+     * Clone timetable schedule from another term.
+     * Route: POST /admin/timetable/{classId}/clone
+     */
+    public function cloneSchedule(Request $request, string|int $classId = 0): Response
+    {
+        $user = $this->getUserContext($request);
+        if (!$user) {
+            return Response::redirect('/login');
+        }
+
+        $classId = (int)($classId ?: $request->getRouteParam('classId', 0));
+        $sourceTermId = (int)$request->input('source_term_id', 0);
+        $targetTermId = (int)$request->input('target_term_id', 0);
+        $overwrite = (bool)$request->input('overwrite_existing', false);
+
+        try {
+            $result = $this->timetableService->cloneTermTimetable(
+                $sourceTermId,
+                $targetTermId,
+                $classId > 0 ? $classId : null,
+                $overwrite,
+                $user
+            );
+
+            $msg = "Timetable successfully cloned! {$result['cloned_count']} period(s) copied.";
+            if ($result['skipped_count'] > 0) {
+                $msg .= " ({$result['skipped_count']} period(s) skipped due to existing schedule or conflicts).";
+            }
+
+            return $this->redirectWithSuccess(
+                "/admin/timetable/{$classId}/edit?term_id={$targetTermId}",
+                $msg
+            );
+        } catch (ValidationException $e) {
+            return $this->redirectWithErrors(
+                "/admin/timetable/{$classId}/edit?term_id={$targetTermId}",
+                $e->getErrors()
+            );
+        } catch (\Throwable $e) {
+            return $this->redirectWithError(
+                "/admin/timetable/{$classId}/edit?term_id={$targetTermId}",
+                $e->getMessage()
+            );
+        }
+    }
+
+    /**
+     * Import timetable schedule from uploaded CSV spreadsheet.
+     * Route: POST /admin/timetable/{classId}/import
+     */
+    public function importCsv(Request $request, string|int $classId = 0): Response
+    {
+        $user = $this->getUserContext($request);
+        if (!$user) {
+            return Response::redirect('/login');
+        }
+
+        $classId = (int)($classId ?: $request->getRouteParam('classId', 0));
+        $termId = (int)$request->input('term_id', 0);
+        $overwrite = (bool)$request->input('overwrite_existing', false);
+
+        $content = null;
+        $file = $request->file('csv_file') ?? ($_FILES['csv_file'] ?? null);
+        if ($file && is_array($file) && !empty($file['tmp_name']) && is_uploaded_file($file['tmp_name'])) {
+            $content = file_get_contents($file['tmp_name']);
+        }
+
+        if (empty($content)) {
+            $content = (string)$request->input('csv_content', '');
+        }
+
+        if (empty($content) || trim($content) === '') {
+            return $this->redirectWithError(
+                "/admin/timetable/{$classId}/edit?term_id={$termId}",
+                'Please select a valid CSV file to upload.'
+            );
+        }
+
+        // Parse custom column mapping from UI if present
+        $columnMapping = [];
+        if ($request->filled('map_day')) {
+            $columnMapping['day'] = (int)$request->input('map_day');
+        }
+        if ($request->filled('map_period')) {
+            $columnMapping['period'] = (int)$request->input('map_period');
+        }
+        if ($request->filled('map_subject')) {
+            $columnMapping['subject'] = (int)$request->input('map_subject');
+        }
+        if ($request->filled('map_room')) {
+            $columnMapping['room'] = (int)$request->input('map_room');
+        }
+        if ($request->filled('map_class')) {
+            $columnMapping['class'] = (int)$request->input('map_class');
+        }
+
+        try {
+            $result = $this->timetableService->importFromCsv(
+                $content,
+                $termId,
+                $user,
+                $classId > 0 ? $classId : null,
+                $overwrite,
+                $columnMapping
+            );
+
+            return $this->redirectWithSuccess(
+                "/admin/timetable/{$classId}/edit?term_id={$termId}",
+                "Successfully imported {$result['imported_count']} timetable slot(s) across {$result['classes_count']} class cohort(s)!"
+            );
+        } catch (ValidationException $e) {
+            $errors = $e->getErrors();
+            $msg = $e->getMessage();
+            if (!empty($errors['import_errors']) && is_array($errors['import_errors'])) {
+                $msg = "Import validation failed:\n• " . implode("\n• ", array_slice($errors['import_errors'], 0, 5));
+                if (count($errors['import_errors']) > 5) {
+                    $msg .= "\n...and " . (count($errors['import_errors']) - 5) . " more error(s).";
+                }
+            }
+            return $this->redirectWithError(
+                "/admin/timetable/{$classId}/edit?term_id={$termId}",
+                $msg
+            );
+        } catch (\Throwable $e) {
+            return $this->redirectWithError(
+                "/admin/timetable/{$classId}/edit?term_id={$termId}",
+                'Import failed: ' . $e->getMessage()
+            );
+        }
+    }
+
+    /**
+     * Download sample CSV template pre-populated with active class and subject codes.
+     * Route: GET /admin/timetable/template/download
+     */
+    public function downloadTemplate(Request $request, string|int $classId = 0): Response
+    {
+        $user = $this->getUserContext($request);
+        if (!$user) {
+            return Response::redirect('/login');
+        }
+
+        $cId = (int)($classId ?: $request->getRouteParam('classId', 0));
+        $classIdParam = $cId > 0 ? $cId : ($request->getQuery('class_id') ? (int)$request->getQuery('class_id') : null);
+        $termId = $request->getQuery('term_id') ? (int)$request->getQuery('term_id') : null;
+
+        $term = $termId ? $this->academicRepo->findTermById($termId) : null;
+        $sessionId = $term ? (int)$term->sessionId : null;
+
+        $csv = $this->timetableService->generateSampleCsv($classIdParam, $sessionId);
+        $filename = "claret_timetable_sample_template.csv";
+
+        return new Response($csv, 200, [
+            'Content-Type' => 'text/csv; charset=utf-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+        ]);
     }
 }

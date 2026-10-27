@@ -283,8 +283,47 @@ class FeeInvoiceService
             return ServiceResult::error('Associated fee invoice not found.');
         }
 
-        $now = date('Y-m-d H:i:s');
-        $gatewayRef = 'MOCK_PSTK_' . strtoupper(bin2hex(random_bytes(6)));
+        $secretKey = $this->paymentService->getSecretKey();
+        $isLivePaystack = !empty($secretKey) && !str_starts_with($secretKey, 'mock_') && !str_starts_with($secretKey, 'sk_test_mock');
+
+        if ($isLivePaystack || Config::get('app.env') === 'production') {
+            if (empty($secretKey)) {
+                return ServiceResult::error('Paystack secret key is not configured.');
+            }
+
+            $url = rtrim((string)Config::get('paystack.payment_url', 'https://api.paystack.co'), '/') . '/transaction/verify/' . rawurlencode($reference);
+
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Authorization: Bearer ' . $secretKey,
+                'Content-Type: application/json',
+            ]);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $err = curl_error($ch);
+            curl_close($ch);
+
+            if ($err) {
+                return ServiceResult::error("Paystack verification error: {$err}");
+            }
+
+            $body = json_decode((string)$response, true);
+            if ($httpCode !== 200 || empty($body['status']) || ($body['data']['status'] ?? '') !== 'success') {
+                return ServiceResult::error($body['message'] ?? 'Payment verification failed or transaction not successful.');
+            }
+
+            $gatewayRef = (string)($body['data']['id'] ?? $body['data']['reference'] ?? $reference);
+            if (!empty($body['data']['paid_at'])) {
+                $now = date('Y-m-d H:i:s', strtotime($body['data']['paid_at']));
+            }
+        } else {
+            // Local dev / sandbox simulation fallback only
+            $gatewayRef = 'MOCK_PSTK_' . strtoupper(bin2hex(random_bytes(6)));
+        }
 
         // 1. Mark payment as successful
         $this->paymentRepo->updateStatus($payment->id, Payment::STATUS_SUCCESSFUL, $gatewayRef, $now);

@@ -101,8 +101,11 @@ class PaymentController extends Controller
             return $this->redirectWithError('/applicant/application', 'Missing payment reference.');
         }
 
-        // If simulated reference, verify via simulator
+        // If simulated reference, verify via simulator (disabled in production)
         if (str_starts_with($reference, 'ADM-') && $request->query('simulated')) {
+            if (\App\Core\Config::get('app.env') === 'production') {
+                return $this->redirectWithError('/applicant/application', 'Payment simulation is disabled in production environments.');
+            }
             $result = $this->admissionService->simulateSuccessfulWardPayment($reference, $user->id);
         } else {
             // Live / Sandbox Paystack verification
@@ -130,6 +133,11 @@ class PaymentController extends Controller
     public function simulate(Request $request): Response
     {
         $user = $this->requireAuthContext($request);
+
+        if (\App\Core\Config::get('app.env') === 'production') {
+            return $this->forbidden('Payment simulation is disabled in production environments.');
+        }
+
         $reference = (string)$request->post('reference', '');
 
         if (empty($reference)) {

@@ -155,6 +155,7 @@ $workday = $statusBundle['workday'];
                                         <li>On Windows PC: Ensure <strong>Windows Settings &rarr; Privacy & security &rarr; Location</strong> is toggled <strong>ON</strong>.</li>
                                     </ol>
                                 </div>
+                                <?php if (\App\Core\Config::get('app.env') !== 'production' && \App\Core\Config::get('app.debug', false)): ?>
                                 <div class="flex items-center justify-between gap-2 pt-1">
                                     <span class="text-[11px] text-slate-500">Desktop PC in faculty office or testing without hardware GPS?</span>
                                     <button type="button" onclick="simulateCampusLocation()" class="px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-[11px] border border-slate-300 transition flex items-center gap-1">
@@ -162,6 +163,7 @@ $workday = $statusBundle['workday'];
                                         <span>Use Campus Coordinates (Office / Dev)</span>
                                     </button>
                                 </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>

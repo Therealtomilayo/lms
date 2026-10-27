@@ -242,6 +242,67 @@ class TimetableRepository
     }
 
     /**
+     * Find all timetable slots for an entire term.
+     *
+     * @return array<int, TimetableSlot>
+     */
+    public function findByTerm(int $termId): array
+    {
+        $sql = "
+            SELECT 
+                ts.*,
+                cs.session_id,
+                cs.class_id,
+                cs.subject_id,
+                cs.teacher_id,
+                cs.status AS class_subject_status,
+                sub.name AS subject_name,
+                sub.code AS subject_code,
+                c.name AS class_name,
+                c.section_arm,
+                u.name AS teacher_name,
+                t.staff_id AS teacher_staff_id,
+                tm.name AS term_name,
+                tm.session_id AS term_session_id,
+                tm.start_date AS term_start_date,
+                tm.end_date AS term_end_date,
+                tm.status AS term_status,
+                (tm.status = 'active') AS term_is_current
+            FROM timetable_slots ts
+            JOIN class_subjects cs ON cs.id = ts.class_subject_id
+            JOIN subjects sub ON sub.id = cs.subject_id
+            JOIN classes c ON c.id = cs.class_id
+            JOIN terms tm ON tm.id = ts.term_id
+            LEFT JOIN teachers t ON t.id = cs.teacher_id
+            LEFT JOIN users u ON u.id = t.user_id
+            WHERE ts.term_id = :term_id
+            ORDER BY 
+                cs.class_id ASC,
+                CASE ts.day_of_week
+                    WHEN 'mon' THEN 1
+                    WHEN 'tue' THEN 2
+                    WHEN 'wed' THEN 3
+                    WHEN 'thu' THEN 4
+                    WHEN 'fri' THEN 5
+                    WHEN 'sat' THEN 6
+                    WHEN 'sun' THEN 7
+                    ELSE 8
+                END ASC,
+                ts.start_time ASC,
+                ts.end_time ASC
+        ";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':term_id' => $termId]);
+
+        $slots = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $slots[] = TimetableSlot::fromArray($row);
+        }
+        return $slots;
+    }
+
+    /**
      * Find all timetable slots for a teacher in a specific term (or all terms if null).
      *
      * @return array<int, TimetableSlot>
@@ -544,4 +605,67 @@ class TimetableRepository
 
         throw new \App\Core\Exceptions\ValidationException(['time' => "Cannot parse time value: {$time}"]);
     }
+
+    /**
+     * Delete all timetable slots for a class in a specific term.
+     */
+    public function deleteByClassAndTerm(int $classId, int $termId): int
+    {
+        $sql = "
+            DELETE FROM timetable_slots
+            WHERE term_id = :term_id
+              AND class_subject_id IN (
+                  SELECT id FROM class_subjects WHERE class_id = :class_id
+              )
+        ";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            ':class_id' => $classId,
+            ':term_id' => $termId,
+        ]);
+        return $stmt->rowCount();
+    }
+
+    /**
+     * Batch insert multiple timetable slots.
+     *
+     * @param array<int, array{term_id: int, class_subject_id: int, day_of_week: string, start_time: string, end_time: string, room: ?string}> $slotsData
+     * @return int Number of inserted rows
+     */
+    public function batchCreate(array $slotsData): int
+    {
+        if (empty($slotsData)) {
+            return 0;
+        }
+
+        $sql = "INSERT INTO timetable_slots (term_id, class_subject_id, day_of_week, start_time, end_time, room, created_at, updated_at) VALUES ";
+        $placeholders = [];
+        $values = [];
+
+        foreach ($slotsData as $i => $row) {
+            $placeholders[] = "(:term_{$i}, :cs_{$i}, :day_{$i}, :start_{$i}, :end_{$i}, :room_{$i}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
+            $values[":term_{$i}"] = (int)$row['term_id'];
+            $values[":cs_{$i}"] = (int)$row['class_subject_id'];
+            $values[":day_{$i}"] = strtolower(trim((string)$row['day_of_week']));
+            $values[":start_{$i}"] = self::normalizeTime((string)$row['start_time']);
+            $values[":end_{$i}"] = self::normalizeTime((string)$row['end_time']);
+            $values[":room_{$i}"] = !empty($row['room']) ? trim((string)$row['room']) : null;
+        }
+
+        $sql .= implode(', ', $placeholders);
+        $stmt = $this->db->prepare($sql);
+        foreach ($values as $key => $val) {
+            if ($val === null) {
+                $stmt->bindValue($key, null, PDO::PARAM_NULL);
+            } elseif (is_int($val)) {
+                $stmt->bindValue($key, $val, PDO::PARAM_INT);
+            } else {
+                $stmt->bindValue($key, $val, PDO::PARAM_STR);
+            }
+        }
+
+        $stmt->execute();
+        return count($slotsData);
+    }
 }
+

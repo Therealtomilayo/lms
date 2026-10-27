@@ -216,9 +216,14 @@ class ParentFeeController extends Controller
                     return $this->redirect($authUrl);
                 }
             }
+            return $this->redirectWithFlash("/parent/fees/invoices/{$invoice->id}", 'error', $pstkRes->getError() ?? 'Unable to initialize transaction with Paystack.');
         }
 
-        // Automatic simulation callback
+        if (\App\Core\Config::get('app.env') === 'production') {
+            return $this->redirectWithFlash("/parent/fees/invoices/{$invoice->id}", 'error', 'Online payment gateway is currently not configured.');
+        }
+
+        // Automatic simulation callback (non-production local dev only)
         return $this->redirect("/parent/fees/verify?reference={$payment->reference}");
     }
 

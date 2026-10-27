@@ -351,10 +351,14 @@ try {
 
     // Admin Timetable Builder & Management Routes
     $router->get('/admin/timetable', [\App\Controllers\Admin\TimetableController::class, 'index'], $adminAuth);
+    $router->get('/admin/timetable/template/download', [\App\Controllers\Admin\TimetableController::class, 'downloadTemplate'], $adminAuth);
+    $router->get('/admin/timetable/{classId}/template/download', [\App\Controllers\Admin\TimetableController::class, 'downloadTemplate'], $adminAuth);
     $router->get('/admin/timetable/{classId}/edit', [\App\Controllers\Admin\TimetableController::class, 'edit'], $adminAuth);
     $router->post('/admin/timetable/{classId}/slots', [\App\Controllers\Admin\TimetableController::class, 'store'], $adminFormAuth);
     $router->post('/admin/timetable/{classId}/slots/{slotId}', [\App\Controllers\Admin\TimetableController::class, 'update'], $adminFormAuth);
     $router->post('/admin/timetable/{classId}/slots/{slotId}/delete', [\App\Controllers\Admin\TimetableController::class, 'delete'], $adminFormAuth);
+    $router->post('/admin/timetable/{classId}/clone', [\App\Controllers\Admin\TimetableController::class, 'cloneSchedule'], $adminFormAuth);
+    $router->post('/admin/timetable/{classId}/import', [\App\Controllers\Admin\TimetableController::class, 'importCsv'], $adminFormAuth);
 
     // Admin System Health, Backups & Audit Log Explorer Routes
     $router->get('/admin/health', [\App\Controllers\Admin\HealthController::class, 'index'], $adminAuth);

@@ -95,7 +95,8 @@ $this->layout('layouts/applicant', ['title' => 'Application Fee Payment']);
                 </button>
             </form>
 
-            <!-- Instant Sandbox Simulation Form (Always available in local dev/test or when simulated flag is present) -->
+            <?php if (\App\Core\Config::get('app.env') !== 'production' && \App\Core\Config::get('app.debug', false)): ?>
+            <!-- Instant Sandbox Simulation Form (Dev/Testing Mode Only) -->
             <div class="pt-3 border-t border-slate-100">
                 <div class="rounded-xl bg-amber-50/70 border border-amber-200 p-3.5 text-center">
                     <span class="text-[10px] font-bold uppercase tracking-wider text-amber-800 block mb-1">
@@ -115,6 +116,7 @@ $this->layout('layouts/applicant', ['title' => 'Application Fee Payment']);
                     </form>
                 </div>
             </div>
+            <?php endif; ?>
 
             <!-- Trust Badge -->
             <div class="text-center pt-2">

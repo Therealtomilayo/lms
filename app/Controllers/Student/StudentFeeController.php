@@ -151,9 +151,14 @@ class StudentFeeController extends Controller
                     return $this->redirect($authUrl);
                 }
             }
+            return $this->redirectWithFlash("/student/fees/invoices/{$invoice->id}", 'error', $pstkRes->getError() ?? 'Unable to initialize transaction with Paystack.');
         }
 
-        // Automatic simulation callback
+        if (\App\Core\Config::get('app.env') === 'production') {
+            return $this->redirectWithFlash("/student/fees/invoices/{$invoice->id}", 'error', 'Online payment gateway is currently not configured.');
+        }
+
+        // Automatic simulation callback (non-production local dev only)
         return $this->redirect("/student/fees/verify?reference={$payment->reference}");
     }
 

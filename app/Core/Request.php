@@ -59,11 +59,20 @@ class Request
         $uri = $this->serverParams['REQUEST_URI'] ?? '/';
         $path = parse_url($uri, PHP_URL_PATH) ?: '/';
 
-        // Strip subfolder if hosted under a subdirectory
-        $scriptName = $this->serverParams['SCRIPT_NAME'] ?? '';
-        $baseDir = dirname($scriptName);
-        if ($baseDir !== '/' && $baseDir !== '\\' && str_starts_with($path, $baseDir)) {
-            $path = substr($path, strlen($baseDir));
+        // Strip subfolder if hosted under a subdirectory (e.g. /lms or /lms/public)
+        $scriptName = str_replace('\\', '/', $this->serverParams['SCRIPT_NAME'] ?? '');
+        $scriptDir = dirname($scriptName);
+
+        if ($scriptDir !== '/' && $scriptDir !== '.') {
+            if (str_starts_with($path, $scriptDir)) {
+                $path = substr($path, strlen($scriptDir));
+            } else {
+                // If /public is omitted in URL by root .htaccess rewrite (e.g. /lms rewritten to /lms/public)
+                $parentDir = dirname($scriptDir);
+                if ($parentDir !== '/' && $parentDir !== '.' && str_starts_with($path, $parentDir)) {
+                    $path = substr($path, strlen($parentDir));
+                }
+            }
             if ($path === '' || $path[0] !== '/') {
                 $path = '/' . $path;
             }
@@ -232,6 +241,11 @@ class Request
     public function file(string $key): ?array
     {
         return $this->files[$key] ?? null;
+    }
+
+    public function getFile(string $key): ?array
+    {
+        return $this->file($key);
     }
 
     public function files(): array

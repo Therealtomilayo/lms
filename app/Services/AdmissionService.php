@@ -476,6 +476,10 @@ class AdmissionService
      */
     public function simulateSuccessfulWardPayment(string $reference, int $applicantUserId): ServiceResult
     {
+        if (\App\Core\Config::get('app.env') === 'production') {
+            return ServiceResult::error('Payment simulation is disabled in production environments.');
+        }
+
         $payment = $this->admissionRepo->findPaymentByReference($reference);
         if (!$payment) {
             return ServiceResult::error("Payment transaction {$reference} not found.");

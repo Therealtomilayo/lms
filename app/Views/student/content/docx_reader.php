@@ -1,9 +1,9 @@
-<div class="max-w-6xl mx-auto space-y-4" id="docx-reader-root">
-    <!-- Header & Breadcrumbs Card -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 transition">
-        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div>
-                <nav class="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+<div class="max-w-6xl mx-auto space-y-3 sm:space-y-4" id="docx-reader-root">
+    <!-- Header & Breadcrumbs Card (Compact on mobile/tablets, hidden in fullscreen) -->
+    <div id="docx-header-card" class="bg-white rounded-2xl border border-slate-200 shadow-xs p-3.5 sm:p-5 transition">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="min-w-0">
+                <nav class="hidden sm:flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
                     <a href="/student/dashboard" class="hover:text-sky-600 transition">Student Portal</a>
                     <span class="text-slate-300">/</span>
                     <a href="/student/subjects" class="hover:text-sky-600 transition">Subjects</a>
@@ -11,45 +11,36 @@
                     <a href="/student/content?class_subject_id=<?= (int)$item->classSubjectId ?>" class="hover:text-sky-600 transition">
                         <?= htmlspecialchars($item->classSubject?->subject?->name ?? 'Course Materials') ?>
                     </a>
-                    <span class="text-slate-300">/</span>
-                    <a href="/student/content/<?= (int)$item->id ?>" class="hover:text-sky-600 transition">
-                        <?= htmlspecialchars($item->title) ?>
-                    </a>
                 </nav>
 
-                <div class="flex flex-wrap items-center gap-3">
-                    <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight leading-tight">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <h1 class="text-base sm:text-xl font-extrabold text-slate-900 tracking-tight leading-tight truncate">
                         <?= htmlspecialchars($item->title) ?>
                     </h1>
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold bg-sky-50 text-sky-800 border border-sky-200">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold bg-sky-50 text-sky-800 border border-sky-200">
                         <?= htmlspecialchars($item->classSubject?->subject?->code ?: 'SUBJ') ?>
-                    </span>
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200">
-                        Word Document Reader
                     </span>
                 </div>
 
-                <p class="text-xs text-slate-500 mt-1.5 flex items-center gap-2 flex-wrap">
-                    <span>File: <strong class="text-slate-700"><?= htmlspecialchars($file->originalName) ?></strong></span>
+                <p class="text-[11px] text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
+                    <span class="truncate max-w-[200px] sm:max-w-xs">File: <strong class="text-slate-700"><?= htmlspecialchars($file->originalName) ?></strong></span>
                     <span>&bull;</span>
-                    <span>Size: <strong><?= htmlspecialchars($file->getFormattedSize()) ?></strong></span>
-                    <span>&bull;</span>
-                    <span>Teacher: <strong><?= htmlspecialchars($item->teacher?->user?->name ?? ($item->teacher?->name ?? 'Subject Teacher')) ?></strong></span>
+                    <span><?= htmlspecialchars($file->getFormattedSize()) ?></span>
                 </p>
             </div>
 
             <!-- Action buttons -->
-            <div class="flex items-center gap-2.5 flex-wrap">
+            <div class="flex items-center gap-2 flex-shrink-0">
                 <a href="/student/content/<?= (int)$item->id ?>" 
-                   class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition">
-                    <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition">
+                    <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                     </svg>
-                    <span>Back to Lesson</span>
+                    <span>Back</span>
                 </a>
                 <a href="<?= htmlspecialchars($downloadUrl) ?>" 
-                   class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition border border-slate-200 shadow-2xs">
-                    <svg class="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                   class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition border border-slate-200 shadow-2xs">
+                    <svg class="w-3.5 h-3.5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                     </svg>
                     <span>Download</span>
@@ -226,6 +217,55 @@
 .docx-reading-block {
     position: relative;
     transition: outline 0.2s ease;
+}
+
+/* FULLSCREEN READING MODE: Pure document immersion, zero distractions */
+#docx-reader-root:fullscreen,
+#docx-reader-root.is-fullscreen {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #0f172a !important;
+    z-index: 99999 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+}
+
+#docx-reader-root:fullscreen #docx-header-card,
+#docx-reader-root.is-fullscreen #docx-header-card {
+    display: none !important;
+}
+
+#docx-reader-root:fullscreen #docx-toolbar-container,
+#docx-reader-root.is-fullscreen #docx-toolbar-container {
+    position: relative !important;
+    top: 0 !important;
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-top: none !important;
+    flex-shrink: 0 !important;
+    z-index: 50 !important;
+}
+
+#docx-reader-root:fullscreen #docx-viewport,
+#docx-reader-root.is-fullscreen #docx-viewport {
+    flex: 1 1 auto !important;
+    height: calc(100vh - 55px) !important;
+    max-height: calc(100vh - 55px) !important;
+    min-height: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 1rem !important;
+    padding-bottom: 5rem !important;
 }
 </style>
 
@@ -583,21 +623,47 @@
         applyZoom();
     });
 
-    // Fullscreen Controls
+    // Fullscreen Controls with Fallback for Mobile / iOS
+    function setFullscreenMode(enable) {
+        const root = document.getElementById('docx-reader-root');
+        if (enable) {
+            root.classList.add('is-fullscreen');
+            document.body.classList.add('overflow-hidden');
+            fullscreenEnterIcon.classList.add('hidden');
+            fullscreenExitIcon.classList.remove('hidden');
+            fullscreenText.textContent = 'Exit Fullscreen';
+        } else {
+            root.classList.remove('is-fullscreen');
+            document.body.classList.remove('overflow-hidden');
+            fullscreenEnterIcon.classList.remove('hidden');
+            fullscreenExitIcon.classList.add('hidden');
+            fullscreenText.textContent = 'Fullscreen';
+        }
+    }
+
     toggleFullscreenBtn.addEventListener('click', () => {
         const root = document.getElementById('docx-reader-root');
-        if (!document.fullscreenElement) {
-            root.requestFullscreen().catch(() => {});
+        const isCurrentlyFull = !!document.fullscreenElement || root.classList.contains('is-fullscreen');
+        if (!isCurrentlyFull) {
+            if (root.requestFullscreen) {
+                root.requestFullscreen().then(() => {
+                    setFullscreenMode(true);
+                }).catch(() => {
+                    setFullscreenMode(true);
+                });
+            } else {
+                setFullscreenMode(true);
+            }
         } else {
-            document.exitFullscreen().catch(() => {});
+            if (document.fullscreenElement && document.exitFullscreen) {
+                document.exitFullscreen().catch(() => {});
+            }
+            setFullscreenMode(false);
         }
     });
 
     document.addEventListener('fullscreenchange', () => {
-        const isFs = !!document.fullscreenElement;
-        fullscreenEnterIcon.classList.toggle('hidden', isFs);
-        fullscreenExitIcon.classList.toggle('hidden', !isFs);
-        fullscreenText.textContent = isFs ? 'Exit Fullscreen' : 'Fullscreen';
+        setFullscreenMode(!!document.fullscreenElement);
     });
 
     // Initialize

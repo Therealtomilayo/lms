@@ -110,6 +110,10 @@ class PaymentService
      */
     public function simulateSuccessfulPayment(string $reference): ServiceResult
     {
+        if (Config::get('app.env') === 'production') {
+            return ServiceResult::error('Payment simulation is disabled in production environments.');
+        }
+
         $payment = $this->paymentRepository->findByReference($reference);
         if (!$payment) {
             return ServiceResult::error("Payment transaction {$reference} not found.");

@@ -62,13 +62,15 @@
                     <span>Pay ₦1,500 with Paystack</span>
                 </button>
 
-                <!-- Sandbox Simulation Button -->
+                <?php if (\App\Core\Config::get('app.env') !== 'production' && \App\Core\Config::get('app.debug', false)): ?>
+                <!-- Sandbox Simulation Button (Local Dev / Sandbox Only) -->
                 <button type="button" 
                         id="btn-simulate-pay"
                         onclick="executeSimulatedPayment()" 
                         class="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition flex items-center justify-center gap-2 cursor-pointer border border-slate-200">
                     <span>Quick Sandbox Simulation (Instant Test)</span>
                 </button>
+                <?php endif; ?>
             </div>
             <p class="text-[11px] text-center text-slate-400">Secured with Paystack 256-bit encryption &bull; Card details never stored.</p>
         </div>
@@ -188,8 +190,9 @@ async function executePaystackPopupPayment() {
                 window.location.href = authUrl;
                 return;
             }
-            alert('Paystack popup script could not be loaded. Switching to sandbox simulation.');
-            await executeSimulatedPaymentWithRef(ref);
+            alert('Paystack secure gateway could not be loaded. Please check your internet connection.');
+            btn.disabled = false;
+            btn.innerHTML = '<span>Pay ₦1,500 with Paystack</span>';
             return;
         }
 

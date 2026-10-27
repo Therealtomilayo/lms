@@ -23,6 +23,7 @@ use App\Repositories\ParentRepository;
 use App\Repositories\StudentRepository;
 use App\Repositories\TeacherRepository;
 use App\Repositories\TimetableRepository;
+use App\Utils\PeriodSchedule;
 use PDO;
 
 /**
@@ -383,6 +384,492 @@ class TimetableService
             }
             throw $e;
         }
+    }
+
+    /**
+     * Clone timetable slots from one term to another within the same academic session.
+     *
+     * @return array{cloned_count: int, skipped_count: int, conflicts: array<int, string>}
+     */
+    public function cloneTermTimetable(
+        int $sourceTermId,
+        int $targetTermId,
+        ?int $classId = null,
+        bool $overwrite = false,
+        ?UserContext $actor = null
+    ): array {
+        if ($actor !== null && !TimetablePolicy::canManage($actor)) {
+            throw new AuthorizationException('Only administrators can clone timetable schedules.');
+        }
+
+        if ($sourceTermId === $targetTermId) {
+            throw new ValidationException(['target_term_id' => 'Source and target terms cannot be the same.']);
+        }
+
+        $sourceTerm = $this->academicRepo->findTermById($sourceTermId);
+        if (!$sourceTerm) {
+            throw new ResourceNotFoundException("Source Term #{$sourceTermId} not found.");
+        }
+
+        $targetTerm = $this->academicRepo->findTermById($targetTermId);
+        if (!$targetTerm) {
+            throw new ResourceNotFoundException("Target Term #{$targetTermId} not found.");
+        }
+
+        // Cross-Session Invariant: Term cloning is strictly within the same academic session
+        // because class_subjects are allocated per academic session.
+        if ((int)$sourceTerm->sessionId !== (int)$targetTerm->sessionId) {
+            throw new DomainRuleException("Cross-Session Violation: Cannot clone timetable across different academic sessions (Session #{$sourceTerm->sessionId} vs Session #{$targetTerm->sessionId}). Subjects are allocated per session.");
+        }
+
+        // Fetch source slots
+        $sourceSlots = $classId !== null
+            ? $this->timetableRepo->findByClass($classId, $sourceTermId)
+            : $this->timetableRepo->findByTerm($sourceTermId);
+
+        if (empty($sourceSlots)) {
+            throw new ValidationException(['source_term_id' => 'No timetable slots found in the selected source term to clone.']);
+        }
+
+        $this->db->beginTransaction();
+        try {
+            if ($overwrite) {
+                if ($classId !== null) {
+                    $this->timetableRepo->deleteByClassAndTerm($classId, $targetTermId);
+                } else {
+                    $stmt = $this->db->prepare("DELETE FROM timetable_slots WHERE term_id = :term_id");
+                    $stmt->execute([':term_id' => $targetTermId]);
+                }
+            }
+
+            $clonedCount = 0;
+            $skippedCount = 0;
+            $conflictErrors = [];
+            $batchData = [];
+
+            foreach ($sourceSlots as $slot) {
+                // Check if slot collides in target term
+                $conflicts = $this->validateSlotConflicts(
+                    $targetTermId,
+                    $slot->classSubjectId,
+                    $slot->dayOfWeek,
+                    $slot->startTime,
+                    $slot->endTime,
+                    $slot->room
+                );
+
+                if (!empty($conflicts)) {
+                    $conflictErrors[] = "{$slot->getDayLabel()} {$slot->getFormattedTimeRange()} ({$slot->classSubject?->subjectName}): " . $conflicts[0]['message'];
+                    $skippedCount++;
+                    continue;
+                }
+
+                $batchData[] = [
+                    'term_id' => $targetTermId,
+                    'class_subject_id' => $slot->classSubjectId,
+                    'day_of_week' => $slot->dayOfWeek,
+                    'start_time' => $slot->startTime,
+                    'end_time' => $slot->endTime,
+                    'room' => $slot->room,
+                ];
+                $clonedCount++;
+            }
+
+            if (!empty($batchData)) {
+                $this->timetableRepo->batchCreate($batchData);
+            }
+
+            if ($actor !== null) {
+                $this->auditService?->log(
+                    actorUserId: $actor->id,
+                    action: 'TIMETABLE_TERM_CLONED',
+                    entityType: 'timetable_slots',
+                    entityId: $targetTermId,
+                    before: null,
+                    after: ['source_term_id' => $sourceTermId, 'target_term_id' => $targetTermId, 'cloned_count' => $clonedCount],
+                    metadata: ['class_id' => $classId, 'overwrite' => $overwrite]
+                );
+            }
+
+            $this->db->commit();
+
+            return [
+                'cloned_count' => $clonedCount,
+                'skipped_count' => $skippedCount,
+                'conflicts' => $conflictErrors,
+            ];
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Import timetable schedule from CSV spreadsheet content.
+     * Implements strict two-pass pre-flight validation:
+     * - Pass 1: Resolves classes, subjects, days, periods, and syntax.
+     * - Pass 2: In-memory self-conflict detection & cross-school collision checking.
+     *
+     * @param array<string, int> $columnMapping Optional explicit column index overrides from UI mapping.
+     * @return array{imported_count: int, classes_count: int}
+     * @throws ValidationException on any syntax, resolution, or scheduling conflict.
+     */
+    public function importFromCsv(
+        string $csvContent,
+        int $termId,
+        UserContext $actor,
+        ?int $defaultClassId = null,
+        bool $overwrite = false,
+        array $columnMapping = []
+    ): array
+    {
+        if (!TimetablePolicy::canManage($actor)) {
+            throw new AuthorizationException('Only administrators can import timetable schedules.');
+        }
+
+        $term = $this->academicRepo->findTermById($termId);
+        if (!$term) {
+            throw new ResourceNotFoundException("Academic Term #{$termId} not found.");
+        }
+
+        $defaultClass = $defaultClassId ? $this->academicRepo->findClassById($defaultClassId) : null;
+
+        // 1. Clean UTF-8 BOM if present
+        $bom = pack('H*', 'EFBBBF');
+        $csvContent = preg_replace("/^{$bom}/", '', trim($csvContent));
+        if (empty($csvContent)) {
+            throw new ValidationException(['file' => 'The uploaded CSV file is empty.']);
+        }
+
+        // 2. Parse CSV rows
+        $lines = preg_split("/\r\n|\n|\r/", $csvContent);
+        if (empty($lines)) {
+            throw new ValidationException(['file' => 'No readable lines found in the CSV file.']);
+        }
+
+        $headerRow = str_getcsv(array_shift($lines));
+        if (empty($headerRow) || count(array_filter($headerRow)) === 0) {
+            throw new ValidationException(['file' => 'CSV file is missing a valid header row.']);
+        }
+
+        // Normalize header names
+        $headerMap = [];
+        foreach ($headerRow as $idx => $colName) {
+            $clean = strtolower(trim((string)$colName));
+            $clean = str_replace([' ', '-', '_'], '', $clean);
+            if (in_array($clean, ['class', 'classname', 'classarm', 'cohort'], true)) {
+                $headerMap['class'] = $idx;
+            } elseif (in_array($clean, ['day', 'dayofweek', 'weekday'], true)) {
+                $headerMap['day'] = $idx;
+            } elseif (in_array($clean, ['period', 'periodnumber', 'periodno', 'slot'], true)) {
+                $headerMap['period'] = $idx;
+            } elseif (in_array($clean, ['subject', 'subjectcode', 'course', 'code'], true)) {
+                $headerMap['subject'] = $idx;
+            } elseif (in_array($clean, ['room', 'classroom', 'hall', 'lab', 'venue'], true)) {
+                $headerMap['room'] = $idx;
+            } elseif (in_array($clean, ['starttime', 'start'], true)) {
+                $headerMap['start_time'] = $idx;
+            } elseif (in_array($clean, ['endtime', 'end'], true)) {
+                $headerMap['end_time'] = $idx;
+            }
+        }
+
+        // Apply explicit column mapping overrides if provided
+        foreach ($columnMapping as $mapTarget => $mapIdx) {
+            if ($mapIdx !== null && $mapIdx !== '' && (int)$mapIdx >= 0) {
+                $headerMap[$mapTarget] = (int)$mapIdx;
+            }
+        }
+
+        if (!isset($headerMap['class']) && !$defaultClass) {
+            throw new ValidationException([
+                'file' => "Required CSV headers missing. Ensure your CSV contains: 'class_name', 'day_of_week', and 'subject_code'. Found: " . implode(', ', array_filter($headerRow))
+            ]);
+        }
+
+        if (!isset($headerMap['day']) || !isset($headerMap['subject'])) {
+            throw new ValidationException([
+                'file' => "Required CSV headers missing. Ensure your CSV contains: 'day_of_week' and 'subject_code'. Found: " . implode(', ', array_filter($headerRow))
+            ]);
+        }
+
+        if (!isset($headerMap['period']) && (!isset($headerMap['start_time']) || !isset($headerMap['end_time']))) {
+            throw new ValidationException([
+                'file' => "Time headers missing. The CSV must have either 'period_number' (1-8) or 'start_time' and 'end_time'."
+            ]);
+        }
+
+        // Preload classes and class_subjects for target session
+        $classes = $this->academicRepo->getAllClasses();
+        $classesByName = [];
+        foreach ($classes as $c) {
+            $classesByName[strtolower(trim($c->name))] = $c;
+        }
+
+        $allClassSubjects = $this->academicRepo->getClassSubjectsBySession((int)$term->sessionId);
+        $csLookup = [];
+        foreach ($allClassSubjects as $cs) {
+            $codeKey = strtolower(trim((string)$cs->subjectCode));
+            $csLookup["{$cs->classId}_{$codeKey}"] = $cs;
+        }
+
+        $rowErrors = [];
+        $preparedSlots = [];
+        $classesAffected = [];
+        $inMemorySlots = [];
+
+        $rowNum = 1;
+        foreach ($lines as $line) {
+            $rowNum++;
+            if (trim($line) === '') {
+                continue;
+            }
+
+            $row = str_getcsv($line);
+            if (empty($row) || count(array_filter($row)) === 0) {
+                continue;
+            }
+
+            $className = '';
+            if (isset($headerMap['class']) && isset($row[$headerMap['class']])) {
+                $className = trim((string)$row[$headerMap['class']]);
+            }
+            if ($className === '' && $defaultClass) {
+                $classObj = $defaultClass;
+                $className = $defaultClass->name;
+            } else {
+                $classObj = $classesByName[strtolower($className)] ?? null;
+            }
+
+            $dayInput = isset($headerMap['day']) ? trim((string)($row[$headerMap['day']] ?? '')) : '';
+            $subjectInput = isset($headerMap['subject']) ? trim((string)($row[$headerMap['subject']] ?? '')) : '';
+            $roomInput = isset($headerMap['room']) ? trim((string)($row[$headerMap['room']] ?? '')) : null;
+
+            if ($className === '' || $dayInput === '' || $subjectInput === '') {
+                $rowErrors[] = "Row {$rowNum}: Class, Day, and Subject Code cannot be blank.";
+                continue;
+            }
+
+            // Resolve Class
+            if (!$classObj) {
+                $rowErrors[] = "Row {$rowNum}: Class '{$className}' does not exist in the school system.";
+                continue;
+            }
+
+            // Resolve Subject
+            $lookupKey = "{$classObj->id}_" . strtolower($subjectInput);
+            $classSubject = $csLookup[$lookupKey] ?? null;
+            if (!$classSubject) {
+                $rowErrors[] = "Row {$rowNum}: Subject code '{$subjectInput}' is not allocated to class '{$classObj->name}' in the active session.";
+                continue;
+            }
+
+            // Resolve Day
+            $dayKey = PeriodSchedule::normalizeDay($dayInput);
+            if (!$dayKey) {
+                $rowErrors[] = "Row {$rowNum}: Invalid day of week '{$dayInput}'. Expected Monday to Friday.";
+                continue;
+            }
+
+            // Resolve Times
+            $startTime = null;
+            $endTime = null;
+
+            if (isset($headerMap['period'])) {
+                $periodNum = (int)($row[$headerMap['period']] ?? 0);
+                $periodObj = PeriodSchedule::getPeriodByNumber($periodNum);
+                if (!$periodObj || $periodObj['is_break']) {
+                    $rowErrors[] = "Row {$rowNum}: Invalid period number '{$periodNum}'. Valid instructional periods are 1 through 8.";
+                    continue;
+                }
+                $startTime = $periodObj['start'];
+                $endTime = $periodObj['end'];
+            } else {
+                $startTime = trim((string)($row[$headerMap['start_time']] ?? ''));
+                $endTime = trim((string)($row[$headerMap['end_time']] ?? ''));
+                if (!$this->isValidTimeFormat($startTime) || !$this->isValidTimeFormat($endTime)) {
+                    $rowErrors[] = "Row {$rowNum}: Invalid time format. Expected HH:MM or HH:MM:SS.";
+                    continue;
+                }
+                $startTime = $this->normalizeTime($startTime);
+                $endTime = $this->normalizeTime($endTime);
+                if (strtotime($startTime) >= strtotime($endTime)) {
+                    $rowErrors[] = "Row {$rowNum}: Start time must strictly precede end time.";
+                    continue;
+                }
+            }
+
+            // In-Memory collision check
+            $startSec = strtotime($startTime);
+            $endSec = strtotime($endTime);
+
+            $selfCollision = false;
+            foreach ($inMemorySlots as $mem) {
+                if ($mem['day'] === $dayKey) {
+                    $mStart = strtotime($mem['start']);
+                    $mEnd = strtotime($mem['end']);
+
+                    if ($startSec < $mEnd && $endSec > $mStart) {
+                        if ($mem['class_id'] === $classObj->id) {
+                            $rowErrors[] = "Row {$rowNum}: Collision with Row {$mem['row']} — Class '{$classObj->name}' scheduled twice on {$dayInput} ({$startTime}–{$endTime}).";
+                            $selfCollision = true;
+                            break;
+                        }
+                        if ($classSubject->teacherId && $mem['teacher_id'] === $classSubject->teacherId) {
+                            $rowErrors[] = "Row {$rowNum}: Collision with Row {$mem['row']} — Teacher '{$classSubject->teacherName}' double-booked on {$dayInput} ({$startTime}–{$endTime}).";
+                            $selfCollision = true;
+                            break;
+                        }
+                        if ($roomInput && $mem['room'] && strcasecmp($roomInput, $mem['room']) === 0) {
+                            $rowErrors[] = "Row {$rowNum}: Collision with Row {$mem['row']} — Room '{$roomInput}' allocated twice on {$dayInput} ({$startTime}–{$endTime}).";
+                            $selfCollision = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if ($selfCollision) {
+                continue;
+            }
+
+            // Database collision check
+            $dbConflicts = $this->validateSlotConflicts($termId, $classSubject->id, $dayKey, $startTime, $endTime, $roomInput);
+            if (!empty($dbConflicts)) {
+                if ($overwrite) {
+                    // When overwrite is requested, ignore collisions with the same class's existing slots
+                    $dbConflicts = array_values(array_filter($dbConflicts, fn($c) => ($c['type'] ?? '') !== 'class_overlap'));
+                }
+                if (!empty($dbConflicts)) {
+                    $rowErrors[] = "Row {$rowNum}: Database Conflict — " . $dbConflicts[0]['message'];
+                    continue;
+                }
+            }
+
+            $inMemorySlots[] = [
+                'row' => $rowNum,
+                'class_id' => $classObj->id,
+                'teacher_id' => $classSubject->teacherId,
+                'day' => $dayKey,
+                'start' => $startTime,
+                'end' => $endTime,
+                'room' => $roomInput,
+            ];
+
+            $preparedSlots[] = [
+                'term_id' => $termId,
+                'class_subject_id' => $classSubject->id,
+                'day_of_week' => $dayKey,
+                'start_time' => $startTime,
+                'end_time' => $endTime,
+                'room' => $roomInput !== '' ? $roomInput : null,
+            ];
+
+            $classesAffected[$classObj->id] = true;
+        }
+
+        if (!empty($rowErrors)) {
+            throw new ValidationException(['import_errors' => $rowErrors], 'CSV Timetable Import Failed: ' . count($rowErrors) . ' error(s) detected. Please fix the file and re-upload.');
+        }
+
+        if (empty($preparedSlots)) {
+            throw new ValidationException(['file' => 'No valid timetable rows found to import.']);
+        }
+
+        $this->db->beginTransaction();
+        try {
+            if ($overwrite) {
+                foreach (array_keys($classesAffected) as $affectedClassId) {
+                    $this->timetableRepo->deleteByClassAndTerm($affectedClassId, $termId);
+                }
+            }
+
+            $inserted = $this->timetableRepo->batchCreate($preparedSlots);
+
+            $this->auditService?->log(
+                actorUserId: $actor->id,
+                action: 'TIMETABLE_CSV_IMPORTED',
+                entityType: 'timetable_slots',
+                entityId: $termId,
+                before: null,
+                after: ['imported_count' => $inserted, 'classes_count' => count($classesAffected)],
+                metadata: ['term_id' => $termId]
+            );
+
+            $this->db->commit();
+
+            return [
+                'imported_count' => $inserted,
+                'classes_count' => count($classesAffected),
+            ];
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Generate downloadable CSV sample template with live school classes and subjects.
+     */
+    public function generateSampleCsv(?int $classId = null, ?int $sessionId = null): string
+    {
+        $headers = ['class_name', 'day_of_week', 'period_number', 'subject_code', 'room'];
+        $rows = [];
+
+        $classes = $classId !== null
+            ? array_filter([$this->academicRepo->findClassById($classId)])
+            : array_slice($this->academicRepo->getAllClasses(), 0, 3);
+
+        $session = $sessionId ? $this->academicRepo->findSessionById($sessionId) : $this->academicRepo->getCurrentSession();
+        $sessId = $session ? (int)$session->id : 0;
+
+        $sampleDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+        foreach ($classes as $class) {
+            $csList = $this->academicRepo->getClassSubjectsByClassAndSession((int)$class->id, $sessId);
+            $subCodes = [];
+            foreach ($csList as $cs) {
+                if (!empty($cs->subjectCode)) {
+                    $subCodes[] = $cs->subjectCode;
+                }
+            }
+
+            if (empty($subCodes)) {
+                $subCodes = ['MAT101', 'ENG101', 'BSC101', 'SOS101'];
+            }
+
+            $roomName = $class->name ? "Room " . substr($class->name, 0, 8) : "Hall 1";
+
+            $periodIndex = 0;
+            foreach ($sampleDays as $day) {
+                for ($p = 1; $p <= 2; $p++) {
+                    $code = $subCodes[$periodIndex % count($subCodes)];
+                    $rows[] = [
+                        $class->name,
+                        $day,
+                        $p,
+                        $code,
+                        $roomName,
+                    ];
+                    $periodIndex++;
+                }
+            }
+        }
+
+        $output = fopen('php://temp', 'r+');
+        fputcsv($output, $headers);
+        foreach ($rows as $r) {
+            fputcsv($output, $r);
+        }
+        rewind($output);
+        $csv = stream_get_contents($output);
+        fclose($output);
+
+        return (string)$csv;
     }
 
     /**
