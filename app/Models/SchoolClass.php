@@ -71,6 +71,9 @@ final class SchoolClass
         if ($name === 'fullName' || $name === 'full_name' || $name === 'displayName') {
             return $this->getFullName();
         }
+        if ($name === 'stage') {
+            return $this->academicLevel?->stage;
+        }
         return null;
     }
 

@@ -1,0 +1,30 @@
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /apply
+Allow: /forgot-password
+Allow: /assets/
+
+# Disallow private user portals and internal APIs
+Disallow: /admin/
+Disallow: /teacher/
+Disallow: /student/
+Disallow: /parent/
+Disallow: /api/
+Disallow: /logout
+
+# Crawlers
+User-agent: Googlebot
+Allow: /
+Allow: /apply
+Allow: /login
+Allow: /assets/
+
+User-agent: Bingbot
+Allow: /
+Allow: /apply
+Allow: /login
+Allow: /assets/
+
+Sitemap: https://lms.test/sitemap.xml
+

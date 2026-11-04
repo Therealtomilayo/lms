@@ -167,13 +167,16 @@
                 $matchedSlotIds = [];
 
                 // Helper to match a slot against a standard period
+                // Helper to match a slot against a standard period
                 $slotMatchesPeriod = function($slot, $period) {
                     $slotStart = substr($slot->startTime, 0, 5);
                     $slotEnd = substr($slot->endTime, 0, 5);
-                    if ($slotStart === $period['start_time']) {
+                    $pStart = is_object($period) ? substr($period->startTime, 0, 5) : ($period['start_time'] ?? '');
+                    $pEnd = is_object($period) ? substr($period->endTime, 0, 5) : ($period['end_time'] ?? '');
+                    if ($slotStart === $pStart) {
                         return true;
                     }
-                    return ($slotStart < $period['end_time'] && $slotEnd > $period['start_time']);
+                    return ($slotStart < $pEnd && $slotEnd > $pStart);
                 };
                 ?>
 
@@ -187,10 +190,16 @@
                                         Day
                                     </th>
                                     <?php foreach ($standardPeriods as $period): ?>
-                                        <th class="p-2.5 text-center min-w-[130px] border-r border-slate-200 last:border-r-0 <?= $period['type'] === 'break' ? 'bg-amber-50/70 text-amber-900 min-w-[70px] w-20' : '' ?>">
-                                            <div class="font-bold text-xs"><?= htmlspecialchars($period['short_name']) ?></div>
+                                        <?php 
+                                        $isBreak = is_object($period) ? $period->isBreak() : (($period['type'] ?? '') === 'break');
+                                        $pName = is_object($period) ? $period->periodName : ($period['short_name'] ?? '');
+                                        $pStart = is_object($period) ? substr($period->startTime, 0, 5) : ($period['start_time'] ?? '');
+                                        $pEnd = is_object($period) ? substr($period->endTime, 0, 5) : ($period['end_time'] ?? '');
+                                        ?>
+                                        <th class="p-2.5 text-center min-w-[130px] border-r border-slate-200 last:border-r-0 <?= $isBreak ? 'bg-amber-50/70 text-amber-900 min-w-[70px] w-20' : '' ?>">
+                                            <div class="font-bold text-xs"><?= htmlspecialchars($pName) ?></div>
                                             <div class="text-[10px] font-normal text-slate-500 mt-0.5">
-                                                <?= htmlspecialchars($period['start_time']) ?>-<?= htmlspecialchars($period['end_time']) ?>
+                                                <?= htmlspecialchars($pStart) ?>-<?= htmlspecialchars($pEnd) ?>
                                             </div>
                                         </th>
                                     <?php endforeach; ?>
@@ -208,63 +217,90 @@
 
                                         <!-- Period Columns -->
                                         <?php foreach ($standardPeriods as $period): ?>
-                                            <?php if ($period['type'] === 'break'): ?>
+                                            <?php 
+                                            $isBreak = is_object($period) ? $period->isBreak() : (($period['type'] ?? '') === 'break');
+                                            $pName = is_object($period) ? $period->periodName : ($period['short_name'] ?? '');
+                                            $pNum = is_object($period) ? $period->periodNumber : ($period['period_number'] ?? 0);
+                                            $pStart = is_object($period) ? substr($period->startTime, 0, 5) : ($period['start_time'] ?? '');
+                                            $pEnd = is_object($period) ? substr($period->endTime, 0, 5) : ($period['end_time'] ?? '');
+                                            ?>
+                                            <?php if ($isBreak): ?>
                                                 <!-- Institutional Break Cell -->
                                                 <td class="p-1.5 text-center bg-slate-50/80 border-r border-slate-200 text-slate-400 select-none">
                                                     <span class="text-[9px] font-bold uppercase tracking-wider block">
-                                                        <?= htmlspecialchars($period['short_name']) ?>
+                                                        <?= htmlspecialchars($pName) ?>
                                                     </span>
                                                 </td>
                                             <?php else: ?>
-                                                <!-- Instructional Period Cell -->
+                                                <!-- Instructional Period Cell (supports elective splits) -->
                                                 <?php
-                                                $slotForPeriod = null;
+                                                $slotsForPeriod = [];
                                                 foreach ($daySlots as $slot) {
                                                     if ($slotMatchesPeriod($slot, $period)) {
-                                                        $slotForPeriod = $slot;
+                                                        $slotsForPeriod[] = $slot;
                                                         $matchedSlotIds[$slot->id] = true;
-                                                        break;
                                                     }
                                                 }
                                                 ?>
-                                                <?php if ($slotForPeriod): ?>
+                                                <?php if (!empty($slotsForPeriod)): ?>
                                                     <td class="p-2 border-r border-slate-200 align-top bg-white">
-                                                        <div class="p-2.5 rounded-xl border border-brand-200 bg-brand-50/60 hover:bg-brand-50 transition shadow-2xs flex flex-col justify-between h-full min-h-[96px]">
-                                                            <div>
-                                                                <div class="flex items-center justify-between gap-1 mb-1">
-                                                                    <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-brand-600 text-white uppercase">
-                                                                        <?= htmlspecialchars(substr($slotForPeriod->classSubject?->subjectCode ?: 'SUB', 0, 8)) ?>
-                                                                    </span>
-                                                                    <?php if ($slotForPeriod->room): ?>
-                                                                        <span class="px-1 py-0.5 rounded text-[9px] font-semibold bg-purple-100 text-purple-700 truncate max-w-[55px]" title="Room: <?= htmlspecialchars($slotForPeriod->room) ?>">
-                                                                            <?= htmlspecialchars($slotForPeriod->room) ?>
+                                                        <div class="space-y-1.5">
+                                                            <?php foreach ($slotsForPeriod as $slotForPeriod): ?>
+                                                                <div class="p-2 rounded-xl border border-brand-200 bg-brand-50/60 hover:bg-brand-50 transition shadow-2xs flex flex-col justify-between min-h-[85px]">
+                                                                    <div>
+                                                                        <div class="flex items-center justify-between gap-1 mb-1">
+                                                                            <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-brand-600 text-white uppercase truncate">
+                                                                                <?= htmlspecialchars(substr($slotForPeriod->customTitle ?: ($slotForPeriod->classSubject?->subjectCode ?: 'SUB'), 0, 8)) ?>
+                                                                            </span>
+                                                                            <?php if (!empty($slotForPeriod->department)): ?>
+                                                                                <span class="px-1 py-0.5 rounded text-[8.5px] font-bold uppercase tracking-wider bg-teal-100 text-teal-800" title="Department: <?= htmlspecialchars($slotForPeriod->department) ?>">
+                                                                                    <?= htmlspecialchars(substr($slotForPeriod->department, 0, 4)) ?>
+                                                                                </span>
+                                                                            <?php endif; ?>
+                                                                            <?php if ($slotForPeriod->room): ?>
+                                                                                <span class="px-1 py-0.5 rounded text-[8.5px] font-semibold bg-purple-100 text-purple-700 truncate max-w-[50px]" title="Room: <?= htmlspecialchars($slotForPeriod->room) ?>">
+                                                                                    <?= htmlspecialchars($slotForPeriod->room) ?>
+                                                                                </span>
+                                                                            <?php endif; ?>
+                                                                        </div>
+                                                                        <div class="font-bold text-slate-900 text-xs leading-tight line-clamp-1" title="<?= htmlspecialchars($slotForPeriod->customTitle ?: ($slotForPeriod->classSubject?->subjectName ?: 'Subject')) ?>">
+                                                                            <?= htmlspecialchars($slotForPeriod->customTitle ?: ($slotForPeriod->classSubject?->subjectName ?: 'Subject')) ?>
+                                                                        </div>
+                                                                        <?php if (!empty($slotForPeriod->classSubject?->teacherName)): ?>
+                                                                            <div class="text-[10px] text-slate-600 mt-1 line-clamp-1 flex items-center gap-1" title="Teacher: <?= htmlspecialchars($slotForPeriod->classSubject->teacherName) ?>">
+                                                                                <svg class="w-3 h-3 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                                                </svg>
+                                                                                <?= htmlspecialchars($slotForPeriod->classSubject->teacherName) ?>
+                                                                            </div>
+                                                                        <?php endif; ?>
+                                                                    </div>
+                                                                    <div class="mt-1.5 pt-1 border-t border-brand-200/60 flex items-center justify-between text-[10px]">
+                                                                        <span class="text-slate-400 font-mono text-[9px]">
+                                                                            <?= substr($slotForPeriod->startTime, 0, 5) ?>-<?= substr($slotForPeriod->endTime, 0, 5) ?>
                                                                         </span>
-                                                                    <?php endif; ?>
+                                                                        <form method="POST" action="/admin/timetable/<?= (int)$class->id ?>/slots/<?= (int)$slotForPeriod->id ?>/delete" onsubmit="return confirm('Remove slot from <?= $dayName ?>?');" class="inline">
+                                                                            <?= csrf_field() ?>
+                                                                            <input type="hidden" name="term_id" value="<?= (int)$term->id ?>">
+                                                                            <button type="submit" class="text-rose-500 hover:text-rose-700 p-0.5 rounded hover:bg-rose-100/60 transition cursor-pointer" title="Remove slot">
+                                                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                                </svg>
+                                                                            </button>
+                                                                        </form>
+                                                                    </div>
                                                                 </div>
-                                                                <div class="font-bold text-slate-900 text-xs leading-tight line-clamp-1" title="<?= htmlspecialchars($slotForPeriod->classSubject?->subjectName ?: 'Subject') ?>">
-                                                                    <?= htmlspecialchars($slotForPeriod->classSubject?->subjectName ?: 'Subject') ?>
-                                                                </div>
-                                                                <div class="text-[10px] text-slate-600 mt-1 line-clamp-1 flex items-center gap-1" title="Teacher: <?= htmlspecialchars($slotForPeriod->classSubject?->teacherName ?: 'No Teacher') ?>">
-                                                                    <svg class="w-3 h-3 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                                                    </svg>
-                                                                    <?= htmlspecialchars($slotForPeriod->classSubject?->teacherName ?: 'No Teacher') ?>
-                                                                </div>
-                                                            </div>
-                                                            <div class="mt-2 pt-1.5 border-t border-brand-200/60 flex items-center justify-between text-[10px]">
-                                                                <span class="text-slate-400 font-mono text-[9px]">
-                                                                    <?= substr($slotForPeriod->startTime, 0, 5) ?>-<?= substr($slotForPeriod->endTime, 0, 5) ?>
-                                                                </span>
-                                                                <form method="POST" action="/admin/timetable/<?= (int)$class->id ?>/slots/<?= (int)$slotForPeriod->id ?>/delete" onsubmit="return confirm('Remove <?= htmlspecialchars(addslashes($slotForPeriod->classSubject?->subjectName ?? 'this slot')) ?> from <?= $dayName ?>?');" class="inline">
-                                                                    <?= csrf_field() ?>
-                                                                    <input type="hidden" name="term_id" value="<?= (int)$term->id ?>">
-                                                                    <button type="submit" class="text-rose-500 hover:text-rose-700 p-0.5 rounded hover:bg-rose-100/60 transition cursor-pointer" title="Remove slot">
-                                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                        </svg>
-                                                                    </button>
-                                                                </form>
-                                                            </div>
+                                                            <?php endforeach; ?>
+                                                            <!-- Quick Add another split slot button -->
+                                                            <button
+                                                                type="button"
+                                                                onclick="quickAddSlot('<?= $dayKey ?>', '<?= $pStart ?>', '<?= $pEnd ?>', <?= (int)$pNum ?>)"
+                                                                class="w-full py-1 rounded-lg border border-dashed border-slate-200 hover:border-brand-300 text-[10px] text-slate-400 hover:text-brand-600 transition flex items-center justify-center gap-1 cursor-pointer"
+                                                                title="Add concurrent elective split"
+                                                            >
+                                                                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                                                <span>Add Split</span>
+                                                            </button>
                                                         </div>
                                                     </td>
                                                 <?php else: ?>
@@ -272,9 +308,9 @@
                                                     <td class="p-1.5 border-r border-slate-200 align-middle text-center bg-slate-50/20 hover:bg-brand-50/30 transition group">
                                                         <button
                                                             type="button"
-                                                            onclick="quickAddSlot('<?= $dayKey ?>', '<?= $period['start_time'] ?>', '<?= $period['end_time'] ?>', <?= (int)$period['period_number'] ?>)"
+                                                            onclick="quickAddSlot('<?= $dayKey ?>', '<?= $pStart ?>', '<?= $pEnd ?>', <?= (int)$pNum ?>)"
                                                             class="w-full h-full min-h-[96px] rounded-xl border border-dashed border-slate-200 group-hover:border-brand-400 group-hover:bg-brand-50/50 flex flex-col items-center justify-center text-slate-300 group-hover:text-brand-600 transition p-2 cursor-pointer"
-                                                            title="Allocate <?= $dayName ?> <?= htmlspecialchars($period['name']) ?> (<?= htmlspecialchars($period['start_time']) ?>-<?= htmlspecialchars($period['end_time']) ?>)"
+                                                            title="Allocate <?= $dayName ?> <?= htmlspecialchars($pName) ?> (<?= htmlspecialchars($pStart) ?>-<?= htmlspecialchars($pEnd) ?>)"
                                                         >
                                                             <svg class="w-4 h-4 mb-1 opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
@@ -443,14 +479,20 @@
                 </div>
                 <div class="grid grid-cols-4 gap-1.5">
                     <?php foreach ($instructionalPeriods as $p): ?>
+                        <?php 
+                        $pNum = is_object($p) ? $p->periodNumber : ($p['period_number'] ?? 1);
+                        $sTime = is_object($p) ? substr($p->startTime, 0, 5) : ($p['start_time'] ?? '08:00');
+                        $eTime = is_object($p) ? substr($p->endTime, 0, 5) : ($p['end_time'] ?? '08:45');
+                        $sName = is_object($p) ? $p->periodName : ($p['short_name'] ?? "P{$pNum}");
+                        ?>
                         <button
                             type="button"
-                            id="preset-p<?= (int)$p['period_number'] ?>"
-                            onclick="applyPeriodPreset('<?= $p['start_time'] ?>', '<?= $p['end_time'] ?>', <?= (int)$p['period_number'] ?>)"
+                            id="preset-p<?= (int)$pNum ?>"
+                            onclick="applyPeriodPreset('<?= $sTime ?>', '<?= $eTime ?>', <?= (int)$pNum ?>)"
                             class="preset-btn px-2 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-brand-50 hover:border-brand-300 text-slate-700 hover:text-brand-700 text-xs font-bold transition text-center cursor-pointer"
-                            title="<?= htmlspecialchars($p['name']) ?> (<?= htmlspecialchars($p['start_time']) ?>-<?= htmlspecialchars($p['end_time']) ?>)"
+                            title="<?= htmlspecialchars($sName) ?> (<?= htmlspecialchars($sTime) ?>-<?= htmlspecialchars($eTime) ?>)"
                         >
-                            <?= htmlspecialchars($p['short_name']) ?>
+                            <?= htmlspecialchars($sName) ?>
                         </button>
                     <?php endforeach; ?>
                 </div>
@@ -478,6 +520,41 @@
                             </option>
                         <?php endforeach; ?>
                     </select>
+                </div>
+
+                <!-- Department / Elective Stream -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label for="department" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                            Elective Stream
+                        </label>
+                        <select
+                            name="department"
+                            id="department"
+                            class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs font-semibold rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 focus:bg-white transition-colors"
+                        >
+                            <option value="">All / Core</option>
+                            <option value="Science">Science</option>
+                            <option value="Commercial">Commercial</option>
+                            <option value="Arts">Arts</option>
+                            <option value="Vocational">Vocational</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="slot_type" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                            Slot Type
+                        </label>
+                        <select
+                            name="slot_type"
+                            id="slot_type"
+                            class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs font-semibold rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 focus:bg-white transition-colors"
+                        >
+                            <option value="instructional">Instructional</option>
+                            <option value="sport">Sport / Games</option>
+                            <option value="activity">Club / Activity</option>
+                            <option value="assembly">Assembly</option>
+                        </select>
+                    </div>
                 </div>
 
                 <!-- Day of Week -->
@@ -611,13 +688,19 @@
                 </div>
                 <div class="grid grid-cols-4 gap-1.5">
                     <?php foreach ($instructionalPeriods as $p): ?>
+                        <?php 
+                        $pNum = is_object($p) ? $p->periodNumber : ($p['period_number'] ?? 1);
+                        $sTime = is_object($p) ? substr($p->startTime, 0, 5) : ($p['start_time'] ?? '08:00');
+                        $eTime = is_object($p) ? substr($p->endTime, 0, 5) : ($p['end_time'] ?? '08:45');
+                        $sName = is_object($p) ? $p->periodName : ($p['short_name'] ?? "P{$pNum}");
+                        ?>
                         <button
                             type="button"
-                            id="modal-preset-p<?= (int)$p['period_number'] ?>"
-                            onclick="applyModalPeriodPreset('<?= $p['start_time'] ?>', '<?= $p['end_time'] ?>', <?= (int)$p['period_number'] ?>)"
+                            id="modal-preset-p<?= (int)$pNum ?>"
+                            onclick="applyModalPeriodPreset('<?= $sTime ?>', '<?= $eTime ?>', <?= (int)$pNum ?>)"
                             class="modal-preset-btn px-2 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-brand-50 hover:border-brand-300 text-slate-700 hover:text-brand-700 text-xs font-bold transition text-center cursor-pointer"
                         >
-                            <?= htmlspecialchars($p['short_name']) ?>
+                            <?= htmlspecialchars($sName) ?>
                         </button>
                     <?php endforeach; ?>
                 </div>
@@ -641,6 +724,41 @@
                         </option>
                     <?php endforeach; ?>
                 </select>
+            </div>
+
+            <!-- Department / Elective Stream -->
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label for="modal_department" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Elective Stream
+                    </label>
+                    <select
+                        name="department"
+                        id="modal_department"
+                        class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs font-semibold rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 focus:bg-white transition-colors"
+                    >
+                        <option value="">All / Core</option>
+                        <option value="Science">Science</option>
+                        <option value="Commercial">Commercial</option>
+                        <option value="Arts">Arts</option>
+                        <option value="Vocational">Vocational</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="modal_slot_type" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Slot Type
+                    </label>
+                    <select
+                        name="slot_type"
+                        id="modal_slot_type"
+                        class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs font-semibold rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 focus:bg-white transition-colors"
+                    >
+                        <option value="instructional">Instructional</option>
+                        <option value="sport">Sport / Games</option>
+                        <option value="activity">Club / Activity</option>
+                        <option value="assembly">Assembly</option>
+                    </select>
+                </div>
             </div>
 
             <!-- Day of Week -->

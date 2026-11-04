@@ -136,8 +136,12 @@ final class NotificationLogRepository
         }
 
         if (!empty($search)) {
-            $where[] = '(en.recipient LIKE :search OR en.subject LIKE :search OR en.message_body LIKE :search OR u.name LIKE :search)';
-            $params[':search'] = '%' . $search . '%';
+            $where[] = '(en.recipient LIKE :search1 OR en.subject LIKE :search2 OR en.message_body LIKE :search3 OR u.name LIKE :search4)';
+            $searchWild = '%' . $search . '%';
+            $params[':search1'] = $searchWild;
+            $params[':search2'] = $searchWild;
+            $params[':search3'] = $searchWild;
+            $params[':search4'] = $searchWild;
         }
 
         $sql = '

@@ -7,7 +7,52 @@
 ?>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title><?= e($title ?? 'Claret LMS') ?></title>
+<title><?= e($title ?? 'Claret LMS — Claret International School') ?></title>
+<meta name="description" content="<?= e($metaDescription ?? 'Claret International School Admissions, Timetable & Learning Management Portal. Citadel of learning raising 21st century leaders in Mabushi, Abuja.') ?>">
+<meta name="author" content="Claret International School">
+<?php if (!empty($noindex)): ?>
+<meta name="robots" content="noindex, nofollow">
+<?php else: ?>
+<meta name="robots" content="index, follow">
+<?php endif; ?>
+
+<!-- Open Graph / Social SEO -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Claret International School Portal">
+<meta property="og:title" content="<?= e($title ?? 'Claret International School Portal') ?>">
+<meta property="og:description" content="<?= e($metaDescription ?? 'Claret International School Admissions & Learning Management Portal.') ?>">
+<meta property="og:image" content="/assets/img/hero-carousel.jpg">
+<meta property="og:locale" content="en_NG">
+
+<!-- Twitter Cards -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="<?= e($title ?? 'Claret International School Portal') ?>">
+<meta name="twitter:description" content="<?= e($metaDescription ?? 'Claret International School Admissions & Learning Management Portal.') ?>">
+<meta name="twitter:image" content="/assets/img/hero-carousel.jpg">
+
+<!-- Local & Institutional SEO -->
+<meta name="geo.region" content="NG-FC">
+<meta name="geo.placename" content="Mabushi, Abuja">
+<meta name="geo.position" content="9.079895;7.438254">
+<meta name="ICBM" content="9.079895, 7.438254">
+
+<!-- Schema.org EducationalOrganization -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "EducationalOrganization",
+  "name": "Claret International School",
+  "url": "https://claretschools.xo.je",
+  "logo": "/assets/img/logo.png",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "Plot 700, Gitto Street, Mabushi",
+    "addressLocality": "Abuja",
+    "addressRegion": "FCT",
+    "addressCountry": "NG"
+  }
+}
+</script>
 
 <!-- Favicon Suite -->
 <!-- <link rel="icon" type="image/svg+xml" href="/favicon.svg"> -->

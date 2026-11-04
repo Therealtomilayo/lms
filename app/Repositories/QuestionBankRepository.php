@@ -203,8 +203,10 @@ class QuestionBankRepository
         }
 
         if ($search !== null && trim($search) !== '') {
-            $sql .= ' AND (q.question_text LIKE :search OR q.topic LIKE :search)';
-            $params[':search'] = '%' . trim($search) . '%';
+            $sql .= ' AND (q.question_text LIKE :search_text OR q.topic LIKE :search_topic)';
+            $searchWild = '%' . trim($search) . '%';
+            $params[':search_text'] = $searchWild;
+            $params[':search_topic'] = $searchWild;
         }
 
         $sql .= ' ORDER BY q.id DESC LIMIT ' . (int)$limit . ' OFFSET ' . (int)$offset;

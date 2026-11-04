@@ -152,7 +152,7 @@ class TimetableEnhancementTest extends TestCase
         $this->seedFixtures();
         $csv = $this->service->generateSampleCsv(classId: 1, sessionId: 1);
 
-        $this->assertStringContainsString('class_name,day_of_week,period_number,subject_code,room', $csv);
+        $this->assertStringContainsString('class_name,day_of_week,period_number,subject_code,department,room,slot_type,custom_title', $csv);
         $this->assertStringContainsString('JSS 1A', $csv);
         $this->assertStringContainsString('Monday', $csv);
         $this->assertStringContainsString('ENG', $csv);

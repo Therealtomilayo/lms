@@ -36,11 +36,73 @@ $pendingCount = $totalClasses - $configuredCount;
                 </p>
             </div>
 
-            <!-- Term Filter Form -->
-            <div class="flex items-center gap-3">
+            <!-- Action Buttons & Term Filter Form -->
+            <div class="flex flex-wrap items-center gap-3">
+                <a
+                    href="/admin/timetable/master<?= $selectedTerm ? '?term_id=' . (int)$selectedTerm->id : '' ?>"
+                    class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-xs transition-colors"
+                >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                    </svg>
+                    Master Institutional Grid
+                </a>
+
+                <div class="relative inline-block text-left" id="downloadDropdownContainer">
+                    <button
+                        type="button"
+                        id="downloadTemplateBtn"
+                        onclick="document.getElementById('downloadMenu').classList.toggle('hidden')"
+                        class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold transition-colors shadow-xs"
+                        title="Download CSV/Excel Timetable Templates"
+                    >
+                        <svg class="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        <span>Download Template</span>
+                        <svg class="w-3.5 h-3.5 text-slate-400 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+
+                    <!-- Dropdown Menu -->
+                    <div
+                        id="downloadMenu"
+                        class="hidden absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-slate-200 z-50 py-1.5 focus:outline-none"
+                    >
+                        <div class="px-3 py-1.5 border-b border-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                            Select Schedule Template
+                        </div>
+                        <a
+                            href="/admin/timetable/template/download?stage=high_school<?= $selectedTerm ? '&term_id=' . (int)$selectedTerm->id : '' ?>"
+                            class="flex items-start gap-2.5 px-3.5 py-2.5 text-xs text-slate-700 hover:bg-slate-50 transition-colors"
+                        >
+                            <span class="p-1 rounded bg-rose-50 text-brand-600 mt-0.5">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                            </span>
+                            <div>
+                                <strong class="font-semibold text-slate-900 block">High School Template</strong>
+                                <span class="text-slate-500 text-[11px]">9 periods, elective splits (Science/Comm/Arts)</span>
+                            </div>
+                        </a>
+                        <a
+                            href="/admin/timetable/template/download?stage=primary<?= $selectedTerm ? '&term_id=' . (int)$selectedTerm->id : '' ?>"
+                            class="flex items-start gap-2.5 px-3.5 py-2.5 text-xs text-slate-700 hover:bg-slate-50 transition-colors"
+                        >
+                            <span class="p-1 rounded bg-emerald-50 text-emerald-600 mt-0.5">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            </span>
+                            <div>
+                                <strong class="font-semibold text-slate-900 block">Grade School Template</strong>
+                                <span class="text-slate-500 text-[11px]">7 periods, Lit-Num drills, Lunch, Play Time</span>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+
                 <form method="GET" action="/admin/timetable" id="termFilterForm" class="flex items-center gap-2">
                     <label for="term_id" class="text-xs font-semibold text-slate-600 uppercase tracking-wider whitespace-nowrap">
-                        Academic Term:
+                        Term:
                     </label>
                     <div class="relative">
                         <select
@@ -66,8 +128,8 @@ $pendingCount = $totalClasses - $configuredCount;
         </div>
     </div>
 
-    <!-- KPI Metric Strip -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <!-- KPI Metric Strip: Responsive flexible wrap, only breaks when min card width is reached -->
+    <div class="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
         <!-- Total Classes -->
         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex items-center gap-4">
             <div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center flex-shrink-0">
@@ -181,7 +243,8 @@ $pendingCount = $totalClasses - $configuredCount;
             </div>
         <?php else: ?>
             <div class="p-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="classesGrid">
+                <!-- Responsive flexible grid that auto-fits available screen width and only wraps when screen cannot contain cards -->
+                <div class="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-5" id="classesGrid">
                     <?php foreach ($classes as $cls): ?>
                         <?php
                         $slotCount = $classSlotsCount[$cls->id] ?? 0;
@@ -326,6 +389,15 @@ document.addEventListener('DOMContentLoaded', () => {
             currentFilter = btn.getAttribute('data-filter');
             filterClasses();
         });
+    });
+
+    // Close download dropdown if clicked outside
+    document.addEventListener('click', (e) => {
+        const container = document.getElementById('downloadDropdownContainer');
+        const menu = document.getElementById('downloadMenu');
+        if (container && menu && !container.contains(e.target)) {
+            menu.classList.add('hidden');
+        }
     });
 });
 </script>

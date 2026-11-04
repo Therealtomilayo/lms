@@ -131,6 +131,8 @@ class TimetableController extends Controller
             'terms' => $terms,
             'selectedTerm' => $selectedTerm,
             'user' => $user,
+            'standardPeriods' => \App\Utils\PeriodSchedule::getAllPeriods(),
+            'standardDays' => \App\Utils\PeriodSchedule::getDays(),
         ], 'layouts/parent'));
     }
 }

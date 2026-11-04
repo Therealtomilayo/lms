@@ -118,17 +118,65 @@ class TimetableController extends Controller
         // Available class_subjects for this class and the term's session
         $classSubjects = $this->academicRepo->getClassSubjectsByClassAndSession($classId, (int)$selectedTerm->sessionId);
 
+        $structure = (new \App\Repositories\TimetableStructureRepository())->findForClass($classId);
+        $periods = $structure ? $structure->periods : \App\Utils\PeriodSchedule::getAllPeriods($classId);
+        $instructionalPeriods = $structure ? $structure->getInstructionalPeriods() : \App\Utils\PeriodSchedule::getInstructionalPeriods($classId);
+
         return Response::html($this->render('admin/timetable/edit', [
             'title' => "Edit Timetable: {$class->name} — Admin Portal",
             'headerTitle' => "Timetable Builder: {$class->name}",
             'class' => $class,
             'term' => $selectedTerm,
             'terms' => $terms,
+            'structure' => $structure,
             'scheduleData' => $scheduleData,
             'classSubjects' => $classSubjects,
-            'standardPeriods' => \App\Utils\PeriodSchedule::getAllPeriods(),
-            'instructionalPeriods' => \App\Utils\PeriodSchedule::getInstructionalPeriods(),
+            'standardPeriods' => $periods,
+            'instructionalPeriods' => $instructionalPeriods,
             'standardDays' => \App\Utils\PeriodSchedule::getDays(),
+            'csrf_token' => $request->getSession()->get('_csrf_token', ''),
+        ], 'layouts/admin'));
+    }
+
+    /**
+     * Master Institutional Timetable Grid across multiple cohorts.
+     */
+    public function master(Request $request): Response
+    {
+        $user = $this->getUserContext($request);
+        if (!$user) {
+            return Response::redirect('/login');
+        }
+
+        $termId = $request->getQuery('term_id') ? (int)$request->getQuery('term_id') : 0;
+        $stageKey = (string)$request->getQuery('stage', 'high_school');
+        $structureId = $request->getQuery('structure_id') ? (int)$request->getQuery('structure_id') : null;
+
+        $terms = $this->academicRepo->getAllTerms();
+        $structureRepo = new \App\Repositories\TimetableStructureRepository();
+        $structures = $structureRepo->findAll();
+
+        $selectedTerm = $termId ? $this->academicRepo->findTermById($termId) : null;
+        if (!$selectedTerm) {
+            $selectedTerm = $this->academicRepo->findCurrentTerm() ?? $this->academicRepo->findActiveTerm() ?? (!empty($terms) ? $terms[0] : null);
+        }
+
+        $masterData = $this->timetableService->getMasterTimetableMatrix(
+            termId: (int)($selectedTerm?->id ?? 0),
+            stageKey: $stageKey,
+            structureId: $structureId,
+            actor: $user
+        );
+
+        return Response::html($this->render('admin/timetable/master', [
+            'title' => 'Master Institutional Timetable — Admin Portal',
+            'headerTitle' => 'Master Timetable Grid',
+            'terms' => $terms,
+            'selectedTerm' => $selectedTerm,
+            'structures' => $structures,
+            'stageKey' => $stageKey,
+            'selectedStructureId' => $structureId,
+            'masterData' => $masterData,
             'csrf_token' => $request->getSession()->get('_csrf_token', ''),
         ], 'layouts/admin'));
     }
@@ -149,7 +197,12 @@ class TimetableController extends Controller
         try {
             $this->timetableService->createSlot([
                 'term_id' => $termId,
-                'class_subject_id' => (int)$request->input('class_subject_id', 0),
+                'class_id' => $classId,
+                'class_subject_id' => $request->input('class_subject_id') ? (int)$request->input('class_subject_id') : null,
+                'structure_period_id' => $request->input('structure_period_id') ? (int)$request->input('structure_period_id') : null,
+                'department' => $request->input('department') ? trim((string)$request->input('department')) : null,
+                'custom_title' => $request->input('custom_title') ? trim((string)$request->input('custom_title')) : null,
+                'slot_type' => $request->input('slot_type') ? trim((string)$request->input('slot_type')) : 'instructional',
                 'day_of_week' => (string)$request->input('day_of_week', ''),
                 'start_time' => (string)$request->input('start_time', ''),
                 'end_time' => (string)$request->input('end_time', ''),
@@ -196,7 +249,12 @@ class TimetableController extends Controller
         try {
             $this->timetableService->updateSlot($slotId, [
                 'term_id' => $termId,
-                'class_subject_id' => (int)$request->input('class_subject_id', 0),
+                'class_id' => $classId,
+                'class_subject_id' => $request->input('class_subject_id') ? (int)$request->input('class_subject_id') : null,
+                'structure_period_id' => $request->input('structure_period_id') ? (int)$request->input('structure_period_id') : null,
+                'department' => $request->input('department') ? trim((string)$request->input('department')) : null,
+                'custom_title' => $request->input('custom_title') ? trim((string)$request->input('custom_title')) : null,
+                'slot_type' => $request->input('slot_type') ? trim((string)$request->input('slot_type')) : 'instructional',
                 'day_of_week' => (string)$request->input('day_of_week', ''),
                 'start_time' => (string)$request->input('start_time', ''),
                 'end_time' => (string)$request->input('end_time', ''),
@@ -401,12 +459,21 @@ class TimetableController extends Controller
         $cId = (int)($classId ?: $request->getRouteParam('classId', 0));
         $classIdParam = $cId > 0 ? $cId : ($request->getQuery('class_id') ? (int)$request->getQuery('class_id') : null);
         $termId = $request->getQuery('term_id') ? (int)$request->getQuery('term_id') : null;
+        $stageParam = $request->getQuery('stage') ?: ($request->getQuery('type') ?: null);
 
         $term = $termId ? $this->academicRepo->findTermById($termId) : null;
         $sessionId = $term ? (int)$term->sessionId : null;
 
-        $csv = $this->timetableService->generateSampleCsv($classIdParam, $sessionId);
-        $filename = "claret_timetable_sample_template.csv";
+        $csv = $this->timetableService->generateSampleCsv($classIdParam, $sessionId, $stageParam);
+
+        $stageName = ($stageParam === 'primary' || $stageParam === 'grade_school') ? 'gradeschool' : 'highschool';
+        if ($classIdParam) {
+            $cls = $this->academicRepo->findClassById($classIdParam);
+            if ($cls && in_array($cls->stage, ['primary', 'eyfs', 'nursery', 'creche'], true)) {
+                $stageName = 'gradeschool';
+            }
+        }
+        $filename = "claret_timetable_{$stageName}_template.csv";
 
         return new Response($csv, 200, [
             'Content-Type' => 'text/csv; charset=utf-8',

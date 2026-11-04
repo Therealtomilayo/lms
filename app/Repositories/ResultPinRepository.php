@@ -220,8 +220,12 @@ class ResultPinRepository
         }
 
         if (!empty($search)) {
-            $where[] = '(rap.serial_number LIKE :search OR su.name LIKE :search OR s.admission_number LIKE :search OR rap.pin_code LIKE :search)';
-            $params[':search'] = '%' . trim($search) . '%';
+            $where[] = '(rap.serial_number LIKE :search1 OR su.name LIKE :search2 OR s.admission_number LIKE :search3 OR rap.pin_code LIKE :search4)';
+            $searchWild = '%' . trim($search) . '%';
+            $params[':search1'] = $searchWild;
+            $params[':search2'] = $searchWild;
+            $params[':search3'] = $searchWild;
+            $params[':search4'] = $searchWild;
         }
 
         $whereClause = !empty($where) ? ' WHERE ' . implode(' AND ', $where) : '';
@@ -255,8 +259,12 @@ class ResultPinRepository
         }
 
         if (!empty($search)) {
-            $where[] = '(rap.serial_number LIKE :search OR su.name LIKE :search OR s.admission_number LIKE :search OR rap.pin_code LIKE :search)';
-            $params[':search'] = '%' . trim($search) . '%';
+            $where[] = '(rap.serial_number LIKE :search1 OR su.name LIKE :search2 OR s.admission_number LIKE :search3 OR rap.pin_code LIKE :search4)';
+            $searchWild = '%' . trim($search) . '%';
+            $params[':search1'] = $searchWild;
+            $params[':search2'] = $searchWild;
+            $params[':search3'] = $searchWild;
+            $params[':search4'] = $searchWild;
         }
 
         $whereClause = !empty($where) ? ' WHERE ' . implode(' AND ', $where) : '';

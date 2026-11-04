@@ -351,6 +351,7 @@ try {
 
     // Admin Timetable Builder & Management Routes
     $router->get('/admin/timetable', [\App\Controllers\Admin\TimetableController::class, 'index'], $adminAuth);
+    $router->get('/admin/timetable/master', [\App\Controllers\Admin\TimetableController::class, 'master'], $adminAuth);
     $router->get('/admin/timetable/template/download', [\App\Controllers\Admin\TimetableController::class, 'downloadTemplate'], $adminAuth);
     $router->get('/admin/timetable/{classId}/template/download', [\App\Controllers\Admin\TimetableController::class, 'downloadTemplate'], $adminAuth);
     $router->get('/admin/timetable/{classId}/edit', [\App\Controllers\Admin\TimetableController::class, 'edit'], $adminAuth);

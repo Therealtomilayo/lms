@@ -389,42 +389,57 @@ $days = [
 
     </div>
 
-    <!-- 5. WEEKDAY NAVIGATION FILTER BUTTONS (SCREEN-ONLY) -->
-    <div class="screen-only day-filter-bar flex items-center justify-between gap-4 flex-wrap">
+    <?php
+    $standardPeriods = $standardPeriods ?? \App\Utils\PeriodSchedule::getAllPeriods();
+    $standardDays = $standardDays ?? \App\Utils\PeriodSchedule::getDays();
+
+    $slotMatchesPeriod = function($slot, $period) {
+        $slotStart = substr($slot->startTime, 0, 5);
+        $slotEnd = substr($slot->endTime, 0, 5);
+        if ($slotStart === $period['start_time']) {
+            return true;
+        }
+        return ($slotStart < $period['end_time'] && $slotEnd > $period['start_time']);
+    };
+    ?>
+
+    <!-- 5. TIMETABLE HEADER & VIEW TOGGLE (SCREEN-ONLY) -->
+    <div class="screen-only day-filter-bar flex items-center justify-between gap-4 flex-wrap bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
         <div>
             <h3 class="text-base font-bold text-slate-900">
                 Weekly Timetable Matrix
             </h3>
             <p class="text-xs text-slate-500 mt-0.5">
-                Daily period allocations, subjects, and instructors.
+                Daily period allocations, subjects, and instructors for <?= htmlspecialchars($className) ?>.
             </p>
         </div>
 
-        <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl" role="tablist">
-            <button type="button" onclick="filterDay('all')" id="btn-day-all"
-                    class="day-filter-btn px-3 py-1 rounded-lg text-xs font-bold bg-white text-slate-800 shadow-xs transition">
-                All Days
-            </button>
-            <button type="button" onclick="filterDay('mon')" id="btn-day-mon"
-                    class="day-filter-btn px-3 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition">
-                Mon
-            </button>
-            <button type="button" onclick="filterDay('tue')" id="btn-day-tue"
-                    class="day-filter-btn px-3 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition">
-                Tue
-            </button>
-            <button type="button" onclick="filterDay('wed')" id="btn-day-wed"
-                    class="day-filter-btn px-3 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition">
-                Wed
-            </button>
-            <button type="button" onclick="filterDay('thu')" id="btn-day-thu"
-                    class="day-filter-btn px-3 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition">
-                Thu
-            </button>
-            <button type="button" onclick="filterDay('fri')" id="btn-day-fri"
-                    class="day-filter-btn px-3 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition">
-                Fri
-            </button>
+        <div class="flex items-center gap-3 flex-wrap">
+            <!-- Segmented View Toggle Switch -->
+            <div class="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 shadow-2xs">
+                <button
+                    type="button"
+                    id="btn-parent-matrix"
+                    onclick="switchParentTimetableView('matrix')"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer bg-white text-slate-900 shadow-xs"
+                >
+                    <svg class="w-3.5 h-3.5 text-brand-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                    </svg>
+                    Table Matrix
+                </button>
+                <button
+                    type="button"
+                    id="btn-parent-cards"
+                    onclick="switchParentTimetableView('cards')"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer text-slate-600 hover:text-slate-900"
+                >
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                    Day Cards
+                </button>
+            </div>
         </div>
     </div>
 
@@ -475,7 +490,7 @@ $days = [
         </div>
     </div>
 
-    <!-- 6. TIMETABLE SCHEDULE BY DAY -->
+    <!-- 6. TIMETABLE SCHEDULE VIEWS -->
     <?php if ($totalSlots === 0): ?>
         <!-- Empty State -->
         <div class="bg-white p-12 text-center rounded-2xl border border-slate-200 shadow-xs">
@@ -490,188 +505,355 @@ $days = [
             </p>
         </div>
     <?php else: ?>
-        <div class="space-y-4" id="timetable-days-container">
-            <?php foreach ($days as $dayKey => $dayLabel): 
-                $daySlots = $grid[$dayKey] ?? [];
-                if (empty($daySlots) && ($dayKey === 'sat' || $dayKey === 'sun')) {
-                    continue;
-                }
-            ?>
-                <div class="day-section bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden transition-all duration-200"
-                     data-day="<?= $dayKey ?>">
-                    
-                    <!-- Day Bar Header -->
-                    <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-                        <div class="flex items-center gap-2.5">
-                            <span class="w-2.5 h-2.5 rounded-full bg-brand-700"></span>
-                            <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wide">
-                                <?= $dayLabel ?>
-                            </h4>
-                        </div>
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold <?= !empty($daySlots) ? 'bg-brand-50 text-brand-700 border border-brand-200' : 'bg-slate-100 text-slate-500' ?>">
-                            <?= count($daySlots) ?> <?= count($daySlots) === 1 ? 'Period' : 'Periods' ?>
-                        </span>
-                    </div>
 
-                    <div class="p-5">
-                        <?php if (empty($daySlots)): ?>
-                            <div class="py-4 text-center text-xs text-slate-400 italic">
-                                No scheduled lessons for <?= $dayLabel ?>.
+        <!-- VIEW 1: TABLE MATRIX VIEW -->
+        <div id="parent-matrix-view" class="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wider text-xs">
+                    Weekly Timetable Grid
+                </h4>
+                <span class="text-xs font-mono font-bold text-brand-700 bg-brand-50 border border-brand-200 px-2 py-0.5 rounded">
+                    <?= $totalSlots ?> Periods
+                </span>
+            </div>
+
+            <div class="overflow-x-auto rounded-xl border border-slate-200">
+                <table class="w-full border-collapse text-left text-xs">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                            <th class="p-3 w-28 text-center sticky left-0 bg-slate-50 z-10 border-r border-slate-200 uppercase tracking-wider text-[11px]">
+                                Day
+                            </th>
+                            <?php foreach ($standardPeriods as $period): ?>
+                                <th class="p-2.5 text-center min-w-[130px] border-r border-slate-200 last:border-r-0 <?= $period['type'] === 'break' ? 'bg-amber-50/70 text-amber-900 min-w-[70px] w-20' : '' ?>">
+                                    <div class="font-bold text-xs"><?= htmlspecialchars($period['short_name']) ?></div>
+                                    <div class="text-[10px] font-normal text-slate-500 mt-0.5">
+                                        <?= htmlspecialchars($period['start_time']) ?>-<?= htmlspecialchars($period['end_time']) ?>
+                                    </div>
+                                </th>
+                            <?php endforeach; ?>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                        <?php foreach ($standardDays as $dayKey => $dayName): ?>
+                            <?php $daySlots = $grid[$dayKey] ?? []; ?>
+                            <tr class="hover:bg-slate-50/40 transition">
+                                <!-- Row Day Header -->
+                                <td class="p-3 font-bold text-slate-800 text-center sticky left-0 bg-white border-r border-slate-200 z-10 shadow-2xs">
+                                    <span class="block text-xs uppercase tracking-wider"><?= substr($dayName, 0, 3) ?></span>
+                                    <span class="block text-[10px] font-normal text-slate-400 mt-0.5"><?= $dayName ?></span>
+                                </td>
+
+                                <!-- Period Columns -->
+                                <?php foreach ($standardPeriods as $period): ?>
+                                    <?php if ($period['type'] === 'break'): ?>
+                                        <!-- Institutional Break Cell -->
+                                        <td class="p-1.5 text-center bg-slate-50/80 border-r border-slate-200 text-slate-400 select-none">
+                                            <span class="text-[9px] font-bold uppercase tracking-wider block">
+                                                <?= htmlspecialchars($period['short_name']) ?>
+                                            </span>
+                                        </td>
+                                    <?php else: ?>
+                                        <!-- Instructional Period Cell -->
+                                        <?php
+                                        $slotForPeriod = null;
+                                        foreach ($daySlots as $slot) {
+                                            if ($slotMatchesPeriod($slot, $period)) {
+                                                $slotForPeriod = $slot;
+                                                break;
+                                            }
+                                        }
+                                        ?>
+                                        <?php if ($slotForPeriod): ?>
+                                            <?php
+                                                $subCode = $slotForPeriod->classSubject?->subjectCode ?: ($slotForPeriod->subjectCode ?: 'SUB');
+                                                $subName = $slotForPeriod->classSubject?->subjectName ?: ($slotForPeriod->subjectName ?: 'Subject');
+                                                $teacher = $slotForPeriod->classSubject?->teacherName ?: ($slotForPeriod->teacherName ?: 'Subject Teacher');
+                                            ?>
+                                            <td class="p-2 border-r border-slate-200 align-top bg-white">
+                                                <div class="p-2.5 rounded-xl border border-brand-200 bg-brand-50/60 hover:bg-brand-50 transition shadow-2xs flex flex-col justify-between h-full min-h-[96px]">
+                                                    <div>
+                                                        <div class="flex items-center justify-between gap-1 mb-1">
+                                                            <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-brand-700 text-white uppercase">
+                                                                <?= htmlspecialchars(substr($subCode, 0, 8)) ?>
+                                                            </span>
+                                                            <?php if ($slotForPeriod->room): ?>
+                                                                <span class="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-purple-100 text-purple-700 truncate max-w-[55px]" title="Room: <?= htmlspecialchars($slotForPeriod->room) ?>">
+                                                                    <?= htmlspecialchars($slotForPeriod->room) ?>
+                                                                </span>
+                                                            <?php endif; ?>
+                                                        </div>
+                                                        <div class="font-bold text-slate-900 text-xs leading-tight line-clamp-1" title="<?= htmlspecialchars($subName) ?>">
+                                                            <?= htmlspecialchars($subName) ?>
+                                                        </div>
+                                                        <div class="text-[10px] text-slate-600 mt-1 line-clamp-1 flex items-center gap-1" title="Teacher: <?= htmlspecialchars($teacher) ?>">
+                                                            <svg class="w-3 h-3 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                            </svg>
+                                                            <?= htmlspecialchars($teacher) ?>
+                                                        </div>
+                                                    </div>
+                                                    <div class="mt-2 pt-1.5 border-t border-brand-200/60 flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                                                        <span><?= substr($slotForPeriod->startTime, 0, 5) ?>-<?= substr($slotForPeriod->endTime, 0, 5) ?></span>
+                                                        <span><?= $slotForPeriod->getDurationMinutes() ?>m</span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        <?php else: ?>
+                                            <!-- Free / Study Period Cell -->
+                                            <td class="p-1.5 border-r border-slate-200 align-middle text-center bg-slate-50/20 text-slate-300">
+                                                <span class="text-[10px] font-semibold block text-slate-300">Free</span>
+                                            </td>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+                                <?php endforeach; ?>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW 2: DAY CARDS VIEW -->
+            <div id="parent-cards-view" class="space-y-4 hidden">
+                <!-- Day filter pills for cards -->
+                <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl w-fit" role="tablist">
+                    <button type="button" onclick="filterDay('all')" id="btn-day-all"
+                            class="day-filter-btn px-3 py-1 rounded-lg text-xs font-bold bg-white text-slate-800 shadow-xs transition cursor-pointer">
+                        All Days
+                    </button>
+                    <button type="button" onclick="filterDay('mon')" id="btn-day-mon"
+                            class="day-filter-btn px-3 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition cursor-pointer">
+                        Mon
+                    </button>
+                    <button type="button" onclick="filterDay('tue')" id="btn-day-tue"
+                            class="day-filter-btn px-3 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition cursor-pointer">
+                        Tue
+                    </button>
+                    <button type="button" onclick="filterDay('wed')" id="btn-day-wed"
+                            class="day-filter-btn px-3 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition cursor-pointer">
+                        Wed
+                    </button>
+                    <button type="button" onclick="filterDay('thu')" id="btn-day-thu"
+                            class="day-filter-btn px-3 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition cursor-pointer">
+                        Thu
+                    </button>
+                    <button type="button" onclick="filterDay('fri')" id="btn-day-fri"
+                            class="day-filter-btn px-3 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition cursor-pointer">
+                        Fri
+                    </button>
+                </div>
+
+                <div class="space-y-4" id="timetable-days-container">
+                    <?php foreach ($days as $dayKey => $dayLabel): 
+                        $daySlots = $grid[$dayKey] ?? [];
+                        if (empty($daySlots) && ($dayKey === 'sat' || $dayKey === 'sun')) {
+                            continue;
+                        }
+                    ?>
+                        <div class="day-section bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden transition-all duration-200"
+                             data-day="<?= $dayKey ?>">
+                            
+                            <!-- Day Bar Header -->
+                            <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-brand-700"></span>
+                                    <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wide">
+                                        <?= $dayLabel ?>
+                                    </h4>
+                                </div>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold <?= !empty($daySlots) ? 'bg-brand-50 text-brand-700 border border-brand-200' : 'bg-slate-100 text-slate-500' ?>">
+                                    <?= count($daySlots) ?> <?= count($daySlots) === 1 ? 'Period' : 'Periods' ?>
+                                </span>
                             </div>
-                        <?php else: ?>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <?php foreach ($daySlots as $idx => $slot): 
-                                    $subCode = $slot->classSubject?->subjectCode ?: 'SUB';
-                                    $subName = $slot->classSubject?->subjectName ?: 'Subject';
-                                    $teacher = $slot->classSubject?->teacherName ?: 'Subject Teacher';
-                                    $timeRange = $slot->getFormattedTimeRange();
-                                    $duration = $slot->getDurationMinutes();
-                                    $room = $slot->room;
-                                ?>
-                                    <div class="period-card p-4 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white hover:border-brand-300 hover:shadow-xs transition-all duration-150 flex flex-col justify-between">
-                                        <div>
-                                            <!-- Card Badges -->
-                                            <div class="flex items-center justify-between gap-2">
-                                                <div class="flex items-center gap-1.5">
-                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-bold bg-brand-50 text-brand-700 border border-brand-200">
-                                                        <?= htmlspecialchars($subCode) ?>
+
+                            <div class="p-5">
+                                <?php if (empty($daySlots)): ?>
+                                    <div class="py-4 text-center text-xs text-slate-400 italic">
+                                        No scheduled lessons for <?= $dayLabel ?>.
+                                    </div>
+                                <?php else: ?>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        <?php foreach ($daySlots as $idx => $slot): 
+                                            $subCode = $slot->classSubject?->subjectCode ?: ($slot->subjectCode ?: 'SUB');
+                                            $subName = $slot->classSubject?->subjectName ?: ($slot->subjectName ?: 'Subject');
+                                            $teacher = $slot->classSubject?->teacherName ?: ($slot->teacherName ?: 'Subject Teacher');
+                                            $timeRange = $slot->getFormattedTimeRange();
+                                            $duration = $slot->getDurationMinutes();
+                                            $room = $slot->room;
+                                        ?>
+                                            <div class="period-card p-4 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white hover:border-brand-300 hover:shadow-xs transition-all duration-150 flex flex-col justify-between">
+                                                <div>
+                                                    <!-- Card Badges -->
+                                                    <div class="flex items-center justify-between gap-2">
+                                                        <div class="flex items-center gap-1.5">
+                                                            <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-bold bg-brand-50 text-brand-700 border border-brand-200">
+                                                                <?= htmlspecialchars($subCode) ?>
+                                                            </span>
+                                                            <span class="text-[11px] font-bold text-slate-400 font-mono">
+                                                                #<?= $idx + 1 ?>
+                                                            </span>
+                                                        </div>
+                                                        <?php if ($room): ?>
+                                                            <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                                                                Room: <?= htmlspecialchars($room) ?>
+                                                            </span>
+                                                        <?php endif; ?>
+                                                    </div>
+
+                                                    <!-- Subject Title -->
+                                                    <h5 class="text-sm font-bold text-slate-900 mt-2.5 leading-snug">
+                                                        <?= htmlspecialchars($subName) ?>
+                                                    </h5>
+
+                                                    <!-- Teacher -->
+                                                    <div class="flex items-center gap-1.5 mt-2 text-xs text-slate-500">
+                                                        <svg class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                                        </svg>
+                                                        <span class="truncate">
+                                                            Teacher: <strong class="text-slate-700 font-semibold"><?= htmlspecialchars($teacher) ?></strong>
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Period Time Footer -->
+                                                <div class="mt-4 pt-2.5 border-t border-slate-200/80 flex items-center justify-between text-xs">
+                                                    <span class="font-bold text-brand-700 flex items-center gap-1">
+                                                        <svg class="w-3.5 h-3.5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                        </svg>
+                                                        <span><?= htmlspecialchars($timeRange) ?></span>
                                                     </span>
-                                                    <span class="text-[11px] font-bold text-slate-400 font-mono">
-                                                        #<?= $idx + 1 ?>
+                                                    <span class="text-[11px] font-medium text-slate-400">
+                                                        <?= $duration ?> mins
                                                     </span>
                                                 </div>
-                                                <?php if ($room): ?>
-                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">
-                                                        Room: <?= htmlspecialchars($room) ?>
-                                                    </span>
-                                                <?php endif; ?>
+
                                             </div>
-
-                                            <!-- Subject Title -->
-                                            <h5 class="text-sm font-bold text-slate-900 mt-2.5 leading-snug">
-                                                <?= htmlspecialchars($subName) ?>
-                                            </h5>
-
-                                            <!-- Teacher (Normalized secondary school terminology) -->
-                                            <div class="flex items-center gap-1.5 mt-2 text-xs text-slate-500">
-                                                <svg class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                                                </svg>
-                                                <span class="truncate">
-                                                    Teacher: <strong class="text-slate-700 font-semibold"><?= htmlspecialchars($teacher) ?></strong>
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <!-- Period Time Footer -->
-                                        <div class="mt-4 pt-2.5 border-t border-slate-200/80 flex items-center justify-between text-xs">
-                                            <span class="font-bold text-brand-700 flex items-center gap-1">
-                                                <svg class="w-3.5 h-3.5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                                </svg>
-                                                <span><?= htmlspecialchars($timeRange) ?></span>
-                                            </span>
-                                            <span class="text-[11px] font-medium text-slate-400">
-                                                <?= $duration ?> mins
-                                            </span>
-                                        </div>
-
+                                        <?php endforeach; ?>
                                     </div>
-                                <?php endforeach; ?>
+                                <?php endif; ?>
                             </div>
-                        <?php endif; ?>
-                    </div>
 
+                        </div>
+                    <?php endforeach; ?>
                 </div>
-            <?php endforeach; ?>
-        </div>
+            </div>
 
-        <!-- PRINT-ONLY SIGNATURE & ENDORSEMENT FOOTER -->
-        <div class="print-only mt-6 pt-4 border-t border-slate-300">
-            <div class="grid grid-cols-3 gap-6 text-center text-xs">
-                <div>
-                    <div class="border-b border-slate-400 pb-1 mb-1 font-semibold text-slate-800">
-                        <?= htmlspecialchars($scheduleData['class']->classTeacherName ?? 'Class Teacher') ?>
+            <!-- PRINT-ONLY SIGNATURE & ENDORSEMENT FOOTER -->
+            <div class="print-only mt-6 pt-4 border-t border-slate-300">
+                <div class="grid grid-cols-3 gap-6 text-center text-xs">
+                    <div>
+                        <div class="border-b border-slate-400 pb-1 mb-1 font-semibold text-slate-800">
+                            <?= htmlspecialchars($scheduleData['class']->classTeacherName ?? 'Class Teacher') ?>
+                        </div>
+                        <span class="text-[10px] text-slate-500 uppercase tracking-wider">Form / Class Teacher Signature</span>
                     </div>
-                    <span class="text-[10px] text-slate-500 uppercase tracking-wider">Form / Class Teacher Signature</span>
+                    <div>
+                        <div class="border-b border-slate-400 pb-1 mb-1 font-semibold text-slate-800">
+                            Vice Principal (Academics)
+                        </div>
+                        <span class="text-[10px] text-slate-500 uppercase tracking-wider">Academic Director Signature &amp; Stamp</span>
+                    </div>
+                    <div>
+                        <div class="border-b border-slate-400 pb-1 mb-1 font-mono text-slate-800">
+                            <?= date('d/m/Y') ?>
+                        </div>
+                        <span class="text-[10px] text-slate-500 uppercase tracking-wider">Date of Issue</span>
+                    </div>
                 </div>
-                <div>
-                    <div class="border-b border-slate-400 pb-1 mb-1 font-semibold text-slate-800">
-                        Vice Principal (Academics)
-                    </div>
-                    <span class="text-[10px] text-slate-500 uppercase tracking-wider">Academic Director Signature &amp; Stamp</span>
-                </div>
-                <div>
-                    <div class="border-b border-slate-400 pb-1 mb-1 font-mono text-slate-800">
-                        <?= date('d/m/Y') ?>
-                    </div>
-                    <span class="text-[10px] text-slate-500 uppercase tracking-wider">Date of Issue</span>
+            </div>
+        <?php endif; ?>
+
+        <!-- 7. SECONDARY SCHOOL SCHEDULE & BELL TIMES ADVISORY CARD (SCREEN-ONLY) -->
+        <div class="screen-only bell-times-card bg-brand-50 border border-brand-100 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-start gap-4 shadow-xs">
+            <div class="w-10 h-10 rounded-xl bg-brand-700 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <div>
+                <h4 class="text-sm font-bold text-brand-900">
+                    Official School Day Schedule & Bell Times
+                </h4>
+                <p class="text-xs text-slate-600 mt-1 leading-relaxed">
+                    Claret International School operates on a disciplined bell schedule. Guardians are advised to ensure wards arrive before 07:45 AM for morning assembly and devotion roll-call.
+                </p>
+                <div class="mt-2.5 text-xs text-brand-700 font-semibold flex flex-wrap gap-x-6 gap-y-1">
+                    <span>&bull; <strong>Morning Assembly & Devotion:</strong> 07:45 AM &ndash; 08:00 AM</span>
+                    <span>&bull; <strong>Mid-Day Break / Lunch:</strong> 11:20 AM &ndash; 12:05 PM</span>
+                    <span>&bull; <strong>School Closing (Mon &ndash; Thu):</strong> 03:05 PM</span>
+                    <span>&bull; <strong>Friday Early Dismissal:</strong> 01:00 PM</span>
                 </div>
             </div>
         </div>
-    <?php endif; ?>
 
-    <!-- 7. SECONDARY SCHOOL SCHEDULE & BELL TIMES ADVISORY CARD (SCREEN-ONLY) -->
-    <div class="screen-only bell-times-card bg-brand-50 border border-brand-100 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-start gap-4 shadow-xs">
-        <div class="w-10 h-10 rounded-xl bg-brand-700 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-        </div>
-        <div>
-            <h4 class="text-sm font-bold text-brand-900">
-                Official School Day Schedule & Bell Times
-            </h4>
-            <p class="text-xs text-slate-600 mt-1 leading-relaxed">
-                Claret International School operates on a disciplined bell schedule. Guardians are advised to ensure wards arrive before 07:45 AM for morning assembly and devotion roll-call.
-            </p>
-            <div class="mt-2.5 text-xs text-brand-700 font-semibold flex flex-wrap gap-x-6 gap-y-1">
-                <span>&bull; <strong>Morning Assembly & Devotion:</strong> 07:45 AM &ndash; 08:00 AM</span>
-                <span>&bull; <strong>Mid-Day Break / Lunch:</strong> 11:15 AM &ndash; 11:45 AM</span>
-                <span>&bull; <strong>School Closing (Mon &ndash; Thu):</strong> 02:30 PM</span>
-                <span>&bull; <strong>Friday Early Dismissal:</strong> 01:00 PM</span>
-            </div>
-        </div>
     </div>
 
-</div>
+    <!-- Interactive Client-side Day Filter & View Switcher Script -->
+    <script>
+        function switchParentTimetableView(mode) {
+            const matrixView = document.getElementById('parent-matrix-view');
+            const cardsView = document.getElementById('parent-cards-view');
+            const btnMatrix = document.getElementById('btn-parent-matrix');
+            const btnCards = document.getElementById('btn-parent-cards');
 
-<!-- Interactive Client-side Day Filter Script -->
-<script>
-    function filterDay(dayKey) {
-        const sections = document.querySelectorAll('.day-section');
-        const buttons = document.querySelectorAll('.day-filter-btn');
+            if (!matrixView || !cardsView) return;
 
-        // Toggle active button styling
-        buttons.forEach(btn => {
-            btn.classList.remove('bg-white', 'text-slate-800', 'shadow-xs');
-            btn.classList.add('text-slate-600');
-        });
-
-        const activeBtn = document.getElementById('btn-day-' + dayKey);
-        if (activeBtn) {
-            activeBtn.classList.remove('text-slate-600');
-            activeBtn.classList.add('bg-white', 'text-slate-800', 'shadow-xs');
+            if (mode === 'cards') {
+                matrixView.classList.add('hidden');
+                cardsView.classList.remove('hidden');
+                btnCards.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer bg-white text-slate-900 shadow-xs';
+                btnMatrix.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer text-slate-600 hover:text-slate-900';
+            } else {
+                matrixView.classList.remove('hidden');
+                cardsView.classList.add('hidden');
+                btnMatrix.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer bg-white text-slate-900 shadow-xs';
+                btnCards.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer text-slate-600 hover:text-slate-900';
+            }
+            localStorage.setItem('claret_parent_timetable_view_mode', mode);
         }
 
-        // Show/hide day sections
-        sections.forEach(sec => {
-            const secDay = sec.getAttribute('data-day');
-            if (dayKey === 'all') {
-                sec.style.display = '';
-            } else {
-                sec.style.display = (secDay === dayKey) ? '' : 'none';
+        document.addEventListener('DOMContentLoaded', function() {
+            const saved = localStorage.getItem('claret_parent_timetable_view_mode');
+            if (saved === 'cards') {
+                switchParentTimetableView('cards');
             }
         });
-    }
 
-    function printSchedule() {
-        // Restore all day sections so full weekly schedule is printed cleanly
-        document.querySelectorAll('.day-section').forEach(sec => sec.style.display = '');
-        window.print();
-    }
+        function filterDay(dayKey) {
+            const sections = document.querySelectorAll('.day-section');
+            const buttons = document.querySelectorAll('.day-filter-btn');
 
-    window.addEventListener('beforeprint', function() {
-        document.querySelectorAll('.day-section').forEach(sec => sec.style.display = '');
-    });
-</script>
+            buttons.forEach(btn => {
+                btn.classList.remove('bg-white', 'text-slate-800', 'shadow-xs');
+                btn.classList.add('text-slate-600');
+            });
+
+            const activeBtn = document.getElementById('btn-day-' + dayKey);
+            if (activeBtn) {
+                activeBtn.classList.remove('text-slate-600');
+                activeBtn.classList.add('bg-white', 'text-slate-800', 'shadow-xs');
+            }
+
+            sections.forEach(sec => {
+                const secDay = sec.getAttribute('data-day');
+                if (dayKey === 'all') {
+                    sec.style.display = '';
+                } else {
+                    sec.style.display = (secDay === dayKey) ? '' : 'none';
+                }
+            });
+        }
+
+        function printSchedule() {
+            document.querySelectorAll('.day-section').forEach(sec => sec.style.display = '');
+            window.print();
+        }
+
+        window.addEventListener('beforeprint', function() {
+            document.querySelectorAll('.day-section').forEach(sec => sec.style.display = '');
+        });
+    </script>
+

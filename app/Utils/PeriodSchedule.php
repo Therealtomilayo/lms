@@ -298,34 +298,136 @@ class PeriodSchedule
         ],
     ];
 
+    private static ?\App\Repositories\TimetableStructureRepository $structureRepo = null;
+    private static array $classStructureCache = [];
+
+    public static function getStructureRepo(): \App\Repositories\TimetableStructureRepository
+    {
+        if (self::$structureRepo === null) {
+            self::$structureRepo = new \App\Repositories\TimetableStructureRepository();
+        }
+        return self::$structureRepo;
+    }
+
+    public static function setStructureRepo(?\App\Repositories\TimetableStructureRepository $repo): void
+    {
+        self::$structureRepo = $repo;
+        self::$classStructureCache = [];
+    }
+
+    public static function getStructureForClass(int $classId): ?\App\Models\TimetableStructure
+    {
+        if (!isset(self::$classStructureCache[$classId])) {
+            try {
+                self::$classStructureCache[$classId] = self::getStructureRepo()->findForClass($classId);
+            } catch (\Throwable) {
+                self::$classStructureCache[$classId] = null;
+            }
+        }
+        return self::$classStructureCache[$classId];
+    }
+
+    public static function getStructureForStage(string $stageKey): ?\App\Models\TimetableStructure
+    {
+        try {
+            return self::getStructureRepo()->findForStage($stageKey);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
     /**
      * Get all defined period blocks in chronological order (including breaks).
      *
-     * @return array<int, array{period_number: ?int, number: int, name: string, label: string, short_name: string, start_time: string, end_time: string, start: string, end: string, display_time: string, is_break: bool, type: string, duration_minutes: int}>
+     * @return array<int, array{period_number: ?int, number: ?int, name: string, label: string, short_name: string, start_time: string, end_time: string, start: string, end: string, display_time: string, is_break: bool, type: string, duration_minutes: int}>
      */
-    public static function getAllPeriods(): array
+    public static function getAllPeriods(?int $classId = null): array
     {
+        if ($classId !== null && $classId > 0) {
+            $struct = self::getStructureForClass($classId);
+            if ($struct && !empty($struct->periods)) {
+                $result = [];
+                foreach ($struct->periods as $idx => $p) {
+                    $result[$idx + 1] = $p->toArray();
+                }
+                return $result;
+            }
+        }
+
         return self::CHRONOLOGICAL_BLOCKS;
     }
 
     /**
-     * Get only instructional teaching periods (1 through 8).
+     * Get only instructional teaching periods.
      *
      * @return array<int, array{period_number: int, number: int, name: string, label: string, short_name: string, start_time: string, end_time: string, start: string, end: string, display_time: string, is_break: bool, type: string, duration_minutes: int}>
      */
-    public static function getInstructionalPeriods(): array
+    public static function getInstructionalPeriods(?int $classId = null): array
     {
+        if ($classId !== null && $classId > 0) {
+            $struct = self::getStructureForClass($classId);
+            if ($struct) {
+                $inst = $struct->getInstructionalPeriods();
+                if (!empty($inst)) {
+                    $result = [];
+                    foreach ($inst as $num => $p) {
+                        $result[$num] = $p->toArray();
+                    }
+                    return $result;
+                }
+            }
+        }
+
         return self::INSTRUCTIONAL_PERIODS;
     }
 
     /**
-     * Find an instructional period definition by period number (1 through 8).
+     * Find an instructional period definition by period number.
      *
      * @return array{period_number: int, number: int, name: string, label: string, short_name: string, start_time: string, end_time: string, start: string, end: string, display_time: string, is_break: bool, type: string, duration_minutes: int}|null
      */
-    public static function getPeriodByNumber(int $periodNumber): ?array
+    public static function getPeriodByNumber(int $periodNumber, ?int $classId = null): ?array
     {
+        if ($classId !== null && $classId > 0) {
+            $instructional = self::getInstructionalPeriods($classId);
+            return $instructional[$periodNumber] ?? null;
+        }
+
         return self::INSTRUCTIONAL_PERIODS[$periodNumber] ?? null;
+    }
+
+    /**
+     * Find a period block matching or containing a specific time.
+     *
+     * @return array{period_number: ?int, number: int, name: string, label: string, short_name: string, start_time: string, end_time: string, start: string, end: string, display_time: string, is_break: bool, type: string, duration_minutes: int}|null
+     */
+    public static function getPeriodByTime(string $time, ?int $classId = null): ?array
+    {
+        $timeNorm = self::normalizeTime($time);
+        if (!$timeNorm) {
+            return null;
+        }
+
+        $allPeriods = self::getAllPeriods($classId);
+
+        // 1. Exact start time match
+        foreach ($allPeriods as $block) {
+            if ($block['start'] === $timeNorm || substr($block['start'], 0, 5) === substr($timeNorm, 0, 5)) {
+                return $block;
+            }
+        }
+
+        // 2. Interval match: start <= time < end
+        $tSec = strtotime($timeNorm);
+        foreach ($allPeriods as $block) {
+            $sSec = strtotime($block['start']);
+            $eSec = strtotime($block['end']);
+            if ($tSec !== false && $sSec !== false && $eSec !== false && $tSec >= $sSec && $tSec < $eSec) {
+                return $block;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -333,7 +435,7 @@ class PeriodSchedule
      *
      * @return array{period_number: ?int, number: int, name: string, label: string, short_name: string, start_time: string, end_time: string, start: string, end: string, display_time: string, is_break: bool, type: string, duration_minutes: int}|null
      */
-    public static function matchPeriod(string $startTime, string $endTime): ?array
+    public static function matchPeriod(string $startTime, string $endTime, ?int $classId = null): ?array
     {
         $startNorm = self::normalizeTime($startTime);
         $endNorm = self::normalizeTime($endTime);
@@ -342,7 +444,8 @@ class PeriodSchedule
             return null;
         }
 
-        foreach (self::CHRONOLOGICAL_BLOCKS as $block) {
+        $allPeriods = self::getAllPeriods($classId);
+        foreach ($allPeriods as $block) {
             if ($block['start'] === $startNorm && $block['end'] === $endNorm) {
                 return $block;
             }

@@ -31,11 +31,16 @@ final class TimetableSlot
     public function __construct(
         public readonly int $id,
         public readonly int $termId,
-        public readonly int $classSubjectId,
+        public readonly ?int $classSubjectId,
         public readonly string $dayOfWeek,
         public readonly string $startTime, // HH:MM:SS
         public readonly string $endTime,   // HH:MM:SS
         public readonly ?string $room = null,
+        public readonly ?int $classId = null,
+        public readonly ?int $structurePeriodId = null,
+        public readonly ?string $department = null,
+        public readonly ?string $customTitle = null,
+        public readonly string $slotType = 'instructional',
         public readonly ?string $createdAt = null,
         public readonly ?string $updatedAt = null,
         public readonly ?ClassSubject $classSubject = null,
@@ -83,14 +88,23 @@ final class TimetableSlot
             'is_current' => (bool)($data['term_is_current'] ?? 0),
         ]) : null);
 
+        $resolvedClassId = isset($data['class_id']) && $data['class_id'] !== null && $data['class_id'] !== ''
+            ? (int)$data['class_id']
+            : ($classSubject ? (int)$classSubject->classId : null);
+
         return new self(
             id: (int)($data['id'] ?? 0),
             termId: (int)($data['term_id'] ?? 0),
-            classSubjectId: (int)($data['class_subject_id'] ?? 0),
+            classSubjectId: isset($data['class_subject_id']) && $data['class_subject_id'] !== null && $data['class_subject_id'] !== '' ? (int)$data['class_subject_id'] : null,
             dayOfWeek: strtolower((string)($data['day_of_week'] ?? self::DAY_MON)),
             startTime: $startTime,
             endTime: $endTime,
             room: isset($data['room']) && trim((string)$data['room']) !== '' ? trim((string)$data['room']) : null,
+            classId: $resolvedClassId,
+            structurePeriodId: isset($data['structure_period_id']) && $data['structure_period_id'] !== null && $data['structure_period_id'] !== '' ? (int)$data['structure_period_id'] : null,
+            department: isset($data['department']) && trim((string)$data['department']) !== '' ? trim((string)$data['department']) : null,
+            customTitle: isset($data['custom_title']) && trim((string)$data['custom_title']) !== '' ? trim((string)$data['custom_title']) : null,
+            slotType: (string)($data['slot_type'] ?? 'instructional'),
             createdAt: isset($data['created_at']) ? (string)$data['created_at'] : null,
             updatedAt: isset($data['updated_at']) ? (string)$data['updated_at'] : null,
             classSubject: $classSubject,
@@ -103,6 +117,7 @@ final class TimetableSlot
         return [
             'id' => $this->id,
             'term_id' => $this->termId,
+            'class_id' => $this->classId,
             'class_subject_id' => $this->classSubjectId,
             'day_of_week' => $this->dayOfWeek,
             'day_label' => $this->getDayLabel(),
@@ -111,6 +126,10 @@ final class TimetableSlot
             'time_range' => $this->getFormattedTimeRange(),
             'duration_minutes' => $this->getDurationMinutes(),
             'room' => $this->room,
+            'structure_period_id' => $this->structurePeriodId,
+            'department' => $this->department,
+            'custom_title' => $this->customTitle,
+            'slot_type' => $this->slotType,
             'created_at' => $this->createdAt,
             'updated_at' => $this->updatedAt,
             'class_subject' => $this->classSubject?->toArray(),
@@ -145,17 +164,20 @@ final class TimetableSlot
     public function __get(string $name): mixed
     {
         return match ($name) {
-            'subjectName' => $this->classSubject?->subjectName ?? ($this->classSubject?->subject?->name ?? 'Subject'),
-            'subjectCode' => $this->classSubject?->subjectCode ?? ($this->classSubject?->subject?->code ?? ''),
+            'subjectName' => $this->customTitle ?: ($this->classSubject?->subjectName ?? ($this->classSubject?->subject?->name ?? 'Subject')),
+            'subjectCode' => $this->classSubject?->subjectCode ?? ($this->classSubject?->subject?->code ?? ($this->customTitle ? strtoupper(substr($this->customTitle, 0, 4)) : '')),
             'className' => $this->classSubject?->className ?? ($this->classSubject?->schoolClass?->name ?? ''),
-            'teacherName' => $this->classSubject?->teacherName ?? ($this->classSubject?->teacher?->user?->name ?? ($this->classSubject?->teacher?->name ?? 'Subject Teacher')),
+            'teacherName' => $this->classSubject?->teacherName ?? ($this->classSubject?->teacher?->user?->name ?? ($this->classSubject?->teacher?->name ?? ($this->customTitle ? 'Coordinator' : 'Subject Teacher'))),
             'periodNumber' => null,
+            'department' => $this->department,
+            'customTitle' => $this->customTitle,
+            'slotType' => $this->slotType,
             default => null,
         };
     }
 
     public function __isset(string $name): bool
     {
-        return in_array($name, ['subjectName', 'subjectCode', 'className', 'teacherName', 'periodNumber'], true);
+        return in_array($name, ['subjectName', 'subjectCode', 'className', 'teacherName', 'periodNumber', 'department', 'customTitle', 'slotType'], true);
     }
 }
