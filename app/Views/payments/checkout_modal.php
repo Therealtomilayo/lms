@@ -61,16 +61,6 @@
                     <svg class="w-4 h-4 text-sky-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                     <span>Pay ₦1,500 with Paystack</span>
                 </button>
-
-                <?php if (\App\Core\Config::get('app.env') !== 'production' && \App\Core\Config::get('app.debug', false)): ?>
-                <!-- Sandbox Simulation Button (Local Dev / Sandbox Only) -->
-                <button type="button" 
-                        id="btn-simulate-pay"
-                        onclick="executeSimulatedPayment()" 
-                        class="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition flex items-center justify-center gap-2 cursor-pointer border border-slate-200">
-                    <span>Quick Sandbox Simulation (Instant Test)</span>
-                </button>
-                <?php endif; ?>
             </div>
             <p class="text-[11px] text-center text-slate-400">Secured with Paystack 256-bit encryption &bull; Card details never stored.</p>
         </div>
@@ -242,52 +232,6 @@ async function verifyPaystackBackend(ref) {
     } catch (e) {
         alert('Could not verify payment with server.');
     }
-}
-
-async function executeSimulatedPayment() {
-    const btn = document.getElementById('btn-simulate-pay');
-    btn.disabled = true;
-    btn.innerHTML = '<span>Processing Sandbox Simulation...</span>';
-
-    try {
-        const initRes = await fetch('/payments/checkout/pin', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
-            body: new URLSearchParams({
-                student_id: currentCheckoutPayload.studentId,
-                session_id: currentCheckoutPayload.sessionId,
-                term_id: currentCheckoutPayload.termId,
-                _csrf_token: document.querySelector('input[name="_csrf_token"]')?.value || ''
-            })
-        });
-        const initData = await initRes.json();
-        if (!initData.success) {
-            alert(initData.error || 'Checkout initiation failed.');
-            btn.disabled = false;
-            btn.innerHTML = '<span>Quick Sandbox Simulation (Instant Test)</span>';
-            return;
-        }
-
-        await executeSimulatedPaymentWithRef(initData.reference);
-    } catch (err) {
-        alert('Network error during simulated checkout.');
-        btn.disabled = false;
-        btn.innerHTML = '<span>Quick Sandbox Simulation (Instant Test)</span>';
-    }
-}
-
-async function executeSimulatedPaymentWithRef(ref) {
-    const simRes = await fetch('/payments/simulate/' + encodeURIComponent(ref), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
-        body: new URLSearchParams({ _csrf_token: document.querySelector('input[name="_csrf_token"]')?.value || '' })
-    });
-    const simData = await simRes.json();
-    if (!simData.success) {
-        alert(simData.error || 'Payment simulation failed.');
-        return;
-    }
-    displayCheckoutSuccess(simData);
 }
 
 function displayCheckoutSuccess(data) {

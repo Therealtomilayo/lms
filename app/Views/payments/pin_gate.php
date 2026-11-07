@@ -29,26 +29,9 @@ $csrfToken = \App\Core\Csrf::getToken();
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#7B3046">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/assets/css/portal.css?v=<?= file_exists(dirname(__DIR__, 2) . '/public/assets/css/portal.css') ? filemtime(dirname(__DIR__, 2) . '/public/assets/css/portal.css') : '1.0' ?>">
+    <!-- <script src="https://cdn.tailwindcss.com"></script> -->
     <script src="https://js.paystack.co/v1/inline.js"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            50: '#FDF4F6',
-                            100: '#F9E5EA',
-                            600: '#0C9DD5',
-                            700: '#7B3046',
-                            800: '#5C2233',
-                            900: '#3D1520',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
     <style>
         .pin-input {
             letter-spacing: 0.25em;

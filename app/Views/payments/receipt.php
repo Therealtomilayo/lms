@@ -25,7 +25,8 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#7B3046">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/assets/css/portal.css?v=<?= file_exists(dirname(__DIR__, 2) . '/public/assets/css/portal.css') ? filemtime(dirname(__DIR__, 2) . '/public/assets/css/portal.css') : '1.0' ?>">
+    <!-- <script src="https://cdn.tailwindcss.com"></script> -->
     <style>
         @media print {
             body { background: #fff !important; color: #000 !important; }
@@ -181,7 +182,7 @@
             <div class="pt-6 border-t border-slate-200 flex flex-col sm:flex-row sm:items-end justify-between gap-6 text-xs text-slate-500">
                 <div class="space-y-1">
                     <p><strong>Transaction Ref:</strong> <span class="font-mono text-slate-700"><?= e($payment->reference) ?></span></p>
-                    <p><strong>Gateway Ref:</strong> <span class="font-mono text-slate-700"><?= e($payment->gatewayReference ?? 'SIMULATED_PSTK_DIRECT') ?></span></p>
+                    <p><strong>Gateway Ref:</strong> <span class="font-mono text-slate-700"><?= e($payment->gatewayReference ?? 'PSTK-DIRECT') ?></span></p>
                     <p class="text-[11px] text-slate-400 mt-2">This is a computer-generated receipt issued by Claret School Information System.</p>
                 </div>
                 <div class="text-center sm:text-right border-t sm:border-t-0 pt-4 sm:pt-0">

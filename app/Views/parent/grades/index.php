@@ -279,16 +279,18 @@ $fullClassName = $childClass . $arm;
             </p>
             <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
                 <a href="/parent/children/<?= (int)$student->id ?>/grades/report-card?term_id=<?= (int)$selectedTermId ?>" 
-                   class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-700 text-white shadow-xs transition">
-                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                   class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white shadow-xs transition">
+                    <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                     </svg>
                     <span>Enter PIN to Unlock Results</span>
                 </a>
-                <a href="/parent/scratch-cards/buy" 
-                   class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition">
+                <button type="button" 
+                        onclick="openPinCheckoutModal(<?= (int)$student->id ?>, <?= (int)($selectedSession->id ?? 0) ?>, <?= (int)$selectedTermId ?>, '<?= e(addslashes($student->name)) ?>', '<?= e(addslashes($selectedTerm->name ?? 'Current Term')) ?>', 1500)"
+                        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-brand-700 hover:bg-brand-800 text-white shadow-xs transition cursor-pointer">
+                    <svg class="w-4 h-4 text-sky-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
                     <span>Purchase Scratch Card Online</span>
-                </a>
+                </button>
             </div>
         </div>
     <?php else: ?>
@@ -505,4 +507,9 @@ $fullClassName = $childClass . $arm;
             </div>
         </div>
     <?php endif; ?>
+
+    <!-- Paystack Inline Checkout JS & Modal -->
+    <script src="https://js.paystack.co/v1/inline.js"></script>
+    <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars(\App\Core\Csrf::getToken()) ?>">
+    <?php include dirname(__DIR__, 2) . '/payments/checkout_modal.php'; ?>
 </div>

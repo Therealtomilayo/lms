@@ -36,11 +36,12 @@ class SecurityHeadersMiddleware
         // Content Security Policy
         $csp = [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://js.paystack.co",
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
             "font-src 'self' https://fonts.gstatic.com data:",
-            "img-src 'self' data: blob:",
-            "connect-src 'self'",
+            "img-src 'self' data: blob: https://assets.paystack.com https://checkout.paystack.com",
+            "connect-src 'self' https://api.paystack.co",
+            "frame-src 'self' https://checkout.paystack.com",
             "frame-ancestors 'self'",
         ];
         $response->setHeader('Content-Security-Policy', implode('; ', $csp));

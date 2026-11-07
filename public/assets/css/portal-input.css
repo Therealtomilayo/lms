@@ -1,0 +1,67 @@
+@import "../../../claret-international-school-public/node_modules/tailwindcss/index.css";
+
+@source "../../../app/Views/**/*.php";
+@source "../../../public/**/*.php";
+
+@theme {
+  --color-claret-50: #FDF2F4;
+  --color-claret-100: #FBE8EC;
+  --color-claret-200: #F5C5CF;
+  --color-claret-500: #C3456B;
+  --color-claret-600: #9B3B58;
+  --color-claret-700: #7B3046;
+  --color-claret-800: #5F2234;
+  --color-claret-900: #421422;
+
+  --color-brand-100: #DBEAFE;
+  --color-brand-500: #3B82F6;
+  --color-brand-600: #0C9DD5;
+  --color-brand-700: #7B3046;
+  --color-brand-800: #5C2233;
+  --color-brand-900: #3D1520;
+
+  --color-accent-500: #C3456B;
+  --color-accent-600: #C3456B;
+
+  --color-success-100: #DCFCE7;
+  --color-success-500: #22C55E;
+  --color-success-600: #16A34A;
+  --color-success-700: #15803D;
+
+  --color-warning-100: #FEF3C7;
+  --color-warning-500: #F59E0B;
+  --color-warning-600: #D97706;
+  --color-warning-800: #92400E;
+
+  --color-danger-50: #FEF2F2;
+  --color-danger-100: #FEE2E2;
+  --color-danger-500: #EF4444;
+  --color-danger-600: #DC2626;
+  --color-danger-700: #B91C1C;
+  --color-danger-800: #991B1B;
+
+  --color-info-100: #E0F2FE;
+  --color-info-500: #0EA5E9;
+  --color-info-600: #0284C7;
+  --color-info-700: #0369A1;
+
+  --font-sans: "Plus Jakarta Sans", Roboto, system-ui, -apple-system, sans-serif;
+  --font-serif: Fraunces, Georgia, serif;
+}
+
+/* Custom UI utilities and resets */
+button,
+[type='button'],
+[type='reset'],
+[type='submit'],
+[role='button'],
+summary,
+select {
+  cursor: pointer;
+}
+
+button:disabled,
+[type='button']:disabled,
+[type='submit']:disabled {
+  cursor: not-allowed;
+}

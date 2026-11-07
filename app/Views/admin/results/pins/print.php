@@ -14,7 +14,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Print Result Scratch Cards — Claret International School</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/assets/css/portal.css?v=<?= file_exists(dirname(__DIR__, 4) . '/public/assets/css/portal.css') ? filemtime(dirname(__DIR__, 4) . '/public/assets/css/portal.css') : '1.0' ?>">
+    <!-- <script src="https://cdn.tailwindcss.com"></script> -->
     <style>
         @page {
             size: A4 portrait;

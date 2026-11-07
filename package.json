@@ -1,0 +1,10 @@
+{
+  "name": "claret-lms-portal",
+  "version": "1.0.0",
+  "description": "Claret International School LMS Portal",
+  "private": true,
+  "scripts": {
+    "build:css": "node claret-international-school-public/node_modules/@tailwindcss/cli/dist/index.mjs -i ./public/assets/css/portal-input.css -o ./public/assets/css/portal.css --minify",
+    "watch:css": "node claret-international-school-public/node_modules/@tailwindcss/cli/dist/index.mjs -i ./public/assets/css/portal-input.css -o ./public/assets/css/portal.css --watch"
+  }
+}

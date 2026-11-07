@@ -12,7 +12,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invoice <?= htmlspecialchars($invoice->invoiceNumber, ENT_QUOTES, 'UTF-8') ?> — Claret International School</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/assets/css/portal.css?v=<?= file_exists(dirname(__DIR__, 3) . '/public/assets/css/portal.css') ? filemtime(dirname(__DIR__, 3) . '/public/assets/css/portal.css') : '1.0' ?>">
+    <!-- <script src="https://cdn.tailwindcss.com"></script> -->
     <style>
         @media print {
             .no-print { display: none !important; }

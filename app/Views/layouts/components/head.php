@@ -102,68 +102,74 @@
     }
 </script>
 
-<!-- Tailwind CSS (compiled tokens adhering to 08-ui-design-system.md) -->
+<!-- Compiled Tailwind CSS for LMS Portal -->
+<link rel="stylesheet" href="/assets/css/portal.css?v=<?= file_exists(dirname(__DIR__, 4) . '/public/assets/css/portal.css') ? filemtime(dirname(__DIR__, 4) . '/public/assets/css/portal.css') : '1.0' ?>">
+
+<!-- Tailwind CSS CDN Fallback (Commented out in production to eliminate console warnings)
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
-    tailwind.config = {
-        theme: {
-            extend: {
-                colors: {
-                    claret: {
-                        50:  '#FDF2F4',
-                        100: '#FBE8EC',
-                        200: '#F5C5CF',
-                        500: '#C3456B',
-                        600: '#9B3B58',
-                        700: '#7B3046',
-                        800: '#5F2234',
-                        900: '#421422',
+    if (typeof tailwind !== 'undefined') {
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        claret: {
+                            50:  '#FDF2F4',
+                            100: '#FBE8EC',
+                            200: '#F5C5CF',
+                            500: '#C3456B',
+                            600: '#9B3B58',
+                            700: '#7B3046',
+                            800: '#5F2234',
+                            900: '#421422',
+                        },
+                        brand: {
+                            100: '#DBEAFE',
+                            500: '#3B82F6',
+                            600: '#0C9DD5',
+                            700: '#7B3046',
+                        },
+                        accent: {
+                            500: '#C3456B',
+                            600: '#C3456B',
+                        },
+                        success: {
+                            100: '#DCFCE7',
+                            500: '#22C55E',
+                            600: '#16A34A',
+                            700: '#15803D',
+                        },
+                        warning: {
+                            100: '#FEF3C7',
+                            500: '#F59E0B',
+                            600: '#D97706',
+                            800: '#92400E',
+                        },
+                        danger: {
+                            50:  '#FEF2F2',
+                            100: '#FEE2E2',
+                            500: '#EF4444',
+                            600: '#DC2626',
+                            700: '#B91C1C',
+                            800: '#991B1B',
+                        },
+                        info: {
+                            100: '#E0F2FE',
+                            500: '#0EA5E9',
+                            600: '#0284C7',
+                            700: '#0369A1',
+                        }
                     },
-                    brand: {
-                        100: '#DBEAFE',
-                        500: '#3B82F6',
-                        600: '#0C9DD5',
-                        700: '#7B3046',
-                    },
-                    accent: {
-                        500: '#C3456B',
-                        600: '#C3456B',
-                    },
-                    success: {
-                        100: '#DCFCE7',
-                        500: '#22C55E',
-                        600: '#16A34A',
-                        700: '#15803D',
-                    },
-                    warning: {
-                        100: '#FEF3C7',
-                        500: '#F59E0B',
-                        600: '#D97706',
-                        800: '#92400E',
-                    },
-                    danger: {
-                        50:  '#FEF2F2',
-                        100: '#FEE2E2',
-                        500: '#EF4444',
-                        600: '#DC2626',
-                        700: '#B91C1C',
-                        800: '#991B1B',
-                    },
-                    info: {
-                        100: '#E0F2FE',
-                        500: '#0EA5E9',
-                        600: '#0284C7',
-                        700: '#0369A1',
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'Roboto', 'system-ui', '-apple-system', 'sans-serif'],
+                        serif: ['Fraunces', 'Georgia', 'serif'],
                     }
-                },
-                fontFamily: {
-                    sans: ['"Plus Jakarta Sans"', 'Roboto', 'system-ui', '-apple-system', 'sans-serif'],
-                    serif: ['Fraunces', 'Georgia', 'serif'],
                 }
             }
-        }
+        };
     }
 </script>
+-->
 <style>
     html, body { 
         background-color: #f8fafc;

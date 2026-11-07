@@ -70,7 +70,6 @@ class PaymentController extends Controller
                 'amount' => $payment->amount,
                 'formatted_amount' => $payment->getFormattedAmount(),
                 'item' => $payment->metadata['item_description'] ?? 'Result Access Scratch-Card PIN',
-                'simulate_url' => "/payments/simulate/{$payment->reference}",
                 'public_key' => $this->paymentService->getPublicKey(),
                 'authorization_url' => $authorizationUrl,
                 'access_code' => $accessCode,
@@ -78,7 +77,85 @@ class PaymentController extends Controller
             ]);
         }
 
-        return Response::redirect("/payments/checkout/{$payment->reference}");
+        if ($authorizationUrl) {
+            return Response::redirect($authorizationUrl);
+        }
+
+        return $this->redirectWithError("/parent/children/{$studentId}/grades?term_id={$termId}", 'Payment initialization failed. Please try again.');
+    }
+
+    /**
+     * Direct purchase entrypoint for Scratch-Card PIN via Paystack checkout.
+     * Route: GET|POST /parent/scratch-cards/buy
+     */
+    public function buyScratchCard(Request $request): Response
+    {
+        $userContext = $this->getUserContext($request);
+        if (!$userContext) {
+            return Response::redirect('/login');
+        }
+
+        $studentId = (int)($request->post('student_id') ?: $request->query('student_id', 0));
+        $termId = (int)($request->post('term_id') ?: $request->query('term_id', 0));
+        $sessionId = (int)($request->post('session_id') ?: $request->query('session_id', 0));
+
+        // If student is not specified, resolve from parent's wards
+        if ($studentId <= 0) {
+            $parentRepo = new \App\Repositories\ParentRepository();
+            $parent = $parentRepo->findByUserId((int)$userContext->id);
+            if ($parent) {
+                $children = $parentRepo->getChildren((int)$parent->id);
+                if (!empty($children)) {
+                    $studentId = (int)$children[0]->id;
+                }
+            }
+        }
+
+        $academicRepo = new \App\Repositories\AcademicRepository();
+        if ($termId <= 0) {
+            $activeTerm = $academicRepo->getCurrentTerm();
+            $termId = $activeTerm ? (int)$activeTerm->id : 0;
+            if ($sessionId <= 0 && $activeTerm) {
+                $sessionId = (int)$activeTerm->sessionId;
+            }
+        }
+
+        if ($sessionId <= 0) {
+            $term = $termId > 0 ? $academicRepo->findTermById($termId) : null;
+            $sessionId = $term ? (int)$term->sessionId : 0;
+            if ($sessionId <= 0) {
+                $activeSession = $academicRepo->getCurrentSession();
+                $sessionId = $activeSession ? (int)$activeSession->id : 0;
+            }
+        }
+
+        if ($studentId <= 0 || $sessionId <= 0 || $termId <= 0) {
+            \App\Core\Session::start();
+            \App\Core\Session::flash('error', 'Unable to initiate scratch card purchase: missing student or academic term details.');
+            return Response::redirect('/parent/dashboard');
+        }
+
+        // Initialize payment with Paystack
+        $amount = PaymentService::PIN_PRICE_NGN;
+        $result = $this->paymentService->initiatePinPayment($userContext, $studentId, $sessionId, $termId, $amount);
+        if (!$result->success) {
+            \App\Core\Session::start();
+            \App\Core\Session::flash('error', $result->error ?? 'Could not initiate payment.');
+            return Response::redirect("/parent/children/{$studentId}/grades?term_id={$termId}");
+        }
+
+        $payment = $result->data;
+        $callbackUrl = rtrim($request->getBaseUrl(), '/') . '/payments/callback';
+        $paystackInit = $this->paymentService->initializePaystackTransaction($payment, $callbackUrl);
+
+        if ($paystackInit->success && !empty($paystackInit->data['authorization_url'])) {
+            // Secure direct routing to Paystack hosted payment page
+            return Response::redirect($paystackInit->data['authorization_url']);
+        }
+
+        \App\Core\Session::start();
+        \App\Core\Session::flash('error', $paystackInit->error ?? 'Paystack payment gateway is currently unreachable. Please try again or visit the school bursary.');
+        return Response::redirect("/parent/children/{$studentId}/grades/report-card?term_id={$termId}");
     }
 
     /**
@@ -128,53 +205,6 @@ class PaymentController extends Controller
         return $this->redirectWithSuccess(
             "/payments/{$reference}/receipt",
             'Payment verified successfully with Paystack! Your Result Access PIN is ready.'
-        );
-    }
-
-    /**
-     * Simulate successful payment confirmation (Paystack mock).
-     */
-    public function simulate(Request $request, string $reference): Response
-    {
-        $userContext = $this->getUserContext($request);
-        if (!$userContext) {
-            return Response::redirect('/login');
-        }
-
-        // Security: Simulation is strictly forbidden in production
-        if (\App\Core\Config::get('app.env') === 'production') {
-            if ($request->isAjax() || $request->isJson()) {
-                return $this->json(['error' => 'Payment simulation is disabled in production environments.'], 403);
-            }
-            return Response::forbidden('Payment simulation is disabled in production environments.');
-        }
-
-        $result = $this->paymentService->simulateSuccessfulPayment($reference);
-        if (!$result->success) {
-            if ($request->isAjax() || $request->isJson()) {
-                return $this->json(['error' => $result->error], 400);
-            }
-            return $this->redirectWithError('/payments/history', $result->error ?? 'Payment simulation failed.');
-        }
-
-        $payment = $result->data['payment'];
-        $pin = $result->data['pin'];
-
-        if ($request->isAjax() || $request->isJson()) {
-            return $this->json([
-                'success' => true,
-                'reference' => $payment->reference,
-                'pin_code' => $pin ? $pin->getFormattedPin() : null,
-                'serial_number' => $pin?->serialNumber,
-                'max_uses' => $pin?->maxUses ?? 5,
-                'remaining_uses' => $pin ? $pin->getRemainingUses() : 5,
-                'receipt_url' => "/payments/{$payment->reference}/receipt",
-            ]);
-        }
-
-        return $this->redirectWithSuccess(
-            "/payments/{$payment->reference}/receipt",
-            "Payment successful! Your Result Access Scratch-Card PIN has been generated."
         );
     }
 

@@ -613,8 +613,9 @@ try {
     $paymentAuth = [AuthMiddleware::class];
     $personalPaymentAuth = [AuthMiddleware::class, RoleMiddleware::allow(['parent', 'student', 'applicant', 'admin', 'super_admin'])];
     $paymentFormAuth = [AuthMiddleware::class, CsrfMiddleware::class];
+    $router->get('/parent/scratch-cards/buy', [\App\Controllers\PaymentController::class, 'buyScratchCard'], $parentAuth);
+    $router->post('/parent/scratch-cards/buy', [\App\Controllers\PaymentController::class, 'buyScratchCard'], $parentAuth);
     $router->post('/payments/checkout/pin', [\App\Controllers\PaymentController::class, 'checkoutPin'], $paymentFormAuth);
-    $router->post('/payments/simulate/{reference}', [\App\Controllers\PaymentController::class, 'simulate'], $paymentFormAuth);
     $router->get('/payments/callback', [\App\Controllers\PaymentController::class, 'callback'], $paymentAuth);
     $router->get('/payments/history', [\App\Controllers\PaymentController::class, 'history'], $personalPaymentAuth);
     $router->get('/payments/{reference}/receipt', [\App\Controllers\PaymentController::class, 'receipt'], $paymentAuth);

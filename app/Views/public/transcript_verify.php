@@ -21,25 +21,8 @@ $pageTitle = $title ?? 'Transcript Verification — Claret LMS';
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="shortcut icon" href="/favicon.ico">
     <meta name="theme-color" content="#7B3046">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            50: '#FDF4F6',
-                            100: '#F9E5EA',
-                            600: '#0C9DD5',
-                            700: '#7B3046',
-                            800: '#5C2233',
-                            900: '#3D1520',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <link rel="stylesheet" href="/assets/css/portal.css?v=<?= file_exists(dirname(__DIR__, 2) . '/public/assets/css/portal.css') ? filemtime(dirname(__DIR__, 2) . '/public/assets/css/portal.css') : '1.0' ?>">
+    <!-- <script src="https://cdn.tailwindcss.com"></script> -->
     <style>
         @media print {
             .no-print { display: none !important; }
