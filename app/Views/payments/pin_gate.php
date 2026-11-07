@@ -30,9 +30,31 @@ $csrfToken = \App\Core\Csrf::getToken();
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#7B3046">
     <link rel="stylesheet" href="/assets/css/portal.css?v=<?= file_exists(dirname(__DIR__, 2) . '/public/assets/css/portal.css') ? filemtime(dirname(__DIR__, 2) . '/public/assets/css/portal.css') : '1.0' ?>">
-    <!-- <script src="https://cdn.tailwindcss.com"></script> -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#FDF4F6',
+                            100: '#F9E5EA',
+                            200: '#F5C5CF',
+                            600: '#0C9DD5',
+                            700: '#7B3046',
+                            800: '#5C2233',
+                            900: '#3D1520',
+                        }
+                    }
+                }
+            }
+        };
+    </script>
     <script src="https://js.paystack.co/v1/inline.js"></script>
     <style>
+        .logo-wrap { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+        .logo-wrap img { width: 100%; height: 100%; object-fit: contain; }
+        .logo-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.1rem; color: #7B3046; }
         .pin-input {
             letter-spacing: 0.25em;
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;

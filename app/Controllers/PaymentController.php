@@ -39,9 +39,27 @@ class PaymentController extends Controller
             return Response::redirect('/login');
         }
 
-        $studentId = (int)$request->post('student_id', 0);
-        $sessionId = (int)$request->post('session_id', 0);
-        $termId = (int)$request->post('term_id', 0);
+        $studentId = (int)($request->post('student_id', 0) ?: $request->query('student_id', 0));
+        $sessionId = (int)($request->post('session_id', 0) ?: $request->query('session_id', 0));
+        $termId = (int)($request->post('term_id', 0) ?: $request->query('term_id', 0));
+
+        // Dynamic fallback resolution for academic session and term
+        $academicRepo = new \App\Repositories\AcademicRepository();
+        if ($termId <= 0) {
+            $activeTerm = $academicRepo->getCurrentTerm();
+            $termId = $activeTerm ? (int)$activeTerm->id : 0;
+            if ($sessionId <= 0 && $activeTerm) {
+                $sessionId = (int)$activeTerm->sessionId;
+            }
+        }
+        if ($sessionId <= 0 && $termId > 0) {
+            $term = $academicRepo->findTermById($termId);
+            $sessionId = $term ? (int)$term->sessionId : 0;
+        }
+        if ($sessionId <= 0) {
+            $activeSession = $academicRepo->getCurrentSession();
+            $sessionId = $activeSession ? (int)$activeSession->id : 0;
+        }
 
         // Security: Never trust client-supplied amount for fixed-price items!
         $amount = PaymentService::PIN_PRICE_NGN;

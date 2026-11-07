@@ -1,7 +1,7 @@
 @import "../../../claret-international-school-public/node_modules/tailwindcss/index.css";
 
-@source "../../../app/Views/**/*.php";
-@source "../../../public/**/*.php";
+@source "../../../app/Views";
+@source "../../../public";
 
 @theme {
   --color-claret-50: #FDF2F4;
@@ -13,12 +13,15 @@
   --color-claret-800: #5F2234;
   --color-claret-900: #421422;
 
-  --color-brand-100: #DBEAFE;
+  --color-brand-50: #FDF4F6;
+  --color-brand-100: #F9E5EA;
+  --color-brand-200: #F5C5CF;
   --color-brand-500: #3B82F6;
   --color-brand-600: #0C9DD5;
   --color-brand-700: #7B3046;
   --color-brand-800: #5C2233;
   --color-brand-900: #3D1520;
+  --color-brand-950: #260B13;
 
   --color-accent-500: #C3456B;
   --color-accent-600: #C3456B;

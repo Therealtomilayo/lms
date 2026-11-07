@@ -121,6 +121,8 @@ class ReportCardController extends Controller
             ];
         }
 
+        $targetSession = $targetSessionId > 0 ? $this->academicRepo->findSessionById($targetSessionId) : $this->academicRepo->getCurrentSession();
+
         return Response::html($this->render('parent/grades/index', [
             'student' => $student,
             'selectedChild' => $student,
@@ -128,6 +130,8 @@ class ReportCardController extends Controller
             'terms' => $terms,
             'termsData' => $termsData,
             'activeTerm' => $activeTerm,
+            'selectedTerm' => $targetTerm,
+            'selectedSession' => $targetSession,
             'selectedTermId' => $termId,
             'isPublished' => $isPublished,
             'isCleared' => $isCleared,

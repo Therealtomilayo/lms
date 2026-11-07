@@ -8,3 +8,4 @@
     "watch:css": "node claret-international-school-public/node_modules/@tailwindcss/cli/dist/index.mjs -i ./public/assets/css/portal-input.css -o ./public/assets/css/portal.css --watch"
   }
 }
+

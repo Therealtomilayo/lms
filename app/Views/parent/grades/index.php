@@ -19,6 +19,22 @@ $studentName = $student->name ?? 'Child';
 $childClass = $student->currentClass?->name ?? ($student->className ?: 'Class Assigned');
 $arm = !empty($student->currentClass?->sectionArm) ? ' (' . $student->currentClass->sectionArm . ')' : '';
 $fullClassName = $childClass . $arm;
+
+// Resolve active/selected term and session
+$currTerm = null;
+if (!empty($terms)) {
+    foreach ($terms as $t) {
+        if ((int)$t->id === (int)$selectedTermId) {
+            $currTerm = $t;
+            break;
+        }
+    }
+    if (!$currTerm) {
+        $currTerm = $terms[0];
+    }
+}
+$resolvedSessionId = (int)($selectedSession?->id ?? $currTerm?->sessionId ?? $activeTerm?->sessionId ?? 0);
+$resolvedTermName = $currTerm?->name ?? ($selectedTerm?->name ?? 'Current Term');
 ?>
 
 <div class="space-y-6">
@@ -92,25 +108,27 @@ $fullClassName = $childClass . $arm;
         </div>
     </div>
 
-    <!-- Academic Term Selector Toolbar -->
-    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <form method="GET" action="/parent/children/<?= (int)$student->id ?>/grades" class="flex items-center gap-3 w-full sm:w-auto">
-            <label for="term_id" class="text-xs font-bold text-slate-700 uppercase tracking-wider whitespace-nowrap">Academic Term:</label>
-            <select name="term_id" id="term_id" onchange="this.form.submit()" 
-                    class="px-3.5 py-2 text-xs font-bold rounded-xl border border-slate-300 bg-slate-50 text-slate-800 focus:bg-white focus:border-brand-500 focus:ring-brand-500 transition">
-                <?php 
-                $activeStartDate = !empty($activeTerm) ? $activeTerm->startDate : date('Y-m-d');
-                foreach ($terms as $t): 
-                    $isFuture = ($t->startDate > $activeStartDate) && !in_array($t->status, ['active', 'grading_open', 'completed', 'archived'], true);
-                ?>
-                    <option value="<?= (int)$t->id ?>" <?= (int)$t->id === (int)$selectedTermId ? 'selected' : '' ?> <?= $isFuture ? 'disabled' : '' ?>>
-                        <?= htmlspecialchars($t->name) ?><?= $isFuture ? ' (Upcoming Term)' : '' ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
+    <!-- Academic Term Selector Toolbar (Fully responsive, mobile-safe) -->
+    <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 overflow-hidden">
+        <form method="GET" action="/parent/children/<?= (int)$student->id ?>/grades" class="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3 w-full sm:w-auto min-w-0">
+            <label for="term_id" class="text-[11px] sm:text-xs font-bold text-slate-700 uppercase tracking-wider shrink-0">Academic Term:</label>
+            <div class="relative w-full sm:w-auto min-w-0 max-w-full">
+                <select name="term_id" id="term_id" onchange="this.form.submit()" 
+                        class="w-full sm:w-auto min-w-0 max-w-full pl-3.5 pr-8 py-2 text-xs font-bold rounded-xl border border-slate-300 bg-slate-50 text-slate-800 focus:bg-white focus:border-brand-500 focus:ring-brand-500 transition truncate shadow-2xs">
+                    <?php 
+                    $activeStartDate = !empty($activeTerm) ? $activeTerm->startDate : date('Y-m-d');
+                    foreach ($terms as $t): 
+                        $isFuture = ($t->startDate > $activeStartDate) && !in_array($t->status, ['active', 'grading_open', 'completed', 'archived'], true);
+                    ?>
+                        <option value="<?= (int)$t->id ?>" <?= (int)$t->id === (int)$selectedTermId ? 'selected' : '' ?> <?= $isFuture ? 'disabled' : '' ?>>
+                            <?= htmlspecialchars($t->name) ?><?= $isFuture ? ' (Upcoming Term)' : '' ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
         </form>
 
-        <div class="text-xs font-semibold text-slate-500 flex items-center gap-2">
+        <div class="text-xs font-semibold text-slate-500 flex flex-wrap items-center gap-2 pt-2.5 sm:pt-0 border-t sm:border-t-0 border-slate-100 shrink-0">
             <span>Result Status:</span>
             <?php if (!$isPublished): ?>
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
@@ -286,7 +304,7 @@ $fullClassName = $childClass . $arm;
                     <span>Enter PIN to Unlock Results</span>
                 </a>
                 <button type="button" 
-                        onclick="openPinCheckoutModal(<?= (int)$student->id ?>, <?= (int)($selectedSession->id ?? 0) ?>, <?= (int)$selectedTermId ?>, '<?= e(addslashes($student->name)) ?>', '<?= e(addslashes($selectedTerm->name ?? 'Current Term')) ?>', 1500)"
+                        onclick="openPinCheckoutModal(<?= (int)$student->id ?>, <?= (int)$resolvedSessionId ?>, <?= (int)$selectedTermId ?>, '<?= e(addslashes($student->name)) ?>', '<?= e(addslashes($resolvedTermName)) ?>', 1500)"
                         class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-brand-700 hover:bg-brand-800 text-white shadow-xs transition cursor-pointer">
                     <svg class="w-4 h-4 text-sky-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
                     <span>Purchase Scratch Card Online</span>
