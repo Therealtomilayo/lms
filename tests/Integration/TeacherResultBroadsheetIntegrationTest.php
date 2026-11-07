@@ -384,11 +384,11 @@ final class TeacherResultBroadsheetIntegrationTest extends TestCase
         $this->assertSame(200, $response->getStatusCode());
         $body = $response->getBody();
 
-        // Should render official 3-page report card dossier
+        // Should render official 2-page high school report card dossier
         $this->assertStringContainsString('Emeka Nwosu', $body);
         $this->assertStringContainsString('CIS/2026/004', $body);
         $this->assertStringContainsString('Basic Science', $body);
-        $this->assertStringContainsString('Official 3-Page Dossier', $body);
+        $this->assertStringContainsString('Official 2-Page High School Dossier', $body);
     }
 
     public function testUnauthorizedTeacherCannotViewStudentReportCardPdf(): void

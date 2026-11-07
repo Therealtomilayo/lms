@@ -498,14 +498,15 @@ final class AssignmentLifecycleIntegrationTest extends TestCase
         $studentContext = UserContext::fromUser($this->studentUser);
         $parentContext = UserContext::fromUser($this->parentUser);
 
-        // Create published assignment
+        // Create published assignment with future due date
+        $futureDueDate = date('Y-m-d H:i:s', strtotime('+7 days'));
         $createResult = $this->assignmentService->createAssignment([
             'class_subject_id' => $this->classSubjectId,
             'term_id' => $this->termId,
             'topic' => 'Algebra',
             'title' => 'Quadratic Equations Task',
             'instructions' => 'Solve using quadratic formula.',
-            'due_at' => '2026-10-15 18:00:00',
+            'due_at' => $futureDueDate,
             'max_score' => 100.00,
             'status' => 'published',
         ], null, $teacherContext);
@@ -525,7 +526,7 @@ final class AssignmentLifecycleIntegrationTest extends TestCase
         $this->assertSame('All questions solved with step-by-step working.', $submission->textResponse);
         $this->assertNotNull($submission->fileId);
         $this->assertFalse($submission->isGraded());
-        $this->assertFalse($submission->isLate('2026-10-15 18:00:00'));
+        $this->assertFalse($submission->isLate($futureDueDate));
 
         // Teacher grades the submission
         $gradeResult = $this->assignmentService->gradeSubmission(

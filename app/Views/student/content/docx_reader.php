@@ -20,6 +20,9 @@
                     <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold bg-sky-50 text-sky-800 border border-sky-200">
                         <?= htmlspecialchars($item->classSubject?->subject?->code ?: 'SUBJ') ?>
                     </span>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
+                        Word Document Reader
+                    </span>
                 </div>
 
                 <p class="text-[11px] text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
