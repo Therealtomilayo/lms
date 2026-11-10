@@ -59,6 +59,24 @@
         </div>
     </div>
 
+    <?php if (!$student || !$student->schoolClass): ?>
+        <div class="p-4 rounded-2xl bg-amber-50/90 border border-amber-200/80 text-amber-900 shadow-xs flex items-start gap-3.5">
+            <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+                <h4 class="text-xs font-bold text-amber-950 uppercase tracking-wider">Academic Enrollment Notice</h4>
+                <p class="text-xs text-amber-900 mt-0.5 leading-relaxed">
+                    <?= !$student 
+                        ? 'Your student profile record is being finalized by the school administration. You will have full access to class coursework once configured.' 
+                        : 'You are currently not enrolled in an active classroom arm for this session. Please contact the administrative office to complete your class placement.' ?>
+                </p>
+            </div>
+        </div>
+    <?php endif; ?>
+
     <!-- 4-Card KPI Summary Metrics Strip -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- Enrolled Subjects -->

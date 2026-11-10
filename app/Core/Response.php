@@ -47,7 +47,32 @@ class Response
 
     public static function notFound(string $message = 'Not Found'): self
     {
-        return self::html("<h1>404 Not Found</h1><p>{$message}</p>", 404);
+        $accept = $_SERVER['HTTP_ACCEPT'] ?? '';
+        if (str_contains($accept, 'application/json')) {
+            return self::json(['error' => $message, 'code' => 'NOT_FOUND'], 404);
+        }
+
+        try {
+            $view = new View();
+            return self::html($view->render('errors/404', ['message' => $message]), 404);
+        } catch (\Throwable) {
+            return self::html("<h1>404 Not Found</h1><p>" . htmlspecialchars($message) . "</p>", 404);
+        }
+    }
+
+    public static function forbidden(string $message = 'Forbidden'): self
+    {
+        $accept = $_SERVER['HTTP_ACCEPT'] ?? '';
+        if (str_contains($accept, 'application/json')) {
+            return self::json(['error' => $message, 'code' => 'FORBIDDEN'], 403);
+        }
+
+        try {
+            $view = new View();
+            return self::html($view->render('errors/403', ['message' => $message]), 403);
+        } catch (\Throwable) {
+            return self::html("<h1>403 Forbidden</h1><p>" . htmlspecialchars($message) . "</p>", 403);
+        }
     }
 
     public static function download(

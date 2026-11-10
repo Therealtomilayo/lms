@@ -272,6 +272,8 @@ class AttendanceRepository
      */
     public function getStudentAttendanceSummary(int $studentId, int $termId, ?int $classSubjectId = null): array
     {
+        $subjectClause = $classSubjectId !== null ? "AND class_subject_id = :class_subject_id" : "AND class_subject_id IS NULL";
+
         $sql = "
             SELECT 
                 COUNT(*) AS total_records,
@@ -282,14 +284,15 @@ class AttendanceRepository
             FROM attendance_records
             WHERE student_id = :student_id
               AND term_id = :term_id
-              AND ((:class_subject_id IS NULL AND class_subject_id IS NULL) OR class_subject_id = :class_subject_id_match)
+              {$subjectClause}
         ";
 
         $stmt = $this->db->prepare($sql);
         $stmt->bindValue(':student_id', $studentId, PDO::PARAM_INT);
         $stmt->bindValue(':term_id', $termId, PDO::PARAM_INT);
-        $stmt->bindValue(':class_subject_id', $classSubjectId, $classSubjectId === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
-        $stmt->bindValue(':class_subject_id_match', $classSubjectId, $classSubjectId === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
+        if ($classSubjectId !== null) {
+            $stmt->bindValue(':class_subject_id', $classSubjectId, PDO::PARAM_INT);
+        }
         $stmt->execute();
 
         $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
@@ -358,6 +361,8 @@ class AttendanceRepository
      */
     public function getStudentAttendanceHistory(int $studentId, int $termId, ?int $classSubjectId = null): array
     {
+        $subjectClause = $classSubjectId !== null ? "AND ar.class_subject_id = :class_subject_id" : "AND ar.class_subject_id IS NULL";
+
         $sql = "
             SELECT ar.*, u.name AS student_name, s.admission_number, m.name AS marker_name, up.name AS updater_name
             FROM attendance_records ar
@@ -367,15 +372,16 @@ class AttendanceRepository
             LEFT JOIN users up ON up.id = ar.updated_by
             WHERE ar.student_id = :student_id
               AND ar.term_id = :term_id
-              AND ((:class_subject_id IS NULL AND ar.class_subject_id IS NULL) OR ar.class_subject_id = :class_subject_id_match)
+              {$subjectClause}
             ORDER BY ar.date DESC, ar.period_number ASC
         ";
 
         $stmt = $this->db->prepare($sql);
         $stmt->bindValue(':student_id', $studentId, PDO::PARAM_INT);
         $stmt->bindValue(':term_id', $termId, PDO::PARAM_INT);
-        $stmt->bindValue(':class_subject_id', $classSubjectId, $classSubjectId === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
-        $stmt->bindValue(':class_subject_id_match', $classSubjectId, $classSubjectId === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
+        if ($classSubjectId !== null) {
+            $stmt->bindValue(':class_subject_id', $classSubjectId, PDO::PARAM_INT);
+        }
         $stmt->execute();
 
         $results = [];

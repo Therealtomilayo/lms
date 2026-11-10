@@ -70,20 +70,46 @@ class DashboardController extends Controller
         $userContext = $this->requireAuthContext($request);
         $student = $this->studentRepo->findByUserId($userContext->id);
 
-        if (!$student && !$userContext->isAdmin()) {
-            return Response::forbidden('Student profile not found.');
+        if (!$student && $userContext->isStudent()) {
+            // Auto-provision a student profile record if not yet created so the student is never locked out
+            try {
+                $suggestedAdm = $this->studentRepo->generateAdmissionNumber();
+                $student = $this->studentRepo->create(
+                    userId: $userContext->id,
+                    admissionNumber: $suggestedAdm
+                );
+            } catch (\Throwable) {
+                $student = null;
+            }
         }
 
         // Academic state
-        $activeSession = $this->academicRepo->findCurrentSession();
-        $activeTerm = $this->academicRepo->findCurrentTerm();
+        $activeSession = null;
+        $activeTerm = null;
+        try {
+            $activeSession = $this->academicRepo->findCurrentSession();
+        } catch (\Throwable) {
+            $activeSession = null;
+        }
+
+        try {
+            $activeTerm = $this->academicRepo->findCurrentTerm();
+        } catch (\Throwable) {
+            $activeTerm = null;
+        }
+
         $sessionId = $activeSession ? $activeSession->id : 0;
         $termId = $activeTerm ? $activeTerm->id : 0;
 
         // Enrolled subject courses
-        $enrolledSubjects = ($student && $sessionId > 0)
-            ? $this->enrollmentRepo->getStudentSubjectEnrollments($student->id, $sessionId)
-            : [];
+        $enrolledSubjects = [];
+        if ($student && $sessionId > 0) {
+            try {
+                $enrolledSubjects = $this->enrollmentRepo->getStudentSubjectEnrollments($student->id, $sessionId);
+            } catch (\Throwable) {
+                $enrolledSubjects = [];
+            }
+        }
 
         // Assignments
         $assignmentsData = [];
@@ -107,9 +133,14 @@ class DashboardController extends Controller
         $activeQuizzes = $quizzesData['active'] ?? [];
 
         // Attendance summary
-        $attendanceSummary = ($student && $termId > 0)
-            ? $this->attendanceRepo->getStudentAttendanceSummary($student->id, $termId)
-            : ['present' => 0, 'absent' => 0, 'late' => 0, 'excused' => 0, 'total' => 0, 'percentage' => 100.0];
+        $attendanceSummary = ['present' => 0, 'absent' => 0, 'late' => 0, 'excused' => 0, 'total' => 0, 'percentage' => 100.0];
+        if ($student && $termId > 0) {
+            try {
+                $attendanceSummary = $this->attendanceRepo->getStudentAttendanceSummary($student->id, $termId);
+            } catch (\Throwable) {
+                $attendanceSummary = ['present' => 0, 'absent' => 0, 'late' => 0, 'excused' => 0, 'total' => 0, 'percentage' => 100.0];
+            }
+        }
 
         // Today's Timetable slots
         $dayMap = [
@@ -125,14 +156,23 @@ class DashboardController extends Controller
 
         $todaySlots = [];
         if ($student && $student->currentClassId && $termId > 0) {
-            $allSlots = $this->timetableRepo->findByClass($student->currentClassId, $termId);
-            $todaySlots = array_values(array_filter($allSlots, function ($slot) use ($currentDayKey) {
-                return strtolower($slot->dayOfWeek) === $currentDayKey;
-            }));
+            try {
+                $allSlots = $this->timetableRepo->findByClass($student->currentClassId, $termId);
+                $todaySlots = array_values(array_filter($allSlots, function ($slot) use ($currentDayKey) {
+                    return strtolower($slot->dayOfWeek) === $currentDayKey;
+                }));
+            } catch (\Throwable) {
+                $todaySlots = [];
+            }
         }
 
         // Announcements feed
-        $announcements = $this->announcementRepo->getFeedForUser($userContext, null, 4);
+        $announcements = [];
+        try {
+            $announcements = $this->announcementRepo->getFeedForUser($userContext, null, 4);
+        } catch (\Throwable) {
+            $announcements = [];
+        }
 
         // Upcoming and Live Online Classes (SRS §31)
         $upcomingLiveClasses = [];
