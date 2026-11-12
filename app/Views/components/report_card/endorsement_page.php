@@ -88,13 +88,13 @@ $isPromoVisible = !empty($is_promotion_visible) && !empty($is_final_term);
         </div>
 
         <!-- Academic Performance Summary Ribbon -->
-        <div class="endorsement-ribbon-grid grid grid-cols-2 sm:grid-cols-4 print:!grid-cols-4 gap-2.5 bg-gradient-to-r from-pink-50/50 via-slate-50 to-pink-50/50 border border-[#E28BE2] rounded-lg p-3 text-center shadow-xs">
+        <div class="endorsement-ribbon-grid grid grid-cols-4 print:!grid-cols-4 gap-2.5 bg-gradient-to-r from-pink-50/50 via-slate-50 to-pink-50/50 border border-[#E28BE2] rounded-lg p-3 text-center shadow-xs">
             <div class="border-r border-pink-100 pr-2">
                 <span class="block text-[8px] font-bold text-slate-500 uppercase tracking-wider">Total Score</span>
                 <span class="text-base font-black text-slate-900 font-mono"><?= number_format($totalScore, 1) ?></span>
                 <span class="text-[8px] text-slate-400 block">/ <?= $maxPossible ?></span>
             </div>
-            <div class="sm:border-r border-pink-100 pr-2">
+            <div class="border-r border-pink-100 pr-2">
                 <span class="block text-[8px] font-bold text-slate-500 uppercase tracking-wider">Average Score</span>
                 <span class="text-base font-black text-[#7B3046] font-mono"><?= number_format($averageScore, 1) ?>%</span>
                 <span class="text-[8px] font-semibold text-emerald-600 block">Grade <?= $overallGrade ?></span>
@@ -122,7 +122,7 @@ $isPromoVisible = !empty($is_promotion_visible) && !empty($is_final_term);
                 <div class="handwriting-text text-base text-blue-900 leading-relaxed tracking-wide italic">
                     &ldquo;<?= htmlspecialchars($teacherComment) ?>&rdquo;
                 </div>
-                <div class="mt-4 pt-2 border-t border-dashed border-slate-200 flex flex-wrap sm:flex-nowrap gap-3 items-end justify-between">
+                <div class="mt-4 pt-2 border-t border-dashed border-slate-200 flex flex-nowrap gap-3 items-end justify-between">
                     <div>
                         <div class="text-[8px] font-bold text-slate-500 uppercase">Form Teacher:</div>
                         <div class="text-[9.5px] font-extrabold text-slate-900"><?= htmlspecialchars($teacherName) ?></div>
@@ -201,7 +201,7 @@ $isPromoVisible = !empty($is_promotion_visible) && !empty($is_final_term);
                 </div>
 
                 <!-- Signatures & Stamp Layer (Realistic positioning) -->
-                <div class="mt-2 pt-2 border-t border-dashed border-slate-200 relative flex flex-wrap sm:flex-nowrap gap-3 items-end justify-between">
+                <div class="mt-2 pt-2 border-t border-dashed border-slate-200 relative flex flex-nowrap gap-3 items-end justify-between">
                     <div>
                         <div class="text-[8px] font-bold text-slate-500 uppercase"><?= !empty($isHighSchool) ? 'Principal:' : 'Head of School:' ?></div>
                         <div class="text-[10px] font-black text-slate-900">

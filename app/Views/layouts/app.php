@@ -45,7 +45,7 @@
         ]); ?>
 
         <!-- Content Area -->
-        <main id="main-content" class="flex-1 overflow-y-auto p-6 md:p-8 bg-slate-50 focus:outline-none print:block print:overflow-visible print:p-0 print:m-0 print:bg-white print:w-full" tabindex="-1">
+        <main id="main-content" class="flex-1 overflow-y-auto p-6 md:p-8 pb-24 md:pb-8 bg-slate-50 focus:outline-none print:block print:overflow-visible print:p-0 print:m-0 print:bg-white print:w-full" tabindex="-1">
             
             <!-- Global Flash Messages -->
             <?php 
@@ -98,6 +98,13 @@
 
         </main>
     </div>
+
+    <!-- Role-Aware Mobile Bottom Navigation & Academic Hub Sheet -->
+    <?php $this->include('layouts/components/mobile_bottom_nav', [
+        'role' => $role,
+        'children' => $children ?? [],
+        'selectedChild' => $selectedChild ?? null
+    ]); ?>
 
     <!-- Reusable Vanilla Modal, Sidebar & Overlay Javascript Utility -->
     <script>

@@ -81,8 +81,18 @@ $backUrl = $backUrl ?? ($isParentPortal
                 padding: 0 !important;
                 display: block !important;
             }
+            .dossier-canvas {
+                width: 210mm !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                display: block !important;
+                zoom: 1 !important;
+                transform: none !important;
+            }
             .report-page {
                 width: 210mm !important;
+                min-width: 210mm !important;
+                max-width: 210mm !important;
                 height: 297mm !important;
                 max-height: 297mm !important;
                 min-height: 297mm !important;
@@ -163,44 +173,71 @@ $backUrl = $backUrl ?? ($isParentPortal
                 flex-direction: column;
                 align-items: center;
                 box-sizing: border-box;
-                padding: 28px 16px 60px 16px;
+                padding: 24px 8px 60px 8px;
                 overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
             }
-            .report-page {
+            .dossier-canvas {
                 width: 210mm;
                 min-width: 210mm;
-                height: 297mm;
-                max-height: 297mm;
-                margin: 0 auto 36px auto;
+                max-width: 210mm;
+                margin: 0 auto;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                transform-origin: top center;
+                zoom: var(--report-scale, 1);
+            }
+            .report-page {
+                width: 210mm !important;
+                min-width: 210mm !important;
+                max-width: 210mm !important;
+                height: 297mm !important;
+                max-height: 297mm !important;
+                min-height: 297mm !important;
+                margin: 0 auto 36px auto !important;
                 background: #ffffff;
                 box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 5px 15px rgba(0, 0, 0, 0.2);
                 border-radius: 4px;
                 overflow: hidden;
                 box-sizing: border-box;
+                flex-shrink: 0;
+            }
+            .report-page:last-child {
+                margin-bottom: 0 !important;
+            }
+
+            /* Consistent document-level grid layouts across desktop and mobile canvases */
+            .dual-charts-grid {
+                display: grid !important;
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 12px !important;
+            }
+            .academic-subtables-grid {
+                display: grid !important;
+                grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+                gap: 10px !important;
+            }
+            .subtable-col-1 {
+                grid-column: span 5 / span 5 !important;
+            }
+            .subtable-col-2 {
+                grid-column: span 3 / span 3 !important;
+            }
+            .subtable-col-3 {
+                grid-column: span 4 / span 4 !important;
+            }
+            .endorsement-ribbon-grid {
+                display: grid !important;
+                grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
             }
         }
 
         @media screen and (max-width: 860px) {
-            body {
-                overflow-x: hidden;
-                padding: 0;
-            }
             .dossier-wrapper {
-                width: 100% !important;
-                max-width: 100vw !important;
-                padding: 8px 6px !important;
-                overflow-x: hidden !important;
-            }
-            .report-page {
-                width: 100% !important;
-                max-width: 100% !important;
-                min-height: auto !important;
-                height: auto !important;
-                max-height: none !important;
-                margin: 8px 0 16px 0 !important;
-                padding: 12px 10px !important;
-                border-radius: 12px !important;
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
+                padding: 12px 6px 40px 6px;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
             }
         }
 
@@ -324,6 +361,18 @@ $backUrl = $backUrl ?? ($isParentPortal
             <?php endif; ?>
 
             <div class="flex items-center gap-2">
+                <!-- Screen Zoom Mode Switcher (Fit to Screen Width vs 100% Original Size) -->
+                <div class="inline-flex items-center bg-slate-800/90 rounded-lg p-0.5 border border-slate-700">
+                    <button type="button" id="btn-zoom-fit" onclick="window.setDossierZoom && window.setDossierZoom('fit')" 
+                            class="px-2 py-1 rounded text-[10px] font-bold bg-[#7B3046] text-white transition shadow-xs" title="Fit Report Width to Screen">
+                        Fit
+                    </button>
+                    <button type="button" id="btn-zoom-full" onclick="window.setDossierZoom && window.setDossierZoom('full')" 
+                            class="px-2 py-1 rounded text-[10px] font-bold text-slate-400 hover:text-white transition" title="View at 100% Desktop Size">
+                        100%
+                    </button>
+                </div>
+
                 <!-- Page Navigation Indicator -->
                 <span class="hidden md:inline-block text-[11px] font-semibold text-slate-400">
                     <?= $isHighSchool ? 'Official 2-Page High School Dossier' : 'Official 3-Page Grade School Dossier' ?>
@@ -331,11 +380,12 @@ $backUrl = $backUrl ?? ($isParentPortal
 
                 <!-- Print Action Button -->
                 <button onclick="window.print()" 
-                        class="inline-flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-black bg-[#7B3046] hover:bg-[#8D3850] text-white shadow-lg transition transform active:scale-95 cursor-pointer">
+                        class="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-lg text-xs font-black bg-[#7B3046] hover:bg-[#8D3850] text-white shadow-lg transition transform active:scale-95 cursor-pointer">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
                     </svg>
-                    Print Dossier / Save PDF
+                    <span class="hidden sm:inline">Print Dossier / Save PDF</span>
+                    <span class="sm:hidden">PDF</span>
                 </button>
             </div>
 
@@ -344,21 +394,90 @@ $backUrl = $backUrl ?? ($isParentPortal
 
     <!-- MAIN DOSSIER CONTAINER -->
     <main class="dossier-wrapper flex flex-col items-center">
-        <?php if ($isHighSchool): ?>
-            <!-- OFFICIAL HIGH SCHOOL 2-PAGE DOSSIER (A4 Portrait Uniform Preview) -->
-            <?php include dirname(__DIR__, 2) . '/components/report_card/high_school_report_card.php'; ?>
-        <?php else: ?>
-            <!-- OFFICIAL GRADE SCHOOL 3-PAGE DOSSIER (A4 Portrait Uniform Preview) -->
-            <!-- PAGE 1: Official Institutional Cover & Identity Dossier -->
-            <?php include dirname(__DIR__, 2) . '/components/report_card/cover_page.php'; ?>
+        <div id="dossier-canvas" class="dossier-canvas flex flex-col items-center">
+            <?php if ($isHighSchool): ?>
+                <!-- OFFICIAL HIGH SCHOOL 2-PAGE DOSSIER (A4 Portrait Uniform Preview) -->
+                <?php include dirname(__DIR__, 2) . '/components/report_card/high_school_report_card.php'; ?>
+            <?php else: ?>
+                <!-- OFFICIAL GRADE SCHOOL 3-PAGE DOSSIER (A4 Portrait Uniform Preview) -->
+                <!-- PAGE 1: Official Institutional Cover & Identity Dossier -->
+                <?php include dirname(__DIR__, 2) . '/components/report_card/cover_page.php'; ?>
 
-            <!-- PAGE 2: Comprehensive Cognitive Matrix & Behavioral Domains -->
-            <?php include dirname(__DIR__, 2) . '/components/report_card/academic_page.php'; ?>
+                <!-- PAGE 2: Comprehensive Cognitive Matrix & Behavioral Domains -->
+                <?php include dirname(__DIR__, 2) . '/components/report_card/academic_page.php'; ?>
 
-            <!-- PAGE 3: Official Attestation, Promotion Endorsement & Claret Seal -->
-            <?php include dirname(__DIR__, 2) . '/components/report_card/endorsement_page.php'; ?>
-        <?php endif; ?>
+                <!-- PAGE 3: Official Attestation, Promotion Endorsement & Claret Seal -->
+                <?php include dirname(__DIR__, 2) . '/components/report_card/endorsement_page.php'; ?>
+            <?php endif; ?>
+        </div>
     </main>
+
+    <!-- Client-side Responsive Report Scaling Script -->
+    <script>
+    (function() {
+        let currentZoomMode = 'fit';
+
+        function calculateDossierScale() {
+            const canvas = document.getElementById('dossier-canvas');
+            if (!canvas) return;
+
+            const windowWidth = window.innerWidth;
+            // 210mm in standard 96dpi css px is ~793.7px
+            const a4WidthPx = 794;
+            const padding = 16;
+            const availableWidth = Math.max(280, windowWidth - padding);
+
+            if (currentZoomMode === 'full' || windowWidth >= 860) {
+                document.documentElement.style.setProperty('--report-scale', '1');
+                if (!('zoom' in document.body.style)) {
+                    canvas.style.transform = '';
+                    canvas.style.transformOrigin = '';
+                    if (canvas.parentElement) {
+                        canvas.parentElement.style.height = '';
+                    }
+                }
+                return;
+            }
+
+            const scale = Math.min(1, availableWidth / a4WidthPx);
+            document.documentElement.style.setProperty('--report-scale', scale.toFixed(4));
+
+            // Fallback for older engines without CSS zoom support
+            if (!('zoom' in document.body.style)) {
+                canvas.style.transform = `scale(${scale})`;
+                canvas.style.transformOrigin = 'top center';
+                const rawHeight = canvas.offsetHeight || (canvas.children.length * 1123);
+                if (canvas.parentElement) {
+                    canvas.parentElement.style.height = `${Math.ceil(rawHeight * scale) + 40}px`;
+                }
+            }
+        }
+
+        window.setDossierZoom = function(mode) {
+            currentZoomMode = mode;
+            const btnFit = document.getElementById('btn-zoom-fit');
+            const btnFull = document.getElementById('btn-zoom-full');
+            if (btnFit && btnFull) {
+                if (mode === 'fit') {
+                    btnFit.className = 'px-2 py-1 rounded text-[10px] font-bold bg-[#7B3046] text-white transition shadow-xs';
+                    btnFull.className = 'px-2 py-1 rounded text-[10px] font-bold text-slate-400 hover:text-white transition';
+                } else {
+                    btnFull.className = 'px-2 py-1 rounded text-[10px] font-bold bg-[#7B3046] text-white transition shadow-xs';
+                    btnFit.className = 'px-2 py-1 rounded text-[10px] font-bold text-slate-400 hover:text-white transition';
+                }
+            }
+            calculateDossierScale();
+        };
+
+        window.addEventListener('resize', calculateDossierScale);
+        window.addEventListener('orientationchange', calculateDossierScale);
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', calculateDossierScale);
+        } else {
+            calculateDossierScale();
+        }
+    })();
+    </script>
 
 </body>
 </html>

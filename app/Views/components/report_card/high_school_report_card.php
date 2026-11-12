@@ -173,7 +173,7 @@ if (!empty($psychomotor_ratings)) {
                      alt="School Logo" 
                      class="h-16 w-auto object-contain">
                 <div>
-                    <h1 class="text-xl sm:text-2xl font-black tracking-tight text-[#7B3046] uppercase font-sans leading-none">
+                    <h1 class="text-2xl font-black tracking-tight text-[#7B3046] uppercase font-sans leading-none">
                         <?= htmlspecialchars($schoolName) ?>
                     </h1>
                     <p class="text-[9.5px] font-black text-slate-600 uppercase tracking-wider mt-1">

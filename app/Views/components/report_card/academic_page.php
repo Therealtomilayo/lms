@@ -132,7 +132,7 @@ $classStats = $class_stats ?? ['total_students' => 8, 'highest_avg' => 94.5, 'lo
         </div>
 
         <!-- Performance Visualizations (Pure Vector SVG) -->
-        <div class="dual-charts-grid grid grid-cols-1 sm:grid-cols-2 print:!grid-cols-2 gap-3 items-center">
+        <div class="dual-charts-grid grid grid-cols-2 print:!grid-cols-2 gap-3 items-center">
             <!-- Line Chart: Comparison with Class Extremes -->
             <div class="border border-slate-200 rounded p-2 bg-white/90 shadow-2xs">
                 <div class="flex items-center justify-between mb-1">
@@ -247,10 +247,10 @@ $classStats = $class_stats ?? ['total_students' => 8, 'highest_avg' => 94.5, 'lo
         </div>
 
         <!-- Four Sub-Tables Grid (Attendance, Class Demographics, Grading Scale, Behavioral Domain) -->
-        <div class="academic-subtables-grid grid grid-cols-1 md:grid-cols-12 print:!grid-cols-12 gap-2.5 pt-0.5">
+        <div class="academic-subtables-grid grid grid-cols-12 print:!grid-cols-12 gap-2.5 pt-0.5">
             
             <!-- Column 1: Attendance & Class Population & Grading System (5 cols) -->
-            <div class="subtable-col-1 col-span-1 md:col-span-5 print:!col-span-5 flex flex-col gap-2">
+            <div class="subtable-col-1 col-span-5 print:!col-span-5 flex flex-col gap-2">
                 
                 <!-- Attendance Table -->
                 <div class="border border-slate-300 rounded overflow-hidden">
@@ -364,7 +364,7 @@ $classStats = $class_stats ?? ['total_students' => 8, 'highest_avg' => 94.5, 'lo
             </div>
 
             <!-- Column 2: Affective Domain Traits (3.5 cols) -->
-            <div class="subtable-col-2 col-span-1 md:col-span-3.5 print:!col-span-3.5 border border-slate-300 rounded overflow-hidden">
+            <div class="subtable-col-2 col-span-3.5 print:!col-span-3.5 border border-slate-300 rounded overflow-hidden">
                 <div class="bg-[#FFABFF] text-[#2A0845] font-black text-[8px] uppercase px-2 py-0.5 tracking-wider text-center border-b border-[#E28BE2]">
                     Affective Domain (Affective Traits)
                 </div>
@@ -408,7 +408,7 @@ $classStats = $class_stats ?? ['total_students' => 8, 'highest_avg' => 94.5, 'lo
             </div>
 
             <!-- Column 3: Psychomotor Skills (3.5 cols) -->
-            <div class="subtable-col-3 col-span-1 md:col-span-3.5 print:!col-span-3.5 border border-slate-300 rounded overflow-hidden">
+            <div class="subtable-col-3 col-span-3.5 print:!col-span-3.5 border border-slate-300 rounded overflow-hidden">
                 <div class="bg-[#FFABFF] text-[#2A0845] font-black text-[8px] uppercase px-2 py-0.5 tracking-wider text-center border-b border-[#E28BE2]">
                     Psychomotor Domain (Psychomotor Skills)
                 </div>
